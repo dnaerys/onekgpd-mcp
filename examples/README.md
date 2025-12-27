@@ -9,6 +9,7 @@
 - [Oligogenic Burden](#oligogenic-burden)
 - [Protein-Protein Interactions](#protein-protein-interactions)
 - [Macromolecular structural complexes](#macromolecular-structural-complexes)
+- [Regulatory Variant Impact on Known Disease Genes](#regulatory-variant-impact-on-known-disease-genes)
 
 
 #### Models
@@ -233,6 +234,27 @@ look at their variants in the leading-strand polymerase (POLE) and the sliding c
 highly-accurate replication fork ?_
 
     - [report](https://claude.ai/public/artifacts/4ef3cf50-e209-4fd7-9ec3-25c6c8549de7)
+
+
+#### Regulatory Variant Impact on Known Disease Genes
+
+> _Identify healthy individuals in the KGP dataset carrying ClinVar-validated pathogenic variants in SCN5A, KCNH2, or LDLR.
+For each carrier, conduct a cis-regulatory scan within a 70kb window to identify variants in high linkage disequilibrium
+that are statistically associated with Haplotype-Specific Expression (HSE) or Allelic Imbalance. Analyze if these secondary
+variants disrupt Transcription Factor Binding Sites (TFBS) in proximal promoters, alter uORF-mediated translation kinetics,
+or modify mRNA stability motifs in the 3'UTR. Evaluate the hypothesis that resilience is achieved through a "Transcriptional
+Damping" mechanism, where the pathogenic allele is preferentially silenced or the wild-type allele is hyper-activated,
+ensuring the total pool of functional protein remains above the critical phenotypic threshold._
+
+- SCN5A [transcriptional damping report](https://claude.ai/public/artifacts/8c470f0b-46ac-4cb4-9768-d77a95030a06?fullscreen=true) _(Opus 4.5)_
+
+- > _Building on the SCN5A damping findings, the next phase should investigate if resilience in 150 heterozygous carriers
+    is also mediated by trans-acting chaperones that stabilize the functional 50% of sodium channels. Task Statement:
+    Identify healthy SCN5A pathogenic carriers from the previous "Transcriptional Damping" cohort and perform a genome-wide
+    scan for Trans-acting Proteostatic Modifiers. Search for enrichment of gain-of-function variants or high-expression
+    eQTLs in cardiac-specific ion channel chaperones and trafficking regulators, specifically SNTA1 (Syntrophin-alpha 1),
+    GPD1L, and RANGRF (MOG1)._
+    - trans-acting proteostatic modifiers [report](https://claude.ai/public/artifacts/9c4f8fbf-8fe6-4efe-a94f-4ce0ba759da4?fullscreen=true) _(Opus 4.5)_
 
 ---
 
