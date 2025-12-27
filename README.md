@@ -44,6 +44,20 @@ some with _extended thinking mode_, and some from a single-agent system in norma
 
 #### Incomplete Penetrance & Genetic Resilience
 
+> _Titin acts as a molecular spring that gives our heart muscles their elasticity. Certain mutations in TTN, known as
+Truncating Variants (TTNtv), are the leading genetic cause of Dilated Cardiomyopathy - a condition where the heart
+stretches and fails to pump blood effectively. One in 500 healthy people carries one of these "deadly" mutations but
+shows no signs of heart disease. We are searching for the genetic 'shield' that allows healthy individuals to harbor
+known pathogenic TTN mutations without developing cardiomyopathy. Locate established pathogenic alleles (specifically
+TTNtv in the A-band or high-PSI exons) documented in ClinVar or cardiac literature, that appear in the KGP healthy cohort.
+For every healthy carrier identified, scan a 100kb window (the haplotype block) around the pathogenic site. We are looking
+for Modifier Variants - secondary missense or regulatory changes - that consistently 'travel' with the pathogenic allele
+on the same chromosome. Evaluate statistical significance and biological mechanisms of compensation._
+
+- [vis](https://claude.ai/public/artifacts/a4385d67-fc4d-4224-9593-e298dfb7d65c?fullscreen=true),
+[report](https://claude.ai/public/artifacts/bc48355a-eecd-4924-96cd-2e29596b2241?fullscreen=true),
+[suppl](https://claude.ai/public/artifacts/3706f27a-fd34-41cd-bab0-de5cfde449a0?fullscreen=true) _(Opus 4.5)_
+
 > _Identify samples in the KGP dataset that are homozygous for variants classified as 'Pathogenic' in ClinVar for severe
 autosomal recessive metabolic disorders. For these specific samples, scan their exomes for enrichment of variants in known
 suppressor genes or alternative metabolic pathways that might compensate for the primary defect. Propose a mechanism of
@@ -51,7 +65,6 @@ compensation based on pathway analysis._
 
 - _reports for_ _[AATD - SERPINA1 - PiZZ](https://claude.ai/public/artifacts/3231b371-a021-479a-8648-5913660968fa?fullscreen=true)_
 _and_ _[Cystic Fibrosis & Sickle Cell Disease](https://claude.ai/public/artifacts/4dfe5e97-a30e-4a93-9ca2-bdf0eb40e64c?fullscreen=true)_
-
 
 > _Select samples carrying known dominant-negative variants in KRT5 or KRT14 genes (Epidermolysis Bullosa) in the KGP.
 Search for potential cis- or trans-acting rescue modifiers. Specifically, check if these samples carry variants that promote
@@ -78,7 +91,7 @@ variation patterns across functional domains in KGP ? Do statistical evaluation.
 > _In what cardiac related genes, e.g. ion channels, variants in KGP dataset near catalytic residues or
 ligand-binding pockets show strong depletion compared to flanking residues (±20 amino acids) ?_
    
-- results might be [some](https://claude.ai/public/artifacts/e81fa694-7de5-4fed-b903-e6cb23d02dd9?fullscreen=true)
+- [interactive app](https://claude.ai/public/artifacts/e81fa694-7de5-4fed-b903-e6cb23d02dd9?fullscreen=true)
 
 
 #### Reclassification & AlphaMissense Integration

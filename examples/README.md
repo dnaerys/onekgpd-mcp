@@ -21,6 +21,20 @@ some with _extended thinking mode_, and some from a single-agent system in norma
 
 #### Incomplete Penetrance & Genetic Resilience
 
+> _Titin acts as a molecular spring that gives our heart muscles their elasticity. Certain mutations in TTN, known as
+Truncating Variants (TTNtv), are the leading genetic cause of Dilated Cardiomyopathy - a condition where the heart
+stretches and fails to pump blood effectively. One in 500 healthy people carries one of these "deadly" mutations but
+shows no signs of heart disease. We are searching for the genetic 'shield' that allows healthy individuals to harbor
+known pathogenic TTN mutations without developing cardiomyopathy. Locate established pathogenic alleles (specifically
+TTNtv in the A-band or high-PSI exons) documented in ClinVar or cardiac literature, that appear in the KGP healthy cohort.
+For every healthy carrier identified, scan a 100kb window (the haplotype block) around the pathogenic site. We are looking
+for Modifier Variants - secondary missense or regulatory changes - that consistently 'travel' with the pathogenic allele
+on the same chromosome. Evaluate statistical significance and biological mechanisms of compensation._
+
+- [vis](https://claude.ai/public/artifacts/a4385d67-fc4d-4224-9593-e298dfb7d65c?fullscreen=true),
+[report](https://claude.ai/public/artifacts/bc48355a-eecd-4924-96cd-2e29596b2241?fullscreen=true),
+[suppl](https://claude.ai/public/artifacts/3706f27a-fd34-41cd-bab0-de5cfde449a0?fullscreen=true) _(Opus 4.5)_
+
 > _Identify samples in the KGP dataset that are homozygous for variants classified as 'Pathogenic' in ClinVar for severe
 autosomal recessive metabolic disorders. For these specific samples, scan their exomes for enrichment of variants in known
 suppressor genes or alternative metabolic pathways that might compensate for the primary defect. Propose a mechanism of
@@ -38,9 +52,6 @@ enrichment of 'paralog-boosting' promoter variants in these resilient carriers ?
 - [summary](https://claude.ai/public/artifacts/7077c890-2967-4451-8eec-57197959c314?fullscreen=true), 
 [report](https://claude.ai/public/artifacts/dfb9ebd9-cf18-4e69-b4d3-0b825024f5fe?fullscreen=true)
 
-
-> _Which variants in the HBB gene are unexpectedly tolerated in the KGP dataset with at least several annotation sources
-   in agreement with regard to their expected pathogenicity ?_
 
 ---
 
