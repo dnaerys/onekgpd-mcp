@@ -254,7 +254,26 @@ ensuring the total pool of functional protein remains above the critical phenoty
     scan for Trans-acting Proteostatic Modifiers. Search for enrichment of gain-of-function variants or high-expression
     eQTLs in cardiac-specific ion channel chaperones and trafficking regulators, specifically SNTA1 (Syntrophin-alpha 1),
     GPD1L, and RANGRF (MOG1)._
+    
     - trans-acting proteostatic modifiers [report](https://claude.ai/public/artifacts/9c4f8fbf-8fe6-4efe-a94f-4ce0ba759da4?fullscreen=true) _(Opus 4.5)_
+
+- similar study for _[KCNH2 and LDLR](https://claude.ai/public/artifacts/cae6d6bf-3f57-489d-976e-c6286983fa7a?fullscreen=true)_  _(Opus 4.5)_
+
+
+##### Transcriptional damping & friends
+
+> _Transthyretin (TTR) is a critical transport protein that must maintain a stable homotetramer configuration to function;
+its dissociation into monomers is the rate-limiting step in systemic amyloidosis, a devastating protein-molding disease.
+How do healthy heterozygous carriers of ClinVar-pathogenic TTR interface variants (e.g., V30M equivalents) in KGP cohort
+avoid systemic amyloidosis ? Specifically, is this genetic resilience driven by Kinetic Heterodimer Stabilization, where
+the mixed wild-type/mutant tetramer is biochemically "locked" into a functional state ? Or is it driven by a Proteostatic
+Assembly Checkpoint that selectively degrades unstable tetramers before they can dissociate into amyloidogenic monomers ?_
+
+- [report](https://claude.ai/public/artifacts/0ea73bd5-bc4b-4e78-81e9-0117d0c6dcc8?fullscreen=true),
+[suppl](https://claude.ai/public/artifacts/ba98b791-98d8-49bb-8bcf-caee4a9ba805?fullscreen=true),
+[fig1](https://github.com/user-attachments/assets/bddf41e4-1211-444d-8c59-09c703c92de8),
+[fig2](https://github.com/user-attachments/assets/6c1351a5-2753-42ec-92a1-9a25e7b06271),
+[fig3](https://github.com/user-attachments/assets/cd859704-3548-42ae-b2dc-ed6d7bf781d1) 
 
 ---
 

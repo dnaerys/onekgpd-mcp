@@ -162,7 +162,10 @@ ensuring the total pool of functional protein remains above the critical phenoty
     scan for Trans-acting Proteostatic Modifiers. Search for enrichment of gain-of-function variants or high-expression
     eQTLs in cardiac-specific ion channel chaperones and trafficking regulators, specifically SNTA1 (Syntrophin-alpha 1),
     GPD1L, and RANGRF (MOG1)._
+    
     - trans-acting proteostatic modifiers [report](https://claude.ai/public/artifacts/9c4f8fbf-8fe6-4efe-a94f-4ce0ba759da4?fullscreen=true) _(Opus 4.5)_
+
+- similar study for _[KCNH2 and LDLR](https://claude.ai/public/artifacts/cae6d6bf-3f57-489d-976e-c6286983fa7a?fullscreen=true)_  _(Opus 4.5)_
 
 
 _More examples [here](./examples/README.md)_
