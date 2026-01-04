@@ -39,93 +39,49 @@ MCP Server is implemented as a Java EE service, accessing _1KGP dataset_ via gRP
 
 ## Examples
 
-_Sonnet 4.5_ answered most of the questions below, unless specified otherwise. Some answers are from _[multi-agent research system](https://www.anthropic.com/engineering/multi-agent-research-system)_,
-some with _extended thinking mode_, and some from a single-agent system in normal mode.
+#### Regulatory Variant Impact on Known Disease Genes
 
-#### Incomplete Penetrance & Genetic Resilience
+> _Identify healthy individuals in the KGP dataset carrying ClinVar-validated pathogenic variants in SCN5A, KCNH2, or LDLR.
+For each carrier, conduct a cis-regulatory scan within a 70kb window to identify variants in high linkage disequilibrium
+that are statistically associated with Haplotype-Specific Expression (HSE) or Allelic Imbalance. Analyze if these secondary
+variants disrupt Transcription Factor Binding Sites (TFBS) in proximal promoters, alter uORF-mediated translation kinetics,
+or modify mRNA stability motifs in the 3'UTR. Evaluate the hypothesis that resilience is achieved through a "Transcriptional
+Damping" mechanism, where the pathogenic allele is preferentially silenced or the wild-type allele is hyper-activated,
+ensuring the total pool of functional protein remains above the critical phenotypic threshold._
 
-> _Titin acts as a molecular spring that gives our heart muscles their elasticity. Certain mutations in TTN, known as
-Truncating Variants (TTNtv), are the leading genetic cause of Dilated Cardiomyopathy - a condition where the heart
-stretches and fails to pump blood effectively. One in 500 healthy people carries one of these "deadly" mutations but
-shows no signs of heart disease. We are searching for the genetic 'shield' that allows healthy individuals to harbor
-known pathogenic TTN mutations without developing cardiomyopathy. Locate established pathogenic alleles (specifically
-TTNtv in the A-band or high-PSI exons) documented in ClinVar or cardiac literature, that appear in the KGP healthy cohort.
-For every healthy carrier identified, scan a 100kb window (the haplotype block) around the pathogenic site. We are looking
-for Modifier Variants - secondary missense or regulatory changes - that consistently 'travel' with the pathogenic allele
-on the same chromosome. Evaluate statistical significance and biological mechanisms of compensation._
+- _[SCN5A transcriptional damping analysis](https://claude.ai/public/artifacts/8c470f0b-46ac-4cb4-9768-d77a95030a06?fullscreen=true)_
 
-- [vis](https://claude.ai/public/artifacts/a4385d67-fc4d-4224-9593-e298dfb7d65c?fullscreen=true),
-[report](https://claude.ai/public/artifacts/bc48355a-eecd-4924-96cd-2e29596b2241?fullscreen=true),
-[suppl](https://claude.ai/public/artifacts/3706f27a-fd34-41cd-bab0-de5cfde449a0?fullscreen=true) _(Opus 4.5)_
+- > _Building on the SCN5A damping findings, the next phase should investigate if resilience in 150 heterozygous carriers
+    is also mediated by trans-acting chaperones that stabilize the functional 50% of sodium channels. Task Statement:
+    Identify healthy SCN5A pathogenic carriers from the previous "Transcriptional Damping" cohort and perform a genome-wide
+    scan for Trans-acting Proteostatic Modifiers. Search for enrichment of gain-of-function variants or high-expression
+    eQTLs in cardiac-specific ion channel chaperones and trafficking regulators, specifically SNTA1 (Syntrophin-alpha 1),
+    GPD1L, and RANGRF (MOG1)._
+    
+    - _[trans-acting proteostatic modifiers study](https://claude.ai/public/artifacts/9c4f8fbf-8fe6-4efe-a94f-4ce0ba759da4?fullscreen=true)_
 
-> _Identify samples in the KGP dataset that are homozygous for variants classified as 'Pathogenic' in ClinVar for severe
-autosomal recessive metabolic disorders. For these specific samples, scan their exomes for enrichment of variants in known
-suppressor genes or alternative metabolic pathways that might compensate for the primary defect. Propose a mechanism of
-compensation based on pathway analysis._
-
-- _reports for_ _[AATD - SERPINA1 - PiZZ](https://claude.ai/public/artifacts/3231b371-a021-479a-8648-5913660968fa?fullscreen=true)_
-_and_ _[Cystic Fibrosis & Sickle Cell Disease](https://claude.ai/public/artifacts/4dfe5e97-a30e-4a93-9ca2-bdf0eb40e64c?fullscreen=true)_
-
-> _Select samples carrying known dominant-negative variants in KRT5 or KRT14 genes (Epidermolysis Bullosa) in the KGP.
-Search for potential cis- or trans-acting rescue modifiers. Specifically, check if these samples carry variants that promote
-the upregulation of the homologous KRT6 or KRT16 genes (paralog compensation). Can you detect a statistically significant
-enrichment of 'paralog-boosting' promoter variants in these resilient carriers ?_
-
-- [summary](https://claude.ai/public/artifacts/7077c890-2967-4451-8eec-57197959c314?fullscreen=true), 
-[report](https://claude.ai/public/artifacts/dfb9ebd9-cf18-4e69-b4d3-0b825024f5fe?fullscreen=true)
-
-#### Structural Intolerance
-
-> _Which regions in XXXX gene are most likely disease-critical, with strong purifying selection, based on available
-variation patterns across functional domains in KGP ? Do statistical evaluation._
-
-- results for [CACNA1A](https://claude.ai/public/artifacts/ac0f76a9-b311-46ef-a377-5387f3da8085?fullscreen=true),
-[SCN1A](https://claude.ai/public/artifacts/7ce01d30-9bbc-4823-9be5-4d20f51137e1?fullscreen=true),
-[SCN2A](https://claude.ai/public/artifacts/9be55bf0-c38f-4aba-bfd3-4361463b713b?fullscreen=true) ([chart](https://github.com/user-attachments/assets/9c1d6c6b-55b7-41a2-be85-b0f9fde08c68)), 
-[POLR2A](https://claude.ai/public/artifacts/eeaa2483-a7ca-4f4e-81c3-e9ea435bd438?fullscreen=true) ([chart](https://github.com/user-attachments/assets/7df15795-351b-4066-8a81-fd3f98134f08)), 
-[RPL5](https://claude.ai/public/artifacts/75f05627-75e2-4826-a2f0-13d2bd05e7e7?fullscreen=true) ([interactive vis](https://claude.ai/public/artifacts/a7baecef-83e7-463f-a2cf-0dfee441e24a)),
-[RPL11](https://claude.ai/public/artifacts/f3fe732b-671b-48f9-956a-439d2d46698b?fullscreen=true),
-[RPS26](https://claude.ai/public/artifacts/50c82a35-427e-494c-ab30-8b03b8dafc7c?fullscreen=true)
+- similar study for _[KCNH2 and LDLR](https://claude.ai/public/artifacts/cae6d6bf-3f57-489d-976e-c6286983fa7a?fullscreen=true)_ 
 
 
-> _In what cardiac related genes, e.g. ion channels, variants in KGP dataset near catalytic residues or
-ligand-binding pockets show strong depletion compared to flanking residues (±20 amino acids) ?_
-   
-- [interactive app](https://claude.ai/public/artifacts/e81fa694-7de5-4fed-b903-e6cb23d02dd9?fullscreen=true)
+#### Metabolic Pathway Redundancy
 
+> _Cellular redox homeostasis is maintained by two parallel antioxidant systems: the glutathione system
+and the thioredoxin system. Complete loss of either GSR or TXNRD1 is incompatible with mammalian development, yet population
+databases contain individuals carrying variants predicted to impair enzyme function. Identify clusters of individuals in the
+KGP cohort who carry multiple 'Moderate' impact VEP variants across both systems. Reasoning through the AlphaMissense structural
+implications, can you detect a 'balancing act' where a loss of efficiency in Glutathione reductase is consistently paired with
+high-confidence benign or potentially activating variants in the Thioredoxin system ? Synthesize a model of 'Redox Robustness'
+based on the co-occurrence of these variants across the cohort._
 
-#### Reclassification & AlphaMissense Integration
+- _[Genomic architecture of redox resilience analysis](https://claude.ai/public/artifacts/13a47b08-3dd6-4bd2-ac2f-ddd5535393a4?fullscreen=true),
+[fig 1](https://github.com/user-attachments/assets/6432bf5b-9649-4027-948a-664d1b84a35f),
+[fig 2](https://github.com/user-attachments/assets/ad846701-cf92-42b3-8859-cc01f322cb5c),
+[fig 3](https://github.com/user-attachments/assets/cebecf70-2e33-4f20-bf68-63ec9e9f48d1),
+[fig 4](https://github.com/user-attachments/assets/518ee5a0-acd2-41c8-8ff3-7afe07f1ee76),
+[fig 5](https://github.com/user-attachments/assets/657d9dd2-2285-43cd-99f6-70011a551020),
+[fig 6](https://github.com/user-attachments/assets/982c34f4-66b4-496b-ba46-e06c8766901c), 
+[suppl](https://claude.ai/public/artifacts/efbce3ed-99b9-4790-b010-3cb01bf19d5a?fullscreen=true)_
 
-> _Retrieve all variants in KGP dataset in the voltage-gated sodium channel gene family (SCN1A, SCN2A, SCN5A)
-currently classified as 'VUS' in ClinVar. Correlate their 'Likely Pathogenic' AlphaMissense classification
-with their frequency in this healthy cohort. Synthesize a reasoned argument to reclassify a subset of these
-as 'Likely Benign' based on the logic that pathogenic predictions by AlphaMissense are incompatible with the
-observed allele frequency in this healthy population._
-
-- [summary](https://claude.ai/public/artifacts/9a602e37-6795-4979-8b8c-48b052b33501?fullscreen=true),
-[report](https://claude.ai/public/artifacts/3888c6d2-9b6d-435c-88f3-fde159e5b241?fullscreen=true),
-[variants](https://claude.ai/public/artifacts/f9b6557b-c1e1-414f-ae1c-d62d256cb46a?fullscreen=true)
-
-
-#### Oligogenic Burden
-
-> _Calculate the 'Ciliary Mutational Load' for every individual in the KGP dataset. Aggregate all rare, non-synonymous variants
-across the entire Bardet-Biedl Syndrome (BBS) gene panel (BBS1 through BBS21). Is there a clear 'cliff' or maximum mutational
-burden observed in healthy individuals ? Determine if the healthy cohort contains any 'triallelic' carriers (homozygous at one
-locus, heterozygous at another) and model why they do not display the BBS phenotype._
-
-- [report](https://claude.ai/public/artifacts/15fabda9-8a4a-4f0c-9605-ec80298e66f3?fullscreen=true),
-[vis](https://github.com/user-attachments/assets/3d42b9da-3d23-48c7-9703-e9599d8d59b0)
-
-
-#### Protein-Protein Interactions
-
-> _Analyze samples in the KGP dataset with missense variants located at the 'hinge' or 'head' domains in Cohesin complex genes
-(SMC1A, SMC3, RAD21). Perform a 'co-evolution' analysis - do samples with a destabilizing mutation in the SMC1A head domain
-tend to carry a complementary variant in the SMC3 head domain that restores electrostatic compatibility (e.g., a charge swap
-from Glu->Lys in one and Lys->Glu in the other) ?_
-
-- results might be _[some](https://claude.ai/public/artifacts/ea605022-296d-446d-989f-a9e7bae5ab6b)_
 
 #### Macromolecular structural complexes
 
@@ -141,34 +97,17 @@ despite having a 'negative patch' in the tunnel that should repel RNA, do they c
 (EXOSC1, 2, 3) that widens the entrance? Use a 3D electrostatic surface map to determine if the 'healthy' cohort maintains a specific
 electrostatic gradient._
 
-- [report](https://claude.ai/public/artifacts/b8ce0f2b-6adb-4763-9be9-9c323866a691?fullscreen=true) _(Opus 4.5)_
+- _[RNA Exosome charge-swap analysis](https://claude.ai/public/artifacts/b8ce0f2b-6adb-4763-9be9-9c323866a691?fullscreen=true)_
+
+#### Structural Intolerance
+
+> _In what cardiac related genes, e.g. ion channels, variants in KGP dataset near catalytic residues or
+ligand-binding pockets show strong depletion compared to flanking residues (±20 amino acids) ?_
+   
+- [interactive visualisation](https://claude.ai/public/artifacts/e81fa694-7de5-4fed-b903-e6cb23d02dd9?fullscreen=true)
 
 
-#### Regulatory Variant Impact on Known Disease Genes
-
-> _Identify healthy individuals in the KGP dataset carrying ClinVar-validated pathogenic variants in SCN5A, KCNH2, or LDLR.
-For each carrier, conduct a cis-regulatory scan within a 70kb window to identify variants in high linkage disequilibrium
-that are statistically associated with Haplotype-Specific Expression (HSE) or Allelic Imbalance. Analyze if these secondary
-variants disrupt Transcription Factor Binding Sites (TFBS) in proximal promoters, alter uORF-mediated translation kinetics,
-or modify mRNA stability motifs in the 3'UTR. Evaluate the hypothesis that resilience is achieved through a "Transcriptional
-Damping" mechanism, where the pathogenic allele is preferentially silenced or the wild-type allele is hyper-activated,
-ensuring the total pool of functional protein remains above the critical phenotypic threshold._
-
-- SCN5A [transcriptional damping report](https://claude.ai/public/artifacts/8c470f0b-46ac-4cb4-9768-d77a95030a06?fullscreen=true) _(Opus 4.5)_
-
-- > _Building on the SCN5A damping findings, the next phase should investigate if resilience in 150 heterozygous carriers
-    is also mediated by trans-acting chaperones that stabilize the functional 50% of sodium channels. Task Statement:
-    Identify healthy SCN5A pathogenic carriers from the previous "Transcriptional Damping" cohort and perform a genome-wide
-    scan for Trans-acting Proteostatic Modifiers. Search for enrichment of gain-of-function variants or high-expression
-    eQTLs in cardiac-specific ion channel chaperones and trafficking regulators, specifically SNTA1 (Syntrophin-alpha 1),
-    GPD1L, and RANGRF (MOG1)._
-    
-    - trans-acting proteostatic modifiers [report](https://claude.ai/public/artifacts/9c4f8fbf-8fe6-4efe-a94f-4ce0ba759da4?fullscreen=true) _(Opus 4.5)_
-
-- similar study for _[KCNH2 and LDLR](https://claude.ai/public/artifacts/cae6d6bf-3f57-489d-976e-c6286983fa7a?fullscreen=true)_  _(Opus 4.5)_
-
-
-_More examples [here](./examples/README.md)_
+_[More examples](./examples/README.md)_
 
 ## Available Tools
 
