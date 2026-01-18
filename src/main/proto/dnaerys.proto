@@ -1,0 +1,1151 @@
+syntax = "proto3";
+// R1.17.2
+
+package org.dnaerys.cluster.grpc;
+
+option java_multiple_files = true;
+option java_outer_classname = "DnaerysProto";
+
+service DnaerysService {
+    rpc Health (HealthRequest) returns (HealthResponse) {}
+    rpc ClusterNodes (ClusterNodesRequest) returns (ClusterNodesResponse) {}
+
+    // dataset info
+    rpc DatasetInfo (DatasetInfoRequest) returns (DatasetInfoResponse) {}
+
+    // Variant selection
+
+    // selects variants in all samples in a single region
+    // returns stream of unique non-empty sets of unique variants
+    rpc SelectVariantsInRegion (AllelesInRegionRequest) returns (stream AllelesResponse) {}
+
+    // counts variants in all samples in a single region based on selection criteria
+    // returns # of unique variants
+    rpc CountVariantsInRegion (CountAllelesInRegionRequest) returns (CountAllelesResponse) {}
+
+    // selects variants in provided samples in a single region
+    // returns stream of unique non-empty sets of unique variants
+    rpc SelectVariantsInRegionInSamples (AllelesInRegionInSamplesRequest) returns (stream AllelesResponse) {}
+
+    // counts variants in provided samples in a single region based on selection criteria
+    // returns # of unique variants
+    rpc CountVariantsInRegionInSamples (CountAllelesInRegionInSamplesRequest) returns (CountAllelesResponse) {}
+
+    // selects variants in provided samples in a single region
+    // returns stream of unique non-empty sets of unique variants with VC stats
+    rpc SelectVariantsInRegionInSamplesWithStats (AllelesInRegionInSamplesRequest) returns (stream AllelesWithStatsResponse) {}
+
+    // Bracket Queries
+    //      selects variants in all samples in a single region
+    //      with hard requirements for alleles start and end positions
+    //      typical use case - SV
+    // see GA4GH Beacon Bracket Queries
+    //      https://docs.genomebeacons.org/variant-queries/#beacon-bracket-queries
+    // returns stream of unique non-empty sets of unique variants
+    rpc SelectVariantsInBracket (AllelesInBracketRequest) returns (stream AllelesResponse) {}
+
+    // Bracket Queries
+    //      counts variants in all samples in a single region
+    //      with hard requirements for alleles start and end positions
+    //      typical use case - SV
+    // see GA4GH Beacon Bracket Queries
+    //      https://docs.genomebeacons.org/variant-queries/#beacon-bracket-queries
+    // returns # of unique variants
+    rpc CountVariantsInBracket (CountAllelesInBracketRequest) returns (CountAllelesResponse) {}
+
+    // Bracket Queries
+    //      selects variants in provided samples in a single region
+    //      with hard requirements for alleles start and end positions
+    //      typical use case - SV
+    // see GA4GH Beacon Bracket Queries
+    //      https://docs.genomebeacons.org/variant-queries/#beacon-bracket-queries
+    // returns stream of unique non-empty sets of unique variants
+    rpc SelectVariantsInBracketInSamples (AllelesInBracketInSamplesRequest) returns (stream AllelesResponse) {}
+
+    // Bracket Queries
+    //      counts variants in provided samples in a single region
+    //      with hard requirements for alleles start and end positions
+    //      typical use case - SV
+    // see GA4GH Beacon Bracket Queries
+    //      https://docs.genomebeacons.org/variant-queries/#beacon-bracket-queries
+    // returns # of unique variants
+    rpc CountVariantsInBracketInSamples (CountAllelesInBracketInSamplesRequest) returns (CountAllelesResponse) {}
+
+    // selects variants in all samples in multiple regions
+    // regions can intersect or duplicate, returned variants are still unique and skip & limit are still obeyed
+    // returns stream of unique non-empty sets of unique variants
+    rpc SelectVariantsInMultiRegions (AllelesInMultiRegionsRequest) returns (stream AllelesResponse) {}
+
+    // counts variants in all samples in multiple regions
+    // regions can intersect or duplicate
+    // returns # of unique variants
+    rpc CountVariantsInMultiRegions (CountAllelesInMultiRegionsRequest) returns (CountAllelesResponse) {}
+
+    // selects variants in all samples in multiple regions
+    // regions can intersect or duplicate, returned variants are still unique and skip & limit are still obeyed
+    // returns stream of unique non-empty sets of unique variants with F-statistics
+    rpc SelectVariantsInMultiRegionsWithStats (AllelesInMultiRegionsRequest) returns (stream AllelesWithStatsResponse) {}
+
+    // selects variants in provided samples in multiple regions
+    // regions can intersect or duplicate, returned variants are still unique and skip & limit are still obeyed
+    // returns stream of unique non-empty sets of unique variants
+    rpc SelectVariantsInMultiRegionsInSamples (AllelesInMultiRegionsInSamplesRequest) returns (stream AllelesResponse) {}
+
+    // counts variants in provided samples in multiple regions
+    // regions can intersect or duplicate
+    // returns  # of unique variants
+    rpc CountVariantsInMultiRegionsInSamples (CountAllelesInMultiRegionsInSamplesRequest) returns (CountAllelesResponse) {}
+
+    // selects variants in provided samples in multiple regions
+    // regions can intersect or duplicate, returned variants are still unique and skip & limit are still obeyed
+    // returns stream of unique non-empty sets of unique variants with VC stats
+    rpc SelectVariantsInMultiRegionsInSamplesWithStats (AllelesInMultiRegionsInSamplesRequest) returns (stream AllelesWithStatsResponse) {}
+
+    // selects top N variants with the most significant p-value for Chi-squared test for deviation from
+    // Hardy-Weinberg Equilibrium across all variants.
+    // Autosomal + X chromosome outside PAR and biallelic SNVs only.
+    // On X chromosome outside PAR calculated according to:
+    //   "Testing for Hardy-Weinberg equilibrium at biallelic genetic markers on the X chromosome" J Graffelman, BS Weir
+    //   https://www.ncbi.nlm.nih.gov/pmc/articles/PMC4868269/
+    // selection order of variants with identical p-value is undefined
+    rpc TopNHWE (TopNHWERequest) returns (AllelesWithStatsResponse) {}
+
+    // selects top N variants with the most significant p-value in Pearson's chi-squared test
+    // with provided samples as cases and the rest of cohort as controls
+    // selection order of variants with identical p-value is undefined
+    rpc TopNchi2 (TopNchi2Request) returns (AllelesWithStatsResponse) {}
+
+    // Sample selection
+
+    // selects samples with variants in a region
+    rpc SelectSamplesInRegion (SamplesInRegionRequest) returns (SamplesResponse) {}
+
+    // counts samples with variants in a region
+    // returns  # of unique samples
+    rpc CountSamplesInRegion (SamplesInRegionRequest) returns (CountSamplesResponse) {}
+
+    // selects samples with variants in regions
+    rpc SelectSamplesInMultiRegions (SamplesInMultiRegionsRequest) returns (SamplesResponse) {}
+
+    // counts samples with variants in regions
+    // returns  # of unique samples
+    rpc CountSamplesInMultiRegions (SamplesInMultiRegionsRequest) returns (CountSamplesResponse) {}
+
+    // Variant selection by inheritance model
+
+    // naive implementation for de novo candidate variants in proband
+    // entirely based on existing GT calls, no specialised de novo variant calling pipeline is used
+    // returns stream of non-empty sets of unique variants
+    rpc SelectDeNovo (DeNovoRequest) returns (stream AllelesResponse) {}
+
+    // naive implementation for heterozygous dominant candidate variants in affected child
+    // entirely based on existing GT calls
+    // returns stream of non-empty sets of unique variants
+    rpc SelectHetDominant (HetDominantRequest) returns (stream AllelesResponse) {}
+
+    // naive implementation for homozygous recessive candidate variants in affected child
+    // entirely based on existing GT calls
+    // returns stream of non-empty sets of unique variants
+    rpc SelectHomRecessive (HomRecessiveRequest) returns (stream AllelesResponse) {}
+
+    // Polygenic risk scores
+    // PRS implements same calculations as --score in Plink
+    rpc Prs (PRSRequest) returns (PRSResponse) {}
+
+    // "reported vs observed" sex mismatch check is based on F-statistics
+    // for deviation from expected number of homozygous alleles performed
+    // on biallelic SNVs on X chromosome outside PAR. The same method is
+    // used in Hail 0.2 and Plink 1.7, parameters have similar meaning.
+    rpc SexMismatchCheck (FstatXRequest) returns (SexMismatchResponse) {}
+
+    // calculates F-statistics as in SexMismatchCheck for all samples in request,
+    // so distribution and thresholds could be evaluated
+    rpc FstatX (FstatXRequest) returns (FstatXResponse) {}
+
+    // degrees of relatedness & kinship coefficients between samples in dataset
+    //      https://www.ncbi.nlm.nih.gov/pmc/articles/PMC3025716
+    // returns all pairs or filtered by degree of relatedness
+    // can be disabled at runtime by setting "DISABLE_KINSHIP=true" env var
+    rpc Kinship (KinshipRequest) returns (KinshipResponse) {}
+
+    // degrees of relatedness & kinship coefficients between 2 samples
+    //      https://www.ncbi.nlm.nih.gov/pmc/articles/PMC3025716
+    // returns degree of relatedness
+    // can be disabled at runtime by setting "DISABLE_KINSHIP=true" env var
+    rpc KinshipDuo (KinshipDuoRequest) returns (KinshipResponse) {}
+
+    // degrees of relatedness & kinship coefficients between samples in trio
+    //      https://www.ncbi.nlm.nih.gov/pmc/articles/PMC3025716
+    // returns all pairs or filtered by degree of relatedness
+    // can be disabled at runtime by setting "DISABLE_KINSHIP_TRIO=true" env var
+    rpc KinshipTrio (KinshipTrioRequest) returns (KinshipResponse) {}
+
+    // selects samples from dataset which genetically relate to provided
+    // sample of interest up to a certain kinship degree;
+    // sample of interest is provided as a vcf in request;
+    // https://www.ncbi.nlm.nih.gov/pmc/articles/PMC3025716
+    rpc SampleKinship (SampleKinshipRequest) returns (SampleKinshipResponse) {}
+}
+
+// Requesting Health Status
+message HealthRequest {}
+
+// The response message containing Health Status
+message HealthResponse {
+    string status = 1;
+}
+
+// Requesting Active Nodes
+message ClusterNodesRequest {}
+
+// Cluster Nodes states
+message ClusterNodesResponse {
+    repeated string active_nodes = 1; // active nodes
+    repeated string inactive_nodes = 2; // all nodes in any other than "up" state
+    int32 total_nodes = 3; // total number of nodes in cluster at time of request
+    int64 elapsed_ms = 4; // time to execute, in ms; time from receiving request to sending response
+}
+
+// Dataset info
+message DatasetInfoRequest {
+    bool return_samples_names = 1; // whether to return samples names for each cohort
+}
+
+message DatasetInfoResponse {
+    repeated Cohort cohorts = 1;
+    int32 samples_total = 2; // total number of samples in dataset
+    int32 females_total = 3; // total number of female samples in dataset
+    int32 males_total = 4; // total number of male samples in dataset
+    int32 variants_total = 5; // total number of variants in dataset
+    RefAssembly assembly = 6; // dataset's reference assembly
+    bool rto = 7; // dataset is in runtime optimized mode
+    repeated PRS prs = 8; // PRS
+    string timestamp = 9; // dataset's creation timestamp
+    int32 data_format = 10; // data format version
+    string notes = 11; // notes
+    int32 rings_total = 12; // dataset's total number of rings
+    int64 elapsed_ms = 14; // time to execute, in ms; time from receiving request to sending response
+    string node_id = 15; // node which responses
+}
+
+message Cohort {
+    string cohort_name = 1; // cohort name
+    int32 samples_count = 2; // total number of samples in cohort
+    int32 female_count = 3; // number of female samples in cohort
+    int32 male_count = 4; // number of male samples in cohort
+    repeated string female_samples_names = 5; // female sample names
+    repeated string male_samples_names = 6; // male sample names
+    bool synthetic = 7; // is cohort synthetic
+}
+
+message PRS {
+    string name = 1; // polygenic risk scores name
+    string desc = 2; // polygenic risk scores description
+    int32 cardinality = 3; // number of effect alleles
+}
+
+// Variant selection
+
+/*
+ * When Annotations passed as a parameter for variant/sample selection:
+ *   relation between different annotation fields is AND;
+ *   relation between different values for the same annotation field is OR
+ */
+message Annotations {
+    // types
+    repeated VariantType variant_type = 1; // Sequence Ontology Variant classes terms
+    repeated FeatureType feature_type = 2; // VEP features
+    repeated BioType     bio_type = 3;     // VEP biotypes
+    // consequence
+    repeated Consequence consequence = 4; // Sequence Ontology variant consequences
+    repeated Impact impact = 5; // VEP impacts
+    repeated ClinSignificance clinsgn = 6; // ClinVar Clinical Significance
+    // dataset AF
+    float af_lt = 7; // select variants with dataset AF < af_lt, 0 is default & has no effect
+    float af_gt = 8; // select variants with dataset AF > af_gt, 0 is default & has no effect
+    // gnomAD AF
+    float gnomad_exomes_af_lt = 9;   // select variants with gnomADe AF < gnomad_exomes_af_lt, 0 is default & has no effect
+    float gnomad_exomes_af_gt = 10;  // select variants with gnomADe AF > gnomad_exomes_af_gt, 0 is default & has no effect
+    float gnomad_genomes_af_lt = 11; // select variants with gnomADg AF < gnomad_genomes_af_lt, 0 is default & has no effect
+    float gnomad_genomes_af_gt = 12; // select variants with gnomADg AF > gnomad_genomes_af_gt, 0 is default & has no effect
+    // scores
+    repeated SIFT sift = 13; // SIFT prediction terms
+    repeated PolyPhen polyphen = 14; // PolyPhen prediction terms
+    // CADD scores
+    // https://cadd.gs.washington.edu
+    float cadd_raw_lt = 15;   // select variants with CADD raw < cadd_raw_lt, 0 is default & has no effect
+    float cadd_raw_gt = 16;   // select variants with CADD raw > cadd_raw_gt, 0 is default & has no effect
+    float cadd_phred_lt = 17; // select variants with CADD phred < cadd_phred_lt, 0 is default & has no effect
+    float cadd_phred_gt = 18; // select variants with CADD phred > cadd_phred_gt, 0 is default & has no effect
+    // AlphaMissense
+    // https://www.science.org/doi/10.1126/science.adg7492
+    float am_score_lt = 19; // if both am_score_lt and am_class defined, am_score_lt prevail and am_class ignored
+    float am_score_gt = 20; // if both am_score_gt and am_class defined, am_score_gt prevail and am_class ignored
+    repeated AlphaMissense am_class = 21; // in use only if none of am_score* defined
+    // exclusion
+    bool biallelicOnly = 22;  // select only biallelic sites, exclude multiallelic
+    bool multiallelicOnly = 23;  // select only multiallelic sites, exclude biallelic
+    bool excludeMales = 24;   // exclude males samples from selection
+    bool excludeFemales = 25; // exclude females samples from selection
+}
+
+// Selects variants in all samples in region
+message AllelesInRegionRequest {
+    Chromosome chr = 1;
+    int32  start = 2; // 1-based region start position, inclusive
+    int32  end = 3; // 1-based region end position, inclusive
+    string ref = 4; // reference allele, optional
+    string alt = 5; // alternative allele, optional
+    bool   hom = 6; // select homozygous alleles;   NB: empty/null/false == do not select
+    bool   het = 7; // select heterozygous alleles; NB: empty/null/false == do not select
+    Annotations ann = 8; // select by annotations, optional
+    RefAssembly assembly = 9; // reference assembly, optional; default = GRCh38
+    int32  variantMinLength = 10; // minimal alt allele length; default = 0; optional
+    int32  variantMaxLength = 11; // maximal alt allele length; >= 1; default = Int32.MaxValue; optional
+    int32  skip = 12;  // skip first n variants from result from each node, <= 0 means no skip; optional
+    int32  limit = 13; // limit result to n variants from each node, <= 0 means 2^31-1 limit; optional
+}
+
+// Selects variants in all samples in a bracket
+// see https://docs.genomebeacons.org/variant-queries/#beacon-bracket-queries
+message AllelesInBracketRequest {
+    Chromosome chr = 1;
+    int32  start_min = 2; // 1-based start min position, inclusive
+    int32  start_max = 3; // 1-based start max position, inclusive
+    int32  end_min = 4; // 1-based end min position, inclusive
+    int32  end_max = 5; // 1-based end max position, inclusive
+    string ref = 6; // reference allele, optional
+    string alt = 7; // alternative allele, optional
+    bool   hom = 8; // select homozygous alleles;   NB: empty/null/false == do not select
+    bool   het = 9; // select heterozygous alleles; NB: empty/null/false == do not select
+    Annotations ann = 10; // select by annotations, optional
+    RefAssembly assembly = 11; // reference assembly, optional; default = GRCh38
+    int32  variantMinLength = 12; // minimal alt allele length; default = 0; optional
+    int32  variantMaxLength = 13; // maximal alt allele length; >= 1; default = Int32.MaxValue; optional
+    int32  skip = 14;  // skip first n variants from result from each node, <= 0 means no skip; optional
+    int32  limit = 15; // limit result to n variants from each node, <= 0 means 2^31-1 limit; optional
+}
+
+// Selects variants in provided samples in a bracket
+// see https://docs.genomebeacons.org/variant-queries/#beacon-bracket-queries
+message AllelesInBracketInSamplesRequest {
+    Chromosome chr = 1;
+    int32  start_min = 2; // 1-based start min position, inclusive
+    int32  start_max = 3; // 1-based start max position, inclusive
+    int32  end_min = 4; // 1-based end min position, inclusive
+    int32  end_max = 5; // 1-based end max position, inclusive
+    string ref = 6; // reference allele, optional
+    string alt = 7; // alternative allele, optional
+    bool   hom = 8; // select homozygous alleles;   NB: empty/null/false == do not select
+    bool   het = 9; // select heterozygous alleles; NB: empty/null/false == do not select
+    Annotations ann = 10; // select by annotations, optional
+    RefAssembly assembly = 11; // reference assembly, optional; default = GRCh38
+    int32  variantMinLength = 12; // minimal alt allele length; default = 0; optional
+    int32  variantMaxLength = 13; // maximal alt allele length; >= 1; default = Int32.MaxValue; optional
+    repeated string samples = 14; // samples names as provided during ETL
+    int32  skip = 15;  // skip first n variants from result from each node, <= 0 means no skip; optional
+    int32  limit = 16; // limit result to n variants from each node, <= 0 means 2^31-1 limit; optional
+}
+
+// Selects variants in provided samples in region
+message AllelesInRegionInSamplesRequest {
+    Chromosome chr = 1;
+    int32  start = 2; // 1-based region start position, inclusive
+    int32  end = 3; // 1-based region end position, inclusive
+    string ref = 4; // reference allele, optional
+    string alt = 5; // alternative allele, optional
+    bool   hom = 6; // select homozygous alleles;   NB: empty/null/false == do not select
+    bool   het = 7; // select heterozygous alleles; NB: empty/null/false == do not select
+    Annotations ann = 8; // select by annotations, optional
+    RefAssembly assembly = 9; // reference assembly, optional; default = GRCh38
+    repeated string samples = 10; // samples names as provided during ETL
+    int32  variantMinLength = 11; // minimal alt allele length; default = 0; optional
+    int32  variantMaxLength = 12; // maximal alt allele length; >= 1; default = Int32.MaxValue; optional
+    int32  skip = 13;  // skip first n variants from result from each node, <= 0 means no skip; optional
+    int32  limit = 14; // limit result to n variants from each node, <= 0 means 2^31-1 limit; optional
+}
+
+// Selects variants in all samples in regions
+message AllelesInMultiRegionsRequest {
+    repeated Chromosome chr = 1;
+    repeated int32  start = 2; // 1-based regions start positions, inclusive
+    repeated int32  end = 3; // 1-based regions end positions, inclusive
+    repeated string ref = 4; // reference allele for each region, if at all; optional
+    repeated string alt = 5; // alternative allele for each region, if at all; optional
+    bool   hom = 6; // select homozygous alleles;   NB: empty/null/false == do not select
+    bool   het = 7; // select heterozygous alleles; NB: empty/null/false == do not select
+    Annotations ann = 8; // select by annotations, optional
+    RefAssembly assembly = 9; // reference assembly, optional; default = GRCh38
+    int32  variantMinLength = 10; // minimal alt allele length; default = 0; optional
+    int32  variantMaxLength = 11; // maximal alt allele length; >= 1; default = Int32.MaxValue; optional
+    int32  skip = 12; // skip first n variants from result from each node, <= 0 means no skip; optional
+    int32  limit = 13; // limit result to n variants from each node, <= 0 means 2^31-1 limit; optional
+}
+
+// Selects variants in provided samples in regions
+message AllelesInMultiRegionsInSamplesRequest {
+    repeated Chromosome chr = 1;
+    repeated int32  start = 2; // 1-based regions start positions, inclusive
+    repeated int32  end = 3; // 1-based regions end positions, inclusive
+    repeated string ref = 4; // reference allele for each region, if at all; optional
+    repeated string alt = 5; // alternative allele for each region, if at all; optional
+    bool   hom = 6; // select homozygous alleles;   NB: empty/null/false == do not select
+    bool   het = 7; // select heterozygous alleles; NB: empty/null/false == do not select
+    Annotations ann = 8; // select by annotations, optional
+    RefAssembly assembly = 9; // reference assembly, optional; default = GRCh38
+    repeated string samples = 10; // samples names as provided during ETL
+    int32  variantMinLength = 11; // minimal alt allele length; default = 0; optional
+    int32  variantMaxLength = 12; // maximal alt allele length; >= 1; default = Int32.MaxValue; optional
+    int32  skip = 13;  // skip first n variants from result from each node, <= 0 means no skip; optional
+    int32  limit = 14; // limit result to n variants from each node, <= 0 means 2^31-1 limit; optional
+}
+
+
+// Set of variants in given region(s)
+message AllelesResponse {
+    repeated Variant variants = 1;
+    bool incomplete_cluster = 2; // indicates response from incomplete cluster with unreachable nodes
+    bool affected = 3; // indicates that unreachable nodes could possibly affect completeness of response
+    int64 elapsed_ms = 4; // time to execute, in ms; time from receiving request to sending response
+    int64 elapsed_db_ms = 5; // processing time in database engine, in ms
+    string node_id = 6; // node which responses
+}
+
+message Variant {
+    Chromosome chr = 1; // chromosome name in CHR_# format, e.g. CHR_2, CHR_11, CHR_X
+    int32  start = 2; // 1-based, inclusive
+    int32  end = 3;   // 1-based, inclusive = start for SNVs
+    string ref = 4;   // reference allele, in CAPITALS
+    string alt = 5;   // alternate allele, in CAPITALS
+    float  af = 6; // dataset allele frequency
+    float  ac = 7; // dataset allele count. There is some degree of uncertainty how to count heterozygous loci
+                   // in sex chromosomes in males, since the true ones exist only in PAR.
+                   // To resolve this, it is counted as 1/2 of het alleles in data outside PAR. Hence float.
+    int32  an = 8;    // dataset allele number. Doesn't count samples with missing genotypes in data, hence specific per variant.
+    int32  homc = 9;  // homozygous alleles count
+    int32  hetc = 10; // heterozygous alleles count
+    int32  misc = 11; // missing aka no-call alleles count
+    int32  homfc = 12; // homozygous alleles count in females on sex chromosomes. males counts are in homc for sex chromosomes
+    int32  hetfc = 13; // heterozygous alleles count in females on sex chromosomes. males counts are in hetc for sex chromosomes
+    int32  misfc = 14; // missing alleles count in females on sex chromosomes.
+                       // NB: # of female samples with missing GT is not defined in Runtime Optimized mode
+    float  gnomADe = 15; // gnomADe exomes AF as defined in input VCFs, = 0 if variant is not annotated
+    float  gnomADg = 16; // gnomADg genomes AF as defined in input VCFs, = 0 if variant is not annotated
+    float  cadd_raw = 17;  // CADD raw  as defined in input VCFs, = 0 if variant is not annotated
+    float  cadd_phred = 18;// CADD phred as defined in input VCFs, = 0 if variant is not annotated
+    float  am_score = 19; // AlphaMissense score as defined in am_pathogenicity CSQ field, = 0 if variant is not annotated
+    string amino_acids = 20; // amino acid substitution: HGVSp (default) or VEP's "Amino_acids" field notation (as determined in ETL), csv for multiple ENST
+    bool   biallelic = 21; // whether variant was biallelic in input VCFs
+}
+
+// Set of variants in a given region(s) with stats
+// NB: stats is empty if dataset is in Runtime Optimized mode
+message AllelesWithStatsResponse {
+    repeated VariantWithStats variants = 1;
+    bool incomplete_cluster = 2; // indicates response from incomplete cluster with unreachable nodes
+    bool affected = 3; // indicates that unreachable nodes could possibly affect completeness of response
+    int64 elapsed_ms = 4; // time to execute, in ms; time from receiving request to sending response
+    int64 elapsed_db_ms = 5; // processing time in database engine, in ms
+    string node_id = 6; // node which responses
+}
+
+message VariantWithStats {
+    Variant variant = 1;
+    // counters within virtual cohort (aka provided samples in req)
+    // NB. virtual cohort counters are empty in Runtime Optimized mode
+    float  vaf = 2;
+    float  vac = 3;
+    int32  van = 4;
+    int32  vhomc = 5;
+    int32  vhetc = 6;
+    int32  vhomfc = 7;
+    int32  vhetfc = 8;
+    // Statistics
+    // NB i. Calculated for the whole population = dataset, NOT just in sub-population = virtual cohort
+    // NB ii. All stats are empty in Runtime Optimized mode and outside function domain
+    float  phwe = 9;  // p-value for Chi-squared test for deviation from Hardy-Weinberg Equilibrium
+                      // Biallelic SNVs only on autosomal and X chromosomes. For all other variants p-value = 0.
+    float  pchi2 = 10; // p-value in Pearson's chi-squared test with provided samples as cases and the rest of cohort as controls
+    float  or = 11; // odds ratio in Pearson's chi-squared test above
+    // F-statistics
+    // https://en.wikipedia.org/wiki/F-statistics
+    // For biallelic SNVs in Autosomal and PAR only
+    // Empty for X & Y outside PAR, MT, non SNVs and in Runtime Optimized mode
+    float  ibc = 12; // F-statistics as for inbreeding coefficient
+}
+
+message TopNchi2Request {
+    int32 n = 1; // top 'n' variants to select in each node
+    repeated string samples = 2; // samples names as provided during ETL
+    bool seq = 3; // calculate sequentially in a single thread to be gentle on CPU resources;
+                  // by default calculations are performed in MT and occupy all cores available on the nodes
+}
+
+message TopNHWERequest {
+    int32 n = 1; // top 'n' variants to select in each node
+    bool seq = 2; // calculate sequentially in a single thread to be gentle on CPU resources;
+                  // by default calculations are performed in MT and occupy all cores available on the nodes
+}
+
+// Sample selection
+
+// Samples with (specific) variants in a region
+message SamplesInRegionRequest {
+    Chromosome chr = 1;
+    int32  start = 2; // 1-based region start position, inclusive
+    int32  end = 3; // 1-based region end position, inclusive
+    string ref = 4; // reference allele, optional
+    string alt = 5; // alternative allele, optional
+    bool   hom = 6; // select samples with homozygous alleles;   NB: empty/null/false == do not select
+    bool   het = 7; // select samples with heterozygous alleles; NB: empty/null/false == do not select
+    Annotations ann = 8; // select by annotations, optional
+    RefAssembly assembly = 9; // reference assembly, optional; default = GRCh38
+    int32  variantMinLength = 11; // minimal alt allele length; default = 0; optional
+    int32  variantMaxLength = 12; // maximal alt allele length; >= 1; default = Int32.MaxValue; optional
+    int32  skip = 13; // skip first n samples from result from each node, <= 0 means no skip; optional
+    int32  limit = 14; // limit result to n samples from each node, <= 0 means 2^31-1 limit; optional
+}
+
+// Selects samples with (specific) variants in region(s)
+message SamplesInMultiRegionsRequest {
+    repeated Chromosome chr = 1;
+    repeated int32  start = 2; // 1-based regions start positions, inclusive
+    repeated int32  end = 3; // 1-based regions end positions, inclusive
+    repeated string ref = 4; // reference allele for each region, if at all; optional
+    repeated string alt = 5; // alternative allele for each region, if at all; optional
+    bool   hom = 6; // select samples with homozygous alleles;   NB: empty/null/false == do not select
+    bool   het = 7; // select samples with heterozygous alleles; NB: empty/null/false == do not select
+    Annotations ann = 8; // select by annotations, optional
+    RefAssembly assembly = 9; // reference assembly, optional; default = GRCh38
+    int32  variantMinLength = 10; // minimal alt allele length; default = 0; optional
+    int32  variantMaxLength = 11; // maximal alt allele length; >= 1; default = Int32.MaxValue; optional
+    int32  skip = 12; // skip first n samples from result from each node, <= 0 means no skip; optional
+    int32  limit = 13; // limit result to n samples from each node, <= 0 means 2^31-1 limit; optional
+}
+
+// Set of samples with variants in given region(s)
+message SamplesResponse {
+    repeated string samples = 1; // sample names as provided during ETL
+    bool incomplete_cluster = 2; // indicates response from incomplete cluster with unreachable nodes
+    bool affected = 3; // indicates that unreachable nodes could possibly affect completeness of response
+    int64 elapsed_ms = 4; // time to execute, in ms; time from receiving request to sending response
+    int64 elapsed_db_ms = 5; // processing time in database engine, in ms
+    string node_id = 6; // node which responses
+}
+
+// De Novo Request
+message DeNovoRequest {
+    string parent1 = 1; // unaffected parent, sample name as provided during ETL; required
+    string parent2 = 2; // unaffected parent, sample name as provided during ETL; required
+    string proband = 3; // affected child, sample name as provided during ETL; required
+    Chromosome chr = 4; // required
+    int32  start = 5;   // 1-based region start position, inclusive; required
+    int32  end = 6;     // 1-based region end position, inclusive; required
+    string ref = 7;     // reference allele, optional
+    string alt = 8;     // alternative allele, optional
+    Annotations ann = 9;         // select by annotations, optional
+    RefAssembly assembly = 10;    // reference assembly, optional; default = GRCh38
+    int32  variantMinLength = 11;  // minimal alt allele length; default = 0; optional
+    int32  variantMaxLength = 12; // maximal alt allele length; >= 1; default = Int32.MaxValue; optional
+    int32  skip = 13;   // skip first n variants from result from each node, <= 0 means no skip; optional
+    int32  limit = 14;  // limit result to n variants from each node, <= 0 means 2^31-1 limit; optional
+}
+
+// Heterozygous Dominant Request
+message HetDominantRequest {
+    string affected_parent = 1;   // affected parent, sample name as provided during ETL; required
+    string unaffected_parent = 2; // unaffected parent, sample name as provided during ETL; required
+    string affected_child = 3;    // affected child, sample name as provided during ETL; required
+    Chromosome chr = 4;           // required
+    int32  start = 5;             // 1-based region start position, inclusive; required
+    int32  end = 6;               // 1-based region end position, inclusive; required
+    string ref = 7;               // reference allele, optional
+    string alt = 8;               // alternative allele, optional
+    Annotations ann = 9;         // select by annotations, optional
+    RefAssembly assembly = 10;    // reference assembly, optional; default = GRCh38
+    int32  variantMinLength = 11;  // minimal alt allele length; default = 0; optional
+    int32  variantMaxLength = 12; // maximal alt allele length; >= 1; default = Int32.MaxValue; optional
+    int32  skip = 13;  // skip first n variants from result from each node, <= 0 means no skip; optional
+    int32  limit = 14; // limit result to n variants from each node, <= 0 means 2^31-1 limit; optional
+}
+
+// Homozygous Recessive Request
+message HomRecessiveRequest {
+    string unaffected_parent1 = 1;// unaffected parent, sample name as provided during ETL; required
+    string unaffected_parent2 = 2;// unaffected parent, sample name as provided during ETL; required
+    string affected_child = 3;    // affected child, sample name as provided during ETL; required
+    Chromosome chr = 4;           // required
+    int32  start = 5;             // 1-based region start position, inclusive; required
+    int32  end = 6;               // 1-based region end position, inclusive; required
+    string ref = 7;               // reference allele, optional
+    string alt = 8;               // alternative allele, optional
+    Annotations ann = 9;         // select by annotations, optional
+    RefAssembly assembly = 10;    // reference assembly, optional; default = GRCh38
+    int32  variantMinLength = 11;  // minimal alt allele length; default = 0; optional
+    int32  variantMaxLength = 12; // maximal alt allele length; >= 1; default = Int32.MaxValue; optional
+    int32  skip = 13;  // skip first n variants from result from each node, <= 0 means no skip; optional
+    int32  limit = 14; // limit result to n variants from each node, <= 0 means 2^31-1 limit; optional
+}
+
+// PRS for Samples Request
+message PRSRequest {
+    string prs_name = 1; // PRS name as loaded to dataset
+    // either 'cohort_name', 'samples' or both should be provided
+    string cohort_name = 2; // calculate PRS for all samples in cohort
+    repeated string samples = 3; // calculate PRS for sample names as provided during ETL
+    bool dominant = 4; // same as 'dominant' in plink 2.*
+    bool recessive = 5; // same as 'recessive' in plink 2.*
+}
+
+// PRS for Sample Response
+message PRSResponse {
+    string prs_name = 1; // PRS name as loaded to dataset
+    repeated SampleScore sample_scores = 2; // PRS scores for samples
+    bool dominant = 3;  // indicates whether 'dominant' option was used in scores calculations
+    bool recessive = 4; // indicates whether 'recessive' option was used in scores calculations
+    int32 prs_cardinality = 5; // number of effect variants in PRS
+    bool incomplete_cluster = 6; // indicates response from incomplete cluster with unreachable nodes
+    int64 elapsed_ms = 7; // time to execute, in ms; time from receiving request to sending response
+    int64 elapsed_db_ms = 8; // processing time in database engine, in ms
+    string node_id = 9; // node which responses
+}
+
+message SampleScore {
+    string sample = 1; // sample name as provided during ETL
+    float scores_sum = 2; // summary of scores in sample, equals to 'sum' mode in plink's '--score'
+    int32 hethom_cardinality = 3; // number of effect alleles contributed to scores_sum in this sample
+                                  // = number of effect alleles in sample with het or hom genotypes
+    int32 ref_cardinality = 4; // number of effect alleles in sample with ref genotypes;
+                               // for datasets in optimized mode it's < 0 as they miss ref/missing gt data
+                               // and for them the metric just reflects the number of nodes replied.
+                               // see https://dnaerys.org/#doc/#runtime-optimization
+    int32 mis_cardinality = 5; // number of effect alleles in sample with missing genotypes
+                               // for datasets in optimized mode it's = 0 as they miss ref/missing gt data
+    float imputed_sum = 6; // summary of imputed scores for missing alleles in sample, i.e. SNP scores * estimated weights
+                           // with estimated gt weights = gnomAD AF * 2
+                           // equals to default mode in plink's '--score' when combined with 'scores_sum';
+                           // for datasets in optimized mode it's = 0 as they miss ref/missing gt data
+}
+
+message FstatXRequest {
+    // either 'cohort_name', 'samples' or both should be provided
+    string cohort_name = 1;      // report sample sex mismatch for all samples in cohort
+    repeated string samples = 2; // report sample sex mismatch for given sample names
+    // optional
+    float aaf_threshold = 3; // [0,1] consider only alleles with 'aaf_threshold < aaf < 1 - aaf_threshold'; default = 0
+    float female_threshold = 4; // samples called females if F < female_threshold; default = 0.7; ignored in FstatX calls
+    float male_threshold = 5;   // samples called males if F > male_threshold; default = 0.7; ignored in FstatX calls
+    bool include_par = 6; // PAR are excluded by default, this option includes them when true
+    bool seq = 7; // calculate sequentially in a single thread to be gentle on CPU resources;
+                  // by default calculations are performed in MT and occupy all cores available on the nodes with X data
+}
+
+message SexMismatchResponse {
+    repeated SampleStat mismatch_males = 1;   // samples with reported male sex (reported during ETL) and observed female sex
+    repeated SampleStat mismatch_females = 2; // samples with reported female sex (reported during ETL) and observed male sex
+    bool incomplete_cluster = 3; // indicates response from incomplete cluster with unreachable nodes
+    int64 elapsed_ms = 4; // time to execute, in ms; time from receiving request to sending response
+    int64 elapsed_db_ms = 5; // processing time in database engine, in ms
+    string node_id = 6; // node which responses
+}
+
+message SampleStat {
+    string sample = 1; // sample name as provided during ETL
+    string reported_sex = 2; // sample sex as provided during ETL
+    string observed_sex = 3; // sample sex as observed
+    float f_stat = 4; // F value
+}
+
+message FstatXResponse {
+    repeated SampleStat males = 1;   // F-stats for samples with reported male sex (reported during ETL)
+    repeated SampleStat females = 2; // F-stats for samples with reported female sex (reported during ETL)
+    bool incomplete_cluster = 3; // indicates response from incomplete cluster with unreachable nodes
+    int64 elapsed_ms = 4; // time to execute, in ms; time from receiving request to sending response
+    int64 elapsed_db_ms = 5; // processing time in database engine, in ms
+    string node_id = 6; // node which responses
+}
+
+// Degrees of relatedness & kinship coefficients for all pairs(!) of samples
+// returns all pairs or filtered by degree of relatedness
+message KinshipRequest {
+    // either 'cohort_name', 'samples' or both should be provided
+    // Achtung: number of pairs in n samples = O(n^2)!
+    string cohort_name = 1; // report kinship coefficients for all possible pairs in cohort
+    repeated string samples = 2; // report kinship coefficients for all possible pairs in provided samples
+    // filtering by degree: either 'degree' or 'threshold' (or none) should be provided, but not both
+    KinshipDegree degree = 3; // report all pairs with relatedness closer or equal to 'degree'
+    float threshold = 4; // [0,0.5) report pairs with relatedness closer than threshold,
+                         // i.e. with kinship coefficient > threshold; default = 0 = return all pairs
+    bool seq = 5; // calculate sequentially in a single thread to be gentle on CPU resources;
+                  // by default calculations are performed in MT and occupy all cores available on the nodes
+}
+
+// Degree of relatedness & kinship coefficient between samples in duo
+// returns degree of relatedness
+message KinshipDuoRequest {
+    string sample1 = 1;
+    string sample2 = 2;
+    bool seq = 3; // calculate sequentially in a single thread to be gentle on CPU resources;
+                  // by default calculations are performed in MT and occupy all cores available on the nodes
+}
+
+// Degrees of relatedness & kinship coefficients for all pairs of samples in trio
+// returns all pairs or filtered by degree of relatedness
+message KinshipTrioRequest {
+    string sample1 = 1;
+    string sample2 = 2;
+    string sample3 = 3;
+    // filtering by degree: either 'degree' or 'threshold' (or none) should be provided, but not both
+    KinshipDegree degree = 4; // report all pairs with relatedness closer or equal to 'degree'
+    float threshold = 5; // [0,0.5) report pairs with relatedness closer than threshold,
+                         // i.e. with kinship coefficient > threshold; default = 0 = return all pairs
+    bool seq = 6; // calculate sequentially in a single thread to be gentle on CPU resources;
+                  // by default calculations are performed in MT and occupy all cores available on the nodes
+}
+
+message KinshipResponse {
+    repeated Relatedness rel = 1; // relatedness for pairs of samples
+    bool incomplete_cluster = 2; // indicates response from incomplete cluster with unreachable nodes
+    int64 elapsed_ms = 3; // time to execute, in ms; time from receiving request to sending response
+    int64 elapsed_db_ms = 4; // processing time in database engine, in ms
+    string node_id = 5; // node which responses
+}
+
+message Relatedness {
+    string sample1 = 1; // sample name
+    string sample2 = 2; // sample name
+    KinshipDegree degree = 3; // phi_bwf thresholds: > 0.354, (0.177, 0.354), (0.0884, 0.177), (0.0442, 0.0884), < 0.0442
+    float phi_bwf = 4; // "between-family" KING robust estimator for kinship coefficient, based on:
+                       // https://www.ncbi.nlm.nih.gov/pmc/articles/PMC3025716
+                       // https://www.kingrelatedness.com
+}
+
+message SampleKinshipRequest {
+    string sample_vcf = 1; // external sample of interest as a single sample vcf (v4.2) in a multi line text
+                           // if multi sample vcf is provided, the first sample is used
+                           // only autosomal biallelics SNVs counted (and truly diploid, i.e no missing calls on any strand)
+                           // variants are assumed to be aligned to the dataset build and be in a minimal representation
+                           // returns INVALID_ARGUMENT if none found
+    string cohort_name = 2; // search for related samples in provided cohort;
+                            // search in the whole dataset if cohort_name is not specified
+    // filtering by degree: either 'degree' or 'threshold' (or none) should be provided, but not both
+    // if none provided, default degree = THIRD_DEGREE is used
+    KinshipDegree degree = 3; // report all pairs with relatedness closer or equal to 'degree'
+    float threshold = 4; // [0,0.5) report pairs with relatedness closer than threshold,
+                         // i.e. with kinship coefficient > threshold;
+    bool seq = 5; // calculate sequentially in a single thread to be gentle on CPU resources;
+                  // by default calculations are performed in MT and occupy all cores available on the nodes
+}
+
+message SampleKinshipResponse {
+    repeated RelatednessPerSample rel = 1; // relatedness wrt sample of interest
+    int32 accepted_snvs = 2; // # of accepted valid autosomal biallelics SNVs in 'sample_vcf'
+    bool incomplete_cluster = 3; // indicates response from incomplete cluster with unreachable nodes
+    int64 elapsed_ms = 4; // time to execute, in ms; time from receiving request to sending response
+    int64 elapsed_db_ms = 5; // processing time in database engine, in ms
+    string node_id = 6; // node which responses
+}
+
+message RelatednessPerSample {
+    string sample = 1; // sample from dataset
+    KinshipDegree degree = 2; // phi_bwf thresholds: > 0.354, (0.177, 0.354), (0.0884, 0.177), (0.0442, 0.0884), < 0.0442
+    float phi_bwf = 3; // "between-family" KING robust estimator for kinship coefficient, based on:
+                       // https://www.ncbi.nlm.nih.gov/pmc/articles/PMC3025716
+                       // https://www.kingrelatedness.com
+    int32 common_loci = 4; // # of common autosomal biallelics SNV loci between 'sample_vcf' and 'sample_name';
+                           // these are the loci based on which kinship coefficient is calculated for this sample.
+                           // GTs with "no call" on any strand are ignored.
+    // GT counters used in phi_bwf calculation for this pair of samples
+    int32 nHetS1 = 5; // # Heterozygous Alt GTs in 'sample_vcf' in common loci
+    int32 nHetS2 = 6; // # Heterozygous Alt GTs in dataset sample in common loci
+    int32 nHetS1S2 = 7; // # loci where both samples are Heterozygous
+    int32 nHomOp = 8; // # loci where samples are opposite Homozygous
+}
+
+// Count selected variants in all samples in region
+message CountAllelesInRegionRequest {
+    Chromosome chr = 1;
+    int32  start = 2; // 1-based region start position, inclusive
+    int32  end = 3; // 1-based region end position, inclusive
+    string ref = 4; // reference allele, optional
+    string alt = 5; // alternative allele, optional
+    bool   hom = 6; // count homozygous alleles;   NB: empty/null/false == do not include
+    bool   het = 7; // count heterozygous alleles; NB: empty/null/false == do not include
+    Annotations ann = 8; // select by annotations, optional
+    RefAssembly assembly = 9; // reference assembly, optional; default = GRCh38
+    int32  variantMinLength = 10; // minimal alt allele length; default = 0; optional
+    int32  variantMaxLength = 11; // maximal alt allele length; >= 1; default = Int32.MaxValue; optional
+}
+
+// Counts selected variants in provided samples in region
+message CountAllelesInRegionInSamplesRequest {
+    Chromosome chr = 1;
+    int32  start = 2; // 1-based region start position, inclusive
+    int32  end = 3; // 1-based region end position, inclusive
+    string ref = 4; // reference allele, optional
+    string alt = 5; // alternative allele, optional
+    bool   hom = 6; // count homozygous alleles;   NB: empty/null/false == do not select
+    bool   het = 7; // count heterozygous alleles; NB: empty/null/false == do not select
+    Annotations ann = 8; // select by annotations, optional
+    RefAssembly assembly = 9; // reference assembly, optional; default = GRCh38
+    int32  variantMinLength = 10; // minimal alt allele length; default = 0; optional
+    int32  variantMaxLength = 11; // maximal alt allele length; >= 1; default = Int32.MaxValue; optional
+    repeated string samples = 12; // samples names as provided during ETL
+}
+
+// Counts unique variants in all samples in a bracket
+// see https://docs.genomebeacons.org/variant-queries/#beacon-bracket-queries
+message CountAllelesInBracketRequest {
+    Chromosome chr = 1;
+    int32  start_min = 2; // 1-based start min position, inclusive
+    int32  start_max = 3; // 1-based start max position, inclusive
+    int32  end_min = 4; // 1-based end min position, inclusive
+    int32  end_max = 5; // 1-based end max position, inclusive
+    string ref = 6; // reference allele, optional
+    string alt = 7; // alternative allele, optional
+    bool   hom = 8; // count homozygous alleles;   NB: empty/null/false == do not select
+    bool   het = 9; // count heterozygous alleles; NB: empty/null/false == do not select
+    Annotations ann = 10; // select by annotations, optional
+    RefAssembly assembly = 11; // reference assembly, optional; default = GRCh38
+    int32  variantMinLength = 12; // minimal alt allele length; default = 0; optional
+    int32  variantMaxLength = 13; // maximal alt allele length; >= 1; default = Int32.MaxValue; optional
+}
+
+// Counts variants in provided samples in a bracket
+// see https://docs.genomebeacons.org/variant-queries/#beacon-bracket-queries
+message CountAllelesInBracketInSamplesRequest {
+    Chromosome chr = 1;
+    int32  start_min = 2; // 1-based start min position, inclusive
+    int32  start_max = 3; // 1-based start max position, inclusive
+    int32  end_min = 4; // 1-based end min position, inclusive
+    int32  end_max = 5; // 1-based end max position, inclusive
+    string ref = 6; // reference allele, optional
+    string alt = 7; // alternative allele, optional
+    bool   hom = 8; // select homozygous alleles;   NB: empty/null/false == do not select
+    bool   het = 9; // select heterozygous alleles; NB: empty/null/false == do not select
+    Annotations ann = 10; // select by annotations, optional
+    RefAssembly assembly = 11; // reference assembly, optional; default = GRCh38
+    int32  variantMinLength = 12; // minimal alt allele length; default = 0; optional
+    int32  variantMaxLength = 13; // maximal alt allele length; >= 1; default = Int32.MaxValue; optional
+    repeated string samples = 14; // samples names as provided during ETL
+}
+
+// Counts variants in all samples in regions
+message CountAllelesInMultiRegionsRequest {
+    repeated Chromosome chr = 1;
+    repeated int32  start = 2; // 1-based regions start positions, inclusive
+    repeated int32  end = 3; // 1-based regions end positions, inclusive
+    repeated string ref = 4; // reference allele for each region, if at all; optional
+    repeated string alt = 5; // alternative allele for each region, if at all; optional
+    bool   hom = 6; // select homozygous alleles;   NB: empty/null/false == do not select
+    bool   het = 7; // select heterozygous alleles; NB: empty/null/false == do not select
+    Annotations ann = 8; // select by annotations, optional
+    RefAssembly assembly = 9; // reference assembly, optional; default = GRCh38
+    int32  variantMinLength = 10; // minimal alt allele length; default = 0; optional
+    int32  variantMaxLength = 11; // maximal alt allele length; >= 1; default = Int32.MaxValue; optional
+}
+
+// Counts variants in provided samples in regions
+message CountAllelesInMultiRegionsInSamplesRequest {
+    repeated Chromosome chr = 1;
+    repeated int32  start = 2; // 1-based regions start positions, inclusive
+    repeated int32  end = 3; // 1-based regions end positions, inclusive
+    repeated string ref = 4; // reference allele for each region, if at all; optional
+    repeated string alt = 5; // alternative allele for each region, if at all; optional
+    bool   hom = 6; // select homozygous alleles;   NB: empty/null/false == do not select
+    bool   het = 7; // select heterozygous alleles; NB: empty/null/false == do not select
+    Annotations ann = 8; // select by annotations, optional
+    RefAssembly assembly = 9; // reference assembly, optional; default = GRCh38
+    int32  variantMinLength = 10; // minimal alt allele length; default = 0; optional
+    int32  variantMaxLength = 11; // maximal alt allele length; >= 1; default = Int32.MaxValue; optional
+    repeated string samples = 12; // samples names as provided during ETL
+}
+
+message CountAllelesResponse {
+    int64 count = 1; // number of selected alleles
+    bool incomplete_cluster = 2; // indicates response from incomplete cluster with unreachable nodes
+    bool affected = 3; // indicates that unreachable nodes could possibly affect completeness of response
+    int64 elapsed_ms = 4; // time to execute, in ms; time from receiving request to sending response
+    int64 elapsed_db_ms = 5; // processing time in database engine, in ms
+    string node_id = 6; // node which responses
+}
+
+message CountSamplesResponse {
+    int32 count = 1; // number of selected samples
+    bool incomplete_cluster = 2; // indicates response from incomplete cluster with unreachable nodes
+    bool affected = 3; // indicates that unreachable nodes could possibly affect completeness of response
+    int64 elapsed_ms = 4; // time to execute, in ms; time from receiving request to sending response
+    int64 elapsed_db_ms = 5; // processing time in database engine, in ms
+    string node_id = 6; // node which responses
+}
+
+/* ------------------------------------------------------------------------------------------------------------------ */
+
+/* enums */
+
+enum RefAssembly {
+    ASSEMBLY_UNSPECIFIED = 0; // equals default GRCh38
+    GRCh37 = 1;
+    GRCh38 = 2; // default assembly
+}
+
+enum Chromosome {
+    CHROMOSOME_UNSPECIFIED = 0;
+    CHR_1  = 1;
+    CHR_2  = 2;
+    CHR_3  = 3;
+    CHR_4  = 4;
+    CHR_5  = 5;
+    CHR_6  = 6;
+    CHR_7  = 7;
+    CHR_8  = 8;
+    CHR_9  = 9;
+    CHR_10 = 10;
+    CHR_11 = 11;
+    CHR_12 = 12;
+    CHR_13 = 13;
+    CHR_14 = 14;
+    CHR_15 = 15;
+    CHR_16 = 16;
+    CHR_17 = 17;
+    CHR_18 = 18;
+    CHR_19 = 19;
+    CHR_20 = 20;
+    CHR_21 = 21;
+    CHR_22 = 22;
+    CHR_X  = 23;
+    CHR_Y  = 24;
+    CHR_MT = 25;
+}
+
+/* Annotations enums */
+
+// Sequence Ontology Variant classes terms as defined at
+// https://asia.ensembl.org/info/genome/variation/prediction/classification.html#classes
+enum VariantType {
+    VARIANTTYPE_UNSPECIFIED = 0;
+    SNV = 1;
+    INSERTION = 2;
+    DELETION = 3;
+    INDEL = 4;
+    SUBSTITUTION = 5;
+    // SV
+    INVERSION = 6;
+    TRANSLOCATION = 7;
+    DUPLICATION = 8;
+    ALU_INSERTION = 9;
+    COMPLEX_STRUCTURAL_ALTERATION = 10;
+    COMPLEX_SUBSTITUTION = 11;
+    COPY_NUMBER_GAIN = 12;
+    COPY_NUMBER_LOSS = 13;
+    COPY_NUMBER_VARIATION = 14;
+    INTERCHROMOSOMAL_BREAKPOINT = 15;
+    INTERCHROMOSOMAL_TRANSLOCATION = 16;
+    INTRACHROMOSOMAL_BREAKPOINT = 17;
+    INTRACHROMOSOMAL_TRANSLOCATION = 18;
+    LOSS_OF_HETEROZYGOSITY = 19;
+    MOBILE_ELEMENT_DELETION = 20;
+    MOBILE_ELEMENT_INSERTION = 21;
+    NOVEL_SEQUENCE_INSERTION = 22;
+    SHORT_TANDEM_REPEAT_VARIATION = 23;
+    TANDEM_DUPLICATION = 24;
+    PROBE = 25;
+    ALU_DELETION = 26;
+    HERV_DELETION = 27;
+    HERV_INSERTION = 28;
+    LINE1_DELETION = 29;
+    LINE1_INSERTION = 30;
+    SVA_DELETION = 31;
+    SVA_INSERTION = 32;
+    COMPLEX_CHROMOSOMAL_REARRANGEMENT = 33;
+    SEQUENCE_ALTERATION = 34;
+}
+
+// VEP type of feature
+enum FeatureType {
+    FEATURETYPE_UNSPECIFIED = 0;
+    TRANSCRIPT = 1;
+    REGULATORYFEATURE = 2;
+    MOTIFFEATURE = 3;
+}
+
+// VEP Biotypes
+// CSQ BIOTYPE is reused for Transcript & RegulatoryFeature
+//      Transcript BIOTYPE values - https://asia.ensembl.org/info/genome/genebuild/biotypes.html
+enum BioType {
+    // Transcript values
+    BIOTYPE_UNSPECIFIED = 0;
+    PROCESSED_TRANSCRIPT = 1;
+
+    LNCRNA = 2;
+    ANTISENSE = 3;
+    MACRO_LNCRNA = 4;
+    NON_CODING = 5;
+    RETAINED_INTRON = 6;
+    SENSE_INTRONIC = 7;
+    SENSE_OVERLAPPING = 8;
+    LINCRNA = 9;
+    NCRNA = 10;
+    MIRNA = 11;
+    MISCRNA = 12;
+    PIRNA = 13;
+    RRNA = 14;
+    SIRNA = 15;
+    SNRNA = 16;
+    SNORNA = 17;
+    TRNA = 18;
+    VAULTRNA = 19;
+
+    PROTEIN_CODING = 20;
+
+    PSEUDOGENE = 21;
+    IG_PSEUDOGENE = 22;
+    POLYMORPHIC_PSEUDOGENE = 23;
+    PROCESSED_PSEUDOGENE = 24;
+    TRANSCRIBED_PSEUDOGENE = 25;
+    TRANSLATED_PSEUDOGENE = 26;
+    UNITARY_PSEUDOGENE = 27;
+    UNPROCESSED_PSEUDOGENE = 28;
+
+    READTHROUGH = 29;
+    STOP_CODON_READTHROUGH = 30;
+    TEC = 31;
+
+    TR_GENE = 32;
+    TR_C_GENE = 33;
+    TR_D_GENE = 34;
+    TR_J_GENE = 35;
+    TR_V_GENE = 36;
+
+    IG_GENE = 37;
+    IG_C_GENE = 38;
+    IG_D_GENE = 39;
+    IG_J_GENE = 40;
+    IG_V_GENE = 41;
+
+    NONSENSE_MEDIATED_DECAY = 42;
+
+    // RegulatoryFeature values
+    PROMOTER = 43;
+    PROMOTER_FLANKING_REGION = 44;
+    ENHANCER = 45;
+    CTCF_BINDING_SITE = 46;
+    OPEN_CHROMATIN_REGION = 47;
+}
+
+// Sequence Ontology variant consequences
+// https://asia.ensembl.org/info/genome/variation/prediction/predicted_data.html#consequences
+enum Consequence {
+    CONSEQUENCE_UNSPECIFIED = 0;
+    TRANSCRIPT_ABLATION = 1;
+    SPLICE_ACCEPTOR_VARIANT = 2;
+    SPLICE_DONOR_VARIANT = 3;
+    STOP_GAINED = 4;
+    FRAMESHIFT_VARIANT = 5;
+    STOP_LOST = 6;
+    START_LOST = 7;
+    TRANSCRIPT_AMPLIFICATION = 8;
+    INFRAME_INSERTION = 9;
+    INFRAME_DELETION = 10;
+    MISSENSE_VARIANT = 11;
+    PROTEIN_ALTERING_VARIANT = 12;
+    SPLICE_REGION_VARIANT = 13;
+    INCOMPLETE_TERMINAL_CODON_VARIANT = 14;
+    START_RETAINED_VARIANT = 15;
+    STOP_RETAINED_VARIANT = 16;
+    SYNONYMOUS_VARIANT = 17;
+    CODING_SEQUENCE_VARIANT = 18;
+    MATURE_MIRNA_VARIANT = 19;
+    FIVE_PRIME_UTR_VARIANT = 20;
+    THREE_PRIME_UTR_VARIANT = 21;
+    NON_CODING_TRANSCRIPT_EXON_VARIANT = 22;
+    INTRON_VARIANT = 23;
+    NMD_TRANSCRIPT_VARIANT = 24;
+    NON_CODING_TRANSCRIPT_VARIANT = 25;
+    UPSTREAM_GENE_VARIANT = 26;
+    DOWNSTREAM_GENE_VARIANT = 27;
+    TFBS_ABLATION = 28;
+    TFBS_AMPLIFICATION = 29;
+    TF_BINDING_SITE_VARIANT = 30;
+    REGULATORY_REGION_ABLATION = 31;
+    REGULATORY_REGION_AMPLIFICATION = 32;
+    FEATURE_ELONGATION = 33;
+    REGULATORY_REGION_VARIANT = 34;
+    FEATURE_TRUNCATION = 35;
+    INTERGENIC_VARIANT = 36;
+    SPLICE_POLYPYRIMIDINE_TRACT_VARIANT = 37;
+    SPLICE_DONOR_5TH_BASE_VARIANT = 38;
+    SPLICE_DONOR_REGION_VARIANT = 39;
+    CODING_TRANSCRIPT_VARIANT = 40;
+    SEQUENCE_VARIANT = 41;
+}
+
+// VEP impact of consequence type
+// https://asia.ensembl.org/info/genome/variation/prediction/predicted_data.html#consequences
+enum Impact {
+    IMPACT_UNSPECIFIED = 0;
+    HIGH = 1;
+    MODERATE = 2;
+    LOW = 3;
+    MODIFIER = 4;
+}
+
+// SIFT prediction terms
+// https://sift.bii.a-star.edu.sg/
+enum SIFT {
+    SIFT_UNSPECIFIED = 0;
+    TOLERATED = 1;
+    DELETERIOUS = 2;
+}
+
+// PolyPhen prediction terms
+enum PolyPhen {
+    POLYPHEN_UNSPECIFIED = 0;
+    BENIGN = 1;
+    POSSIBLY_DAMAGING = 2;
+    PROBABLY_DAMAGING = 3;
+    UNKNOWN = 4;
+}
+
+// ClinVar Clinical Significance
+// https://www.ncbi.nlm.nih.gov/clinvar/docs/clinsig/
+enum ClinSignificance {
+    CLNSIG_UNSPECIFIED = 0;
+    CLNSIG_BENIGN = 1;
+    LIKELY_BENIGN = 2;
+    UNCERTAIN_SIGNIFICANCE = 3;
+    LIKELY_PATHOGENIC = 4;
+    PATHOGENIC = 5;
+    DRUG_RESPONSE = 6;
+    ASSOCIATION = 7;
+    RISK_FACTOR = 8;
+    PROTECTIVE = 9;
+    AFFECTS = 10;
+    CONFERS_SENSITIVITY = 11;
+    CONFLICTING_INTERPRETATIONS = 12;
+    NOT_PROVIDED = 13;
+    OTHER = 14;
+    LIKELY_PATHOGENIC_LOW_PENETRANCE = 15;
+    PATHOGENIC_LOW_PENETRANCE = 16;
+    UNCERTAIN_RISK_ALLELE = 17;
+    LIKELY_RISK_ALLELE = 18;
+    ESTABLISHED_RISK_ALLELE = 19;
+}
+
+// AlphaMissense class
+// https://www.science.org/doi/10.1126/science.adg7492
+enum AlphaMissense {
+    AM_UNSPECIFIED = 0;
+    AM_LIKELY_BENIGN = 1;      // alphamissense_pathogenicity < 0.34
+    AM_LIKELY_PATHOGENIC = 2;  // alphamissense_pathogenicity > 0.564
+    AM_AMBIGUOUS = 3;          // otherwise
+}
+
+enum KinshipDegree {
+    KINSHIP_UNSPECIFIED = 0;
+    TWINS_MONOZYGOTIC = 1;
+    FIRST_DEGREE = 2;
+    SECOND_DEGREE = 3;
+    THIRD_DEGREE = 4;
+    UNRELATED = 5;
+}
