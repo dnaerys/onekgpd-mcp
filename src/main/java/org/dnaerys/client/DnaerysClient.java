@@ -23,9 +23,6 @@ import java.util.stream.Stream;
 
 import org.dnaerys.cluster.grpc.*;
 import org.dnaerys.client.entity.*;
-import org.dnaerys.util.JsonUtil;
-
-import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 
 public class DnaerysClient {
 
@@ -34,12 +31,7 @@ public class DnaerysClient {
 
     public enum Gender { MALE, FEMALE, BOTH }
 
-    // Essential fields only
-    @JsonPropertyOrder({ "chr", "pos", "ref", "alt", "AF", "AC", "AN", "het", "hom", "gnomADe", "gnomADg", "AlphaMissense", "HGVSp" })
-    private record VariantView(String chr, int pos, String ref, String alt, float AF, int AC, int AN, int het, int hom,
-                               float gnomADe, float gnomADg, float AlphaMissense, String HGVSp) {}
-
-    public record SampleCounts(long total, long male, long female) {}
+    public record SampleCounts(int total, int male, int female) {}
 
     Annotations composeAnnotations(Float afLessThan, Float afGreaterThan,
                                    Float gnomadAfGenLessThan, Float gnomadAfGenGreaterThan,
@@ -194,13 +186,13 @@ public class DnaerysClient {
                 response.getMalesTotal(),
                 response.getFemalesTotal()
             );
-        } catch (Exception e) {
+       } catch (Exception e) {
             LOGGER.log(Level.SEVERE, "Failed to retrieve sample counts", e);
-            return new SampleCounts(0L, 0L, 0L);
-        }
+            return new SampleCounts(0, 0, 0);
+       }
     }
 
-    public String getSampleIds(Gender gender) {
+    public List<String> getSampleIds(Gender gender) {
         try {
             GrpcChannel channel = GrpcChannel.getInstance();
             DatasetInfoRequest request = DatasetInfoRequest.newBuilder()
@@ -220,10 +212,10 @@ public class DnaerysClient {
                 })
                 .toList();
 
-            return JsonUtil.toJsonArray(result);
+            return result;
         } catch (Exception e) {
             LOGGER.log(Level.SEVERE, "Failed to retrieve sample IDs for " + gender, e);
-            return "[]";
+            return List.of();
         }
     }
 
@@ -326,7 +318,7 @@ public class DnaerysClient {
         }
     }
 
-    public String selectVariantsInRegion(
+    public List<Variant> selectVariantsInRegion(
             String chromosome, int start, int end, boolean selectHom, boolean selectHet,
             String refAllele, String altAllele, Integer varMinLength, Integer varMaxLength,
             Boolean biallelicOnly, Boolean multiallelicOnly, Boolean excludeMales, Boolean excludeFemales,
@@ -336,13 +328,13 @@ public class DnaerysClient {
             Float alphaMissenseScoreLT, Float alphaMissenseScoreGT, String clinSignificance,
             Integer skip, Integer limit) {
 
-        if (start < 0 || end < start) return "[]";
+        if (start < 0 || end < start) return List.of();
 
         int finalSkip = (skip == null || skip < 0) ? 0 : skip;
         int finalLimit = (limit == null || limit < 0 || limit > MAX_RETURNED_ITEMS) ? MAX_RETURNED_ITEMS : limit;
 
         Chromosome chr = ContigsMapping.contigName2GrpcChr(chromosome);
-        if (chr.equals(Chromosome.UNRECOGNIZED)) return "[]";
+        if (chr.equals(Chromosome.UNRECOGNIZED)) return List.of();
 
         Annotations annotations = composeAnnotations(afLessThan, afGreaterThan, gnomadAfGenLessThan, gnomadAfGenGreaterThan,
             gnomadAfExLessThan, gnomadAfExGreaterThan, impact, bioType, featureType, variantType, consequences, clinSignificance,
@@ -374,35 +366,12 @@ public class DnaerysClient {
             }
         } catch (Exception e) {
             LOGGER.log(Level.SEVERE, "gRPC Call Failed", e);
-            return "[]";
+            return List.of();
         }
-
-        if (results.isEmpty()) return "[]";
-
-        // A single String as JSON array; optimal for LLM processing
-        return JsonUtil.toJsonArray(
-            results.stream()
-                .map(v -> new VariantView(
-                    JsonUtil.mapChr(v.getChr()),
-                    v.getStart(),
-                    v.getRef(),
-                    v.getAlt(),
-                    v.getAf(),
-                    (int) v.getAc(),
-                    v.getAn(),
-                    // Counters logic: only include for autosomes to avoid misleading LLM on sex chromosomes
-                    v.getChr().getNumber() > 22 ? 0 : v.getHetc(), // counters in sex chr are split between males/females
-                    v.getChr().getNumber() > 22 ? 0 : v.getHomc(), // counters in sex chr are split between males/females
-                    v.getGnomADe(),
-                    v.getGnomADg(),
-                    v.getAmScore(),
-                    v.getAminoAcids()
-                ))
-                .toList()
-        );
+        return results;
     }
 
-    public String selectVariantsInRegionInSample(
+    public List<Variant> selectVariantsInRegionInSample(
         String chromosome, int start, int end, String sample, boolean selectHom, boolean selectHet,
         String refAllele, String altAllele, Integer varMinLength, Integer varMaxLength,
         Boolean biallelicOnly, Boolean multiallelicOnly, Boolean excludeMales, Boolean excludeFemales,
@@ -412,13 +381,13 @@ public class DnaerysClient {
         Float alphaMissenseScoreLT, Float alphaMissenseScoreGT, String clinSignificance,
         Integer skip, Integer limit) {
 
-        if (start < 0 || end < start || sample == null || sample.isEmpty()) return "[]";
+        if (start < 0 || end < start || sample == null || sample.isEmpty()) List.of();
 
         int finalSkip = (skip == null || skip < 0) ? 0 : skip;
         int finalLimit = (limit == null || limit < 0 || limit > MAX_RETURNED_ITEMS) ? MAX_RETURNED_ITEMS : limit;
 
         Chromosome chr = ContigsMapping.contigName2GrpcChr(chromosome);
-        if (chr.equals(Chromosome.UNRECOGNIZED)) return "[]";
+        if (chr.equals(Chromosome.UNRECOGNIZED)) List.of();
 
         Annotations annotations = composeAnnotations(afLessThan, afGreaterThan, gnomadAfGenLessThan, gnomadAfGenGreaterThan,
             gnomadAfExLessThan, gnomadAfExGreaterThan, impact, bioType, featureType, variantType, consequences, clinSignificance,
@@ -451,32 +420,10 @@ public class DnaerysClient {
             }
         } catch (Exception e) {
             LOGGER.log(Level.SEVERE, "gRPC Call Failed for sample: " + sample, e);
-            return "[]";
+            return List.of();
         }
 
-        if (results.isEmpty()) return "[]";
-
-        // A single String as JSON array; optimal for LLM processing
-        return JsonUtil.toJsonArray(
-            results.stream()
-                .map(v -> new VariantView(
-                    JsonUtil.mapChr(v.getChr()),
-                    v.getStart(),
-                    v.getRef(),
-                    v.getAlt(),
-                    v.getAf(),
-                    (int) v.getAc(),
-                    v.getAn(),
-                    // Counters logic: only include for autosomes to avoid misleading LLM on sex chromosomes
-                    v.getChr().getNumber() > 22 ? 0 : v.getHetc(), // counters in sex chr are split between males/females
-                    v.getChr().getNumber() > 22 ? 0 : v.getHomc(), // counters in sex chr are split between males/females
-                    v.getGnomADe(),
-                    v.getGnomADg(),
-                    v.getAmScore(),
-                    v.getAminoAcids()
-                ))
-                .toList()
-        );
+        return results;
     }
 
     public long countSamplesInRegion(
@@ -528,7 +475,7 @@ public class DnaerysClient {
         }
     }
 
-    public String selectSamplesInRegion(
+    public List<String> selectSamplesInRegion(
         String chromosome, int start, int end, boolean selectHom, boolean selectHet,
         String refAllele, String altAllele, Integer varMinLength, Integer varMaxLength,
         Boolean biallelicOnly, Boolean multiallelicOnly, Boolean excludeMales, Boolean excludeFemales,
@@ -537,10 +484,10 @@ public class DnaerysClient {
         String featureType, String variantType, String consequences, String alphaMissense,
         Float alphaMissenseScoreLT, Float alphaMissenseScoreGT, String clinSignificance) {
 
-        if (start < 0 || end < start) return "[]";
+        if (start < 0 || end < start) return List.of();
 
         Chromosome chr = ContigsMapping.contigName2GrpcChr(chromosome);
-        if (chr.equals(Chromosome.UNRECOGNIZED)) return "[]";
+        if (chr.equals(Chromosome.UNRECOGNIZED)) return List.of();
 
         int minLen = (varMinLength == null || varMinLength < 0) ? 0 : varMinLength;
         int maxLen = (varMaxLength == null || varMaxLength < 0) ? 0 : varMaxLength;
@@ -571,15 +518,15 @@ public class DnaerysClient {
         try {
             GrpcChannel channel = GrpcChannel.getInstance();
             List<String> samples = channel.getBlockingStub().selectSamplesInRegion(request).getSamplesList();
-            if (samples == null || samples.isEmpty()) return "[]";
-            return JsonUtil.toJsonArray(samples);
+            if (samples == null) return List.of();
+            return samples;
         } catch (Exception e) {
             LOGGER.log(Level.SEVERE, "Select samples gRPC call failed", e);
-            return "[]";
+            return List.of();
         }
     }
 
-    public String selectDeNovo(
+    public List<Variant> selectDeNovo(
         String parent1, String parent2, String proband, String chromosome, int start, int end,
         String refAllele, String altAllele, Integer varMinLength, Integer varMaxLength, Boolean biallelicOnly,
         Boolean multiallelicOnly, Boolean excludeMales, Boolean excludeFemales, Float afLessThan,
@@ -589,12 +536,12 @@ public class DnaerysClient {
         String clinSignificance, Integer skip, Integer limit) {
 
         if (parent1 == null || parent1.isEmpty() || parent2 == null || parent2.isEmpty() || proband == null || proband.isEmpty()) {
-            return "[]";
+            return List.of();
         }
-        if (start < 0 || end < start) return "[]";
+        if (start < 0 || end < start) return List.of();
 
         Chromosome chr = ContigsMapping.contigName2GrpcChr(chromosome);
-        if (chr.equals(Chromosome.UNRECOGNIZED)) return "[]";
+        if (chr.equals(Chromosome.UNRECOGNIZED)) return List.of();
 
         int finalSkip = (skip == null || skip < 0) ? 0 : skip;
         int finalLimit = (limit == null || limit < 0 || limit > MAX_RETURNED_ITEMS) ? MAX_RETURNED_ITEMS : limit;
@@ -638,34 +585,13 @@ public class DnaerysClient {
             }
         } catch (Exception e) {
             LOGGER.log(Level.SEVERE, "DeNovo gRPC call failed for trio: " + parent1 + ", " + parent2 + ", " + proband, e);
-            return "[]";
+            List.of();
         }
 
-        if (variants.isEmpty()) return "[]";
-
-        return JsonUtil.toJsonArray(
-            variants.stream()
-                .map(v -> new VariantView(
-                    JsonUtil.mapChr(v.getChr()),
-                    v.getStart(),
-                    v.getRef(),
-                    v.getAlt(),
-                    v.getAf(),
-                    (int) v.getAc(),
-                    v.getAn(),
-                    // Counters logic: only include for autosomes
-                    v.getChr().getNumber() > 22 ? 0 : v.getHetc(),
-                    v.getChr().getNumber() > 22 ? 0 : v.getHomc(),
-                    v.getGnomADe(),
-                    v.getGnomADg(),
-                    v.getAmScore(),
-                    v.getAminoAcids()
-                ))
-                .toList()
-        );
+        return variants;
     }
 
-    public String selectHetDominant(
+    public List<Variant> selectHetDominant(
         String affectedParent, String unaffectedParent, String proband, String chromosome,
         int start, int end, String refAllele, String altAllele, Integer varMinLength, Integer varMaxLength,
         Boolean biallelicOnly, Boolean multiallelicOnly, Boolean excludeMales, Boolean excludeFemales,
@@ -678,12 +604,12 @@ public class DnaerysClient {
         if (affectedParent == null || affectedParent.isEmpty() ||
             unaffectedParent == null || unaffectedParent.isEmpty() ||
             proband == null || proband.isEmpty()) {
-            return "[]";
+            return List.of();
         }
-        if (start < 0 || end < start) return "[]";
+        if (start < 0 || end < start) return List.of();
 
         Chromosome chr = ContigsMapping.contigName2GrpcChr(chromosome);
-        if (chr.equals(Chromosome.UNRECOGNIZED)) return "[]";
+        if (chr.equals(Chromosome.UNRECOGNIZED)) return List.of();
 
         int finalSkip = (skip == null || skip < 0) ? 0 : skip;
         int finalLimit = (limit == null || limit < 0 || limit > MAX_RETURNED_ITEMS) ? MAX_RETURNED_ITEMS : limit;
@@ -727,34 +653,13 @@ public class DnaerysClient {
             }
         } catch (Exception e) {
             LOGGER.log(Level.SEVERE, "HetDominant gRPC call failed for trio: " + affectedParent + ", " + unaffectedParent + ", " + proband, e);
-            return "[]";
+            List.of();
         }
 
-        if (variants.isEmpty()) return "[]";
-
-        return JsonUtil.toJsonArray(
-            variants.stream()
-                .map(v -> new VariantView(
-                    JsonUtil.mapChr(v.getChr()),
-                    v.getStart(),
-                    v.getRef(),
-                    v.getAlt(),
-                    v.getAf(),
-                    (int) v.getAc(),
-                    v.getAn(),
-                    // Sex chromosome counter protection logic
-                    v.getChr().getNumber() > 22 ? 0 : v.getHetc(),
-                    v.getChr().getNumber() > 22 ? 0 : v.getHomc(),
-                    v.getGnomADe(),
-                    v.getGnomADg(),
-                    v.getAmScore(),
-                    v.getAminoAcids()
-                ))
-                .toList()
-        );
+        return variants;
     }
 
-    public String selectHomRecessive(
+    public List<Variant> selectHomRecessive(
         String unaffectedParent1, String unaffectedParent2, String proband, String chromosome,
         int start, int end, String refAllele, String altAllele, Integer varMinLength, Integer varMaxLength,
         Boolean biallelicOnly, Boolean multiallelicOnly, Boolean excludeMales, Boolean excludeFemales,
@@ -767,12 +672,12 @@ public class DnaerysClient {
         if (unaffectedParent1 == null || unaffectedParent1.isEmpty() ||
             unaffectedParent2 == null || unaffectedParent2.isEmpty() ||
             proband == null || proband.isEmpty()) {
-            return "[]";
+            return List.of();
         }
-        if (start < 0 || end < start) return "[]";
+        if (start < 0 || end < start) return List.of();
 
         Chromosome chr = ContigsMapping.contigName2GrpcChr(chromosome);
-        if (chr.equals(Chromosome.UNRECOGNIZED)) return "[]";
+        if (chr.equals(Chromosome.UNRECOGNIZED)) return List.of();
 
         int finalSkip = (skip == null || skip < 0) ? 0 : skip;
         int finalLimit = (limit == null || limit < 0 || limit > MAX_RETURNED_ITEMS) ? MAX_RETURNED_ITEMS : limit;
@@ -816,30 +721,10 @@ public class DnaerysClient {
             }
         } catch (Exception e) {
             LOGGER.log(Level.SEVERE, "HomRecessive gRPC call failed for trio: " + unaffectedParent1 + ", " + unaffectedParent2 + ", " + proband, e);
-            return "[]";
+            List.of();
         }
 
-        if (variants.isEmpty()) return "[]";
-
-        return JsonUtil.toJsonArray(
-            variants.stream()
-                .map(v -> new VariantView(
-                    JsonUtil.mapChr(v.getChr()),
-                    v.getStart(),
-                    v.getRef(),
-                    v.getAlt(),
-                    v.getAf(),
-                    (int) v.getAc(),
-                    v.getAn(),
-                    v.getChr().getNumber() > 22 ? 0 : v.getHetc(),
-                    v.getChr().getNumber() > 22 ? 0 : v.getHomc(),
-                    v.getGnomADe(),
-                    v.getGnomADg(),
-                    v.getAmScore(),
-                    v.getAminoAcids()
-                ))
-                .toList()
-        );
+        return variants;
     }
 
     public String kinship(String sample1, String sample2) {
@@ -862,6 +747,7 @@ public class DnaerysClient {
         } catch (Exception e) {
             LOGGER.log(Level.SEVERE, e.getMessage(), e);
         }
+
         return ""; // default
     }
 }

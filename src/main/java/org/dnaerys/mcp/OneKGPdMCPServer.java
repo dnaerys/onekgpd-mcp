@@ -16,13 +16,18 @@
 
 package org.dnaerys.mcp;
 
-import org.dnaerys.client.DnaerysClient;
 import io.quarkiverse.mcp.server.Tool;
 import io.quarkiverse.mcp.server.ToolArg;
 import io.quarkus.logging.Log;
 import io.quarkus.runtime.Startup;
 import jakarta.enterprise.context.ApplicationScoped;
-import org.dnaerys.util.JsonUtil;
+
+import org.dnaerys.client.DnaerysClient;
+import org.dnaerys.cluster.grpc.Variant;
+import org.dnaerys.mcp.generator.*;
+
+import java.util.List;
+import java.util.Map;
 
 @SuppressWarnings("unused")
 @ApplicationScoped
@@ -140,51 +145,126 @@ public class OneKGPdMCPServer {
 
     // Dataset stats & constants
 
-    @Tool(description =
-            "Returns the total, male, and female SAMPLE COUNTS for 1000 Genomes Project\n\n" +
-            "RETURNS: JSON Object.\n" +
-            "Schema:\n" +
-                "{\n" +
-                "  \"total\": 3202,\n" +
-                "  \"male\": 1598,\n" +
-                "  \"female\": 1604\n" +
-                "}")
-    public String getSampleCounts() {
-        DnaerysClient.SampleCounts counts = client.getSampleCounts();
-        return JsonUtil.stringify(counts);
+    @Tool(
+        title = "getSampleCounts",
+        structuredContent = true,
+        annotations = @Tool.Annotations(
+            title = "getSampleCounts",
+            readOnlyHint = true,
+            destructiveHint = false, // required to override Quarkus' defaults
+            idempotentHint = true,  // required to override Quarkus' defaults
+            openWorldHint = false
+        ),
+        description =
+            "Retrieve the total, male, and female SAMPLE COUNTS for 1000 Genomes Project\n\n" +
+            "RETURNS: Refer to the Output Schema for field definitions.",
+        outputSchema = @Tool.OutputSchema(
+            from = DnaerysClient.SampleCounts.class,
+            generator = SampleCountsSchemaGenerator.class
+        )
+    )
+    public DnaerysClient.SampleCounts getSampleCounts() {
+        return client.getSampleCounts();
     }
 
-    @Tool(description =
-            "Returns ALL Sample ID in 1000 Genomes Project\n\n" +
-            "RETURNS: JSON array.")
-    public String getSampleIds() {
-        return client.getSampleIds(DnaerysClient.Gender.BOTH);
+    @Tool(
+        title = "getSampleIds",
+        structuredContent = true, // We now know this is required for Schema validation
+        annotations = @Tool.Annotations(
+            title = "getSampleIds",
+            readOnlyHint = true,
+            destructiveHint = false, // required to override Quarkus' defaults
+            idempotentHint = true,  // required to override Quarkus' defaults
+            openWorldHint = false
+        ),
+        description =
+            "Retrieve ALL Sample ID in 1000 Genomes Project\n\n" +
+            "RETURNS: Refer to the Output Schema for field definitions.",
+        outputSchema = @Tool.OutputSchema(
+            from = Map.class, // Change this to Map
+            generator = SampleIdArraySchemaGenerator.class
+        )
+    )
+    public Map<String, List<String>> getSampleIds() {
+        return Map.of("samples", client.getSampleIds(DnaerysClient.Gender.BOTH));
     }
 
-    @Tool(description =
-            "Returns all FEMALE Sample ID in 1000 Genomes Project\n\n" +
-            "RETURNS: JSON array.")
-    public String getFemaleSamplesIds() {
-        return client.getSampleIds(DnaerysClient.Gender.FEMALE);
+    @Tool(
+        title = "getFemaleSamplesIds",
+        structuredContent = true,
+        annotations = @Tool.Annotations(
+            title = "getFemaleSamplesIds",
+            readOnlyHint = true,
+            destructiveHint = false,
+            idempotentHint = true,
+            openWorldHint = false
+        ),
+        description =
+            "Retrieve all FEMALE Sample IDs in the 1000 Genomes Project\n\n" +
+            "RETURNS: Refer to the Output Schema for field definitions.",
+        outputSchema = @Tool.OutputSchema(
+            generator = SampleIdArraySchemaGenerator.class
+        )
+    )
+    public Map<String, List<String>> getFemaleSamplesIds() {
+        return Map.of("samples", client.getSampleIds(DnaerysClient.Gender.FEMALE));
     }
 
-    @Tool(description =
-            "Returns all MALE Sample ID in 1000 Genomes Project\n\n" +
-            "RETURNS: JSON array.")
-    public String getMaleSamplesIds() {
-        return client.getSampleIds(DnaerysClient.Gender.MALE);
+    @Tool(
+        title = "getMaleSamplesIds",
+        structuredContent = true,
+        annotations = @Tool.Annotations(
+            title = "getMaleSamplesIds",
+            readOnlyHint = true,
+            destructiveHint = false,
+            idempotentHint = true,
+            openWorldHint = false
+        ),
+        description =
+            "Retrieve all MALE Sample IDs in the 1000 Genomes Project\n\n" +
+            "RETURNS: Refer to the Output Schema for field definitions.",
+        outputSchema = @Tool.OutputSchema(
+            generator = SampleIdArraySchemaGenerator.class
+        )
+    )
+    public Map<String, List<String>> getMaleSamplesIds() {
+        return Map.of("samples", client.getSampleIds(DnaerysClient.Gender.MALE));
     }
 
-    @Tool(description =
-            "Returns TOTAL number of variants in 1000 Genomes Project\n\n" +
-            "RETURNS: Integer.")
-    public Long getVariantsTotal() {
-        return client.variantsTotal();
+    @Tool(
+        title = "getVariantsTotal",
+        structuredContent = true,
+        annotations = @Tool.Annotations(
+            title = "getVariantsTotal",
+            readOnlyHint = true,
+            destructiveHint = false,
+            idempotentHint = true,
+            openWorldHint = false
+        ),
+        description =
+            "Retrieve TOTAL number of variants in 1000 Genomes Project\n\n" +
+            "RETURNS: Refer to the Output Schema for field definitions.",
+        outputSchema = @Tool.OutputSchema(
+            generator = CountSchemaGenerator.class
+        )
+    )
+    public Map<String, Long> getVariantsTotal() {
+        return Map.of("count", client.variantsTotal());
     }
 
     // Count/Select Variants in Region
 
-    @Tool(description =
+    @Tool(
+        title = "countVariantsInRegion",
+        structuredContent = true,
+        annotations = @Tool.Annotations(
+            title = "countVariantsInRegion",
+            readOnlyHint = true,
+            destructiveHint = false,
+            idempotentHint = true,
+            openWorldHint = false
+        ),
+        description =
             "COUNT ALL variants (Homozygous + Heterozygous) in genomic region in 1000 Genomes.\n" +
             "Returns: Integer count of variants matching criteria.\n" +
             "Filters: REF/ALT, AF (KGP/gnomAD), VEP impact/biotype/consequences, variant type, AlphaMissense class/score, ClinVar significance.\n\n" +
@@ -203,8 +283,12 @@ public class OneKGPdMCPServer {
             "- Filters: ALL filters are combined with AND logic\n" +
             "- CSV parameters: OR logic. Example: impact='HIGH,MODERATE' returns variants with HIGH OR MODERATE impact\n\n" +
 
-            "RETURNS: Integer. 0 if no matches.")
-    public Long countVariantsInRegion(
+            "RETURNS: Refer to the Output Schema for field definitions.",
+        outputSchema = @Tool.OutputSchema(
+            generator = CountSchemaGenerator.class
+        )
+    )
+    public Map<String, Long> countVariantsInRegion(
                 @ToolArg(description = CHROMOSOME_DESC) String chromosome,
                 @ToolArg(description = START_DESC) int start,
                 @ToolArg(description = END_DESC) int end,
@@ -233,15 +317,25 @@ public class OneKGPdMCPServer {
                 @ToolArg(description = MAXLEN_DESC, required = false) Integer maxVariantLengthBp) {
         boolean selectHom = true;
         boolean selectHet = true;
-        return client.countVariantsInRegion(chromosome, start, end, selectHom, selectHet, refAllele, altAllele, minVariantLengthBp,
+        Long count = client.countVariantsInRegion(chromosome, start, end, selectHom, selectHet, refAllele, altAllele, minVariantLengthBp,
                         maxVariantLengthBp, biallelicOnly, multiallelicOnly, excludeMales, excludeFemales, afLessThan, afGreaterThan,
                         gnomadGenomeAfLessThan, gnomadGenomeAfGreaterThan, gnomadExomeAfLessThan, gnomadExomeAfGreaterThan, vepImpact,
                         vepBiotype, vepFeature, vepVariantType, vepConsequences, alphaMissenseClass, alphaMissenseScoreLessThan,
                         alphaMissenseScoreGreaterThan, clinSignificance);
+        return Map.of("count", count);
     }
 
-
-    @Tool(description =
+    @Tool(
+        title = "countHomozygousVariantsInRegion",
+        structuredContent = true,
+        annotations = @Tool.Annotations(
+            title = "countHomozygousVariantsInRegion",
+            readOnlyHint = true,
+            destructiveHint = false,
+            idempotentHint = true,
+            openWorldHint = false
+        ),
+        description =
             "COUNT HOMOZYGOUS variants ONLY (1/1 genotypes) in genomic region in 1000 Genomes.\n" +
             "Returns: Integer count of homozygous variants matching criteria.\n" +
             "Filters: REF/ALT, AF (KGP/gnomAD), VEP impact/biotype/consequences, variant type, AlphaMissense class/score, ClinVar significance.\n\n" +
@@ -260,8 +354,12 @@ public class OneKGPdMCPServer {
             "- Filters: ALL filters are combined with AND logic\n" +
             "- CSV parameters: OR logic. Example: impact='HIGH,MODERATE' returns variants with HIGH OR MODERATE impact\n\n" +
 
-            "RETURNS: Integer. 0 if no matches.")
-    public Long countHomozygousVariantsInRegion(
+            "RETURNS: Refer to the Output Schema for field definitions.",
+        outputSchema = @Tool.OutputSchema(
+            generator = CountSchemaGenerator.class
+        )
+    )
+    public Map<String, Long> countHomozygousVariantsInRegion(
                 @ToolArg(description = CHROMOSOME_DESC) String chromosome,
                 @ToolArg(description = START_DESC) int start,
                 @ToolArg(description = END_DESC) int end,
@@ -290,13 +388,24 @@ public class OneKGPdMCPServer {
                 @ToolArg(description = MAXLEN_DESC, required = false) Integer maxVariantLengthBp) {
         boolean selectHom = true;
         boolean selectHet = false;
-        return client.countVariantsInRegion(chromosome, start, end, selectHom, selectHet, refAllele, altAllele, minVariantLengthBp,
+        Long count = client.countVariantsInRegion(chromosome, start, end, selectHom, selectHet, refAllele, altAllele, minVariantLengthBp,
                         maxVariantLengthBp, biallelicOnly, multiallelicOnly, excludeMales, excludeFemales, afLessThan, afGreaterThan,
                         gnomadGenomeAfLessThan, gnomadGenomeAfGreaterThan, gnomadExomeAfLessThan, gnomadExomeAfGreaterThan, vepImpact,
                         vepBiotype, vepFeature, vepVariantType, vepConsequences, alphaMissenseClass, alphaMissenseScoreLessThan, alphaMissenseScoreGreaterThan, clinSignificance);
+        return Map.of("count", count);
     }
 
-    @Tool(description =
+    @Tool(
+        title = "countHeterozygousVariantsInRegion",
+        structuredContent = true,
+        annotations = @Tool.Annotations(
+            title = "countHeterozygousVariantsInRegion",
+            readOnlyHint = true,
+            destructiveHint = false,
+            idempotentHint = true,
+            openWorldHint = false
+        ),
+        description =
             "COUNT HETEROZYGOUS variants ONLY (0/1 genotypes) in genomic region in 1000 Genomes.\n" +
             "Returns: Integer count of heterozygous variants matching criteria.\n" +
             "Filters: REF/ALT, AF (KGP/gnomAD), VEP impact/biotype/consequences, variant type, AlphaMissense class/score, ClinVar significance.\n\n" +
@@ -315,8 +424,12 @@ public class OneKGPdMCPServer {
             "- Filters: ALL filters are combined with AND logic\n" +
             "- CSV parameters: OR logic. Example: impact='HIGH,MODERATE' returns variants with HIGH OR MODERATE impact\n\n" +
 
-            "RETURNS: Integer. 0 if no matches.")
-    public Long countHeterozygousVariantsInRegion(
+            "RETURNS: Refer to the Output Schema for field definitions.",
+        outputSchema = @Tool.OutputSchema(
+            generator = CountSchemaGenerator.class
+        )
+    )
+    public Map<String, Long> countHeterozygousVariantsInRegion(
                 @ToolArg(description = CHROMOSOME_DESC) String chromosome,
                 @ToolArg(description = START_DESC) int start,
                 @ToolArg(description = END_DESC) int end,
@@ -345,14 +458,25 @@ public class OneKGPdMCPServer {
                 @ToolArg(description = MAXLEN_DESC, required = false) Integer maxVariantLengthBp) {
         boolean selectHom = false;
         boolean selectHet = true;
-        return client.countVariantsInRegion(chromosome, start, end, selectHom, selectHet, refAllele, altAllele, minVariantLengthBp,
+        Long count = client.countVariantsInRegion(chromosome, start, end, selectHom, selectHet, refAllele, altAllele, minVariantLengthBp,
                         maxVariantLengthBp, biallelicOnly, multiallelicOnly, excludeMales, excludeFemales, afLessThan, afGreaterThan,
                         gnomadGenomeAfLessThan, gnomadGenomeAfGreaterThan, gnomadExomeAfLessThan, gnomadExomeAfGreaterThan, vepImpact,
                         vepBiotype, vepFeature, vepVariantType, vepConsequences, alphaMissenseClass, alphaMissenseScoreLessThan,
                         alphaMissenseScoreGreaterThan, clinSignificance);
+        return Map.of("count", count);
     }
 
-    @Tool(description =
+    @Tool(
+        title = "selectVariantsInRegion",
+        structuredContent = true,
+        annotations = @Tool.Annotations(
+            title = "selectVariantsInRegion",
+            readOnlyHint = true,
+            destructiveHint = false,
+            idempotentHint = true,
+            openWorldHint = false
+        ),
+        description =
             "SELECT ALL variants (Homozygous + Heterozygous) in genomic region in 1000 Genomes.\n" +
             "Returns: variants with gnomADe/gnomADg AF, AlphaMissense score, HGVSp, cohort-wide stats.\n" +
             "Filters: REF/ALT, AF (KGP/gnomAD), VEP impact/biotype/consequences, variant type, AlphaMissense class/score, ClinVar significance.\n\n" +
@@ -372,8 +496,13 @@ public class OneKGPdMCPServer {
             "- CSV parameters: OR logic. Example: impact='HIGH,MODERATE' returns variants with HIGH OR MODERATE impact\n" +
             "- Pagination: skip, limit (max=50)\n\n" +
 
-            "RETURNS: JSON array. Empty array [] if no matches. gnomADe/gnomADg fields contain gnomAD Exome/Genome AF")
-    public String selectVariantsInRegion(
+            "RETURNS: Refer to the Output Schema for field definitions. Empty array [] if no matches.",
+        outputSchema = @Tool.OutputSchema(
+            from = VariantView.class,
+            generator = VariantArraySchemaGenerator.class
+        )
+    )
+    public Map<String, List<VariantView>> selectVariantsInRegion(
                 @ToolArg(description = CHROMOSOME_DESC) String chromosome,
                 @ToolArg(description = START_DESC) int start,
                 @ToolArg(description = END_DESC) int end,
@@ -404,14 +533,31 @@ public class OneKGPdMCPServer {
                 @ToolArg(description = LIM_DESC, required = false) Integer limit) {
         boolean selectHom = true;
         boolean selectHet = true;
-        return client.selectVariantsInRegion(chromosome, start, end, selectHom, selectHet, refAllele, altAllele, minVariantLengthBp,
-            maxVariantLengthBp, biallelicOnly, multiallelicOnly, excludeMales, excludeFemales, afLessThan, afGreaterThan,
+
+        List<Variant> variants = client.selectVariantsInRegion(chromosome, start, end, selectHom, selectHet, refAllele, altAllele,
+            minVariantLengthBp, maxVariantLengthBp, biallelicOnly, multiallelicOnly, excludeMales, excludeFemales, afLessThan, afGreaterThan,
             gnomadGenomeAfLessThan, gnomadGenomeAfGreaterThan, gnomadExomeAfLessThan, gnomadExomeAfGreaterThan, vepImpact, vepBiotype,
             vepFeature, vepVariantType, vepConsequences, alphaMissenseClass, alphaMissenseScoreLessThan, alphaMissenseScoreGreaterThan,
             clinSignificance, skip, limit);
+
+        List<VariantView> vv = variants.stream()
+            .map(VariantView::fromGrpc)
+            .toList();
+
+        return Map.of("variants", vv);
     }
 
-    @Tool(description =
+    @Tool(
+        title = "selectHomozygousVariantsInRegion",
+        structuredContent = true,
+        annotations = @Tool.Annotations(
+            title = "selectHomozygousVariantsInRegion",
+            readOnlyHint = true,
+            destructiveHint = false,
+            idempotentHint = true,
+            openWorldHint = false
+        ),
+        description =
             "SELECT HOMOZYGOUS variants ONLY (1/1 genotypes) in genomic region in 1000 Genomes.\n" +
             "Returns: variants with gnomADe/gnomADg AF, AlphaMissense score, HGVSp, cohort-wide stats.\n" +
             "Filters: REF/ALT, AF (KGP/gnomAD), VEP impact/biotype/consequences, variant type, AlphaMissense class/score, ClinVar significance.\n\n" +
@@ -428,8 +574,13 @@ public class OneKGPdMCPServer {
             "- CSV parameters: OR logic. Example: impact='HIGH,MODERATE' returns variants with HIGH OR MODERATE impact\n" +
             "- Pagination: skip, limit (max=50)\n\n" +
 
-            "RETURNS: JSON array. Empty array [] if no matches. gnomADe/gnomADg fields contain gnomAD Exome/Genome AF")
-    public String selectHomozygousVariantsInRegion(
+            "RETURNS: Refer to the Output Schema for field definitions. Empty array [] if no matches.",
+        outputSchema = @Tool.OutputSchema(
+            from = VariantView.class,
+            generator = VariantArraySchemaGenerator.class
+        )
+    )
+    public Map<String, List<VariantView>> selectHomozygousVariantsInRegion(
                 @ToolArg(description = CHROMOSOME_DESC) String chromosome,
                 @ToolArg(description = START_DESC) int start,
                 @ToolArg(description = END_DESC) int end,
@@ -460,14 +611,31 @@ public class OneKGPdMCPServer {
                 @ToolArg(description = LIM_DESC, required = false) Integer limit) {
         boolean selectHom = true;
         boolean selectHet = false;
-        return client.selectVariantsInRegion(chromosome, start, end, selectHom, selectHet, refAllele, altAllele, minVariantLengthBp,
-            maxVariantLengthBp, biallelicOnly, multiallelicOnly, excludeMales, excludeFemales, afLessThan, afGreaterThan,
+
+        List<Variant> variants = client.selectVariantsInRegion(chromosome, start, end, selectHom, selectHet, refAllele, altAllele,
+            minVariantLengthBp, maxVariantLengthBp, biallelicOnly, multiallelicOnly, excludeMales, excludeFemales, afLessThan, afGreaterThan,
             gnomadGenomeAfLessThan, gnomadGenomeAfGreaterThan, gnomadExomeAfLessThan, gnomadExomeAfGreaterThan, vepImpact, vepBiotype,
             vepFeature, vepVariantType, vepConsequences, alphaMissenseClass, alphaMissenseScoreLessThan, alphaMissenseScoreGreaterThan,
             clinSignificance, skip, limit);
+
+        List<VariantView> vv = variants.stream()
+            .map(VariantView::fromGrpc)
+            .toList();
+
+        return Map.of("variants", vv);
     }
 
-    @Tool(description =
+    @Tool(
+        title = "selectHeterozygousVariantsInRegion",
+        structuredContent = true,
+        annotations = @Tool.Annotations(
+            title = "selectHeterozygousVariantsInRegion",
+            readOnlyHint = true,
+            destructiveHint = false,
+            idempotentHint = true,
+            openWorldHint = false
+        ),
+        description =
             "SELECT HETEROZYGOUS variants ONLY (0/1 genotypes) in genomic region in 1000 Genomes.\n" +
             "Returns: variants with gnomADe/gnomADg AF, AlphaMissense score, HGVSp, cohort-wide stats.\n" +
             "Filters: REF/ALT, AF (KGP/gnomAD), VEP impact/biotype/consequences, variant type, AlphaMissense class/score, ClinVar significance.\n\n" +
@@ -484,8 +652,13 @@ public class OneKGPdMCPServer {
             "- CSV parameters: OR logic. Example: impact='HIGH,MODERATE' returns variants with HIGH OR MODERATE impact\n" +
             "- Pagination: skip, limit (max=50)\n\n" +
 
-            "RETURNS: JSON array. Empty array [] if no matches. gnomADe/gnomADg fields contain gnomAD Exome/Genome AF")
-    public String selectHeterozygousVariantsInRegion(
+            "RETURNS: Refer to the Output Schema for field definitions. Empty array [] if no matches.",
+        outputSchema = @Tool.OutputSchema(
+            from = VariantView.class,
+            generator = VariantArraySchemaGenerator.class
+        )
+    )
+    public Map<String, List<VariantView>> selectHeterozygousVariantsInRegion(
                 @ToolArg(description = CHROMOSOME_DESC) String chromosome,
                 @ToolArg(description = START_DESC) int start,
                 @ToolArg(description = END_DESC) int end,
@@ -516,16 +689,33 @@ public class OneKGPdMCPServer {
                 @ToolArg(description = LIM_DESC, required = false) Integer limit) {
         boolean selectHom = false;
         boolean selectHet = true;
-        return client.selectVariantsInRegion(chromosome, start, end, selectHom, selectHet, refAllele, altAllele, minVariantLengthBp,
-            maxVariantLengthBp, biallelicOnly, multiallelicOnly, excludeMales, excludeFemales, afLessThan, afGreaterThan,
+
+        List<Variant> variants = client.selectVariantsInRegion(chromosome, start, end, selectHom, selectHet, refAllele, altAllele,
+            minVariantLengthBp, maxVariantLengthBp, biallelicOnly, multiallelicOnly, excludeMales, excludeFemales, afLessThan, afGreaterThan,
             gnomadGenomeAfLessThan, gnomadGenomeAfGreaterThan, gnomadExomeAfLessThan, gnomadExomeAfGreaterThan, vepImpact, vepBiotype,
             vepFeature, vepVariantType, vepConsequences, alphaMissenseClass, alphaMissenseScoreLessThan, alphaMissenseScoreGreaterThan,
             clinSignificance, skip, limit);
+
+        List<VariantView> vv = variants.stream()
+            .map(VariantView::fromGrpc)
+            .toList();
+
+        return Map.of("variants", vv);
     }
 
     // Count/Select Variants in Samples
 
-    @Tool(description =
+    @Tool(
+        title = "countVariantsInRegionInSample",
+        structuredContent = true,
+        annotations = @Tool.Annotations(
+            title = "countVariantsInRegionInSample",
+            readOnlyHint = true,
+            destructiveHint = false,
+            idempotentHint = true,
+            openWorldHint = false
+        ),
+        description =
             "COUNT ALL variants (Homozygous + Heterozygous) for a specific SAMPLE in genomic region in 1000 Genomes.\n" +
             "Returns: Integer count of variants matching criteria in the specified sample.\n" +
             "Filters: REF/ALT, AF (KGP/gnomAD), VEP impact/biotype/consequences, variant type, AlphaMissense class/score, ClinVar significance.\n\n" +
@@ -544,8 +734,12 @@ public class OneKGPdMCPServer {
             "- Filters: ALL filters are combined with AND logic\n" +
             "- CSV parameters: OR logic. Example: impact='HIGH,MODERATE' returns variants with HIGH OR MODERATE impact\n\n" +
 
-            "RETURNS: Integer. 0 if no matches.")
-    public Long countVariantsInRegionInSample(
+            "RETURNS: Refer to the Output Schema for field definitions.",
+        outputSchema = @Tool.OutputSchema(
+            generator = CountSchemaGenerator.class
+        )
+    )
+    public Map<String, Long> countVariantsInRegionInSample(
                 @ToolArg(description = CHROMOSOME_DESC) String chromosome,
                 @ToolArg(description = START_DESC) int start,
                 @ToolArg(description = END_DESC) int end,
@@ -575,14 +769,25 @@ public class OneKGPdMCPServer {
                 @ToolArg(description = MAXLEN_DESC, required = false) Integer maxVariantLengthBp) {
         boolean selectHom = true;
         boolean selectHet = true;
-        return client.countVariantsInRegionInSample(chromosome, start, end, sampleId, selectHom, selectHet, refAllele, altAllele,
+        Long count = client.countVariantsInRegionInSample(chromosome, start, end, sampleId, selectHom, selectHet, refAllele, altAllele,
                         minVariantLengthBp, maxVariantLengthBp, biallelicOnly, multiallelicOnly, excludeMales, excludeFemales, afLessThan,
                         afGreaterThan, gnomadGenomeAfLessThan, gnomadGenomeAfGreaterThan, gnomadExomeAfLessThan, gnomadExomeAfGreaterThan,
                         vepImpact, vepBiotype, vepFeature, vepVariantType, vepConsequences, alphaMissenseClass, alphaMissenseScoreLessThan,
                         alphaMissenseScoreGreaterThan, clinSignificance);
+        return Map.of("count", count);
     }
 
-    @Tool(description =
+    @Tool(
+        title = "countHomozygousVariantsInRegionInSample",
+        structuredContent = true,
+        annotations = @Tool.Annotations(
+            title = "countHomozygousVariantsInRegionInSample",
+            readOnlyHint = true,
+            destructiveHint = false,
+            idempotentHint = true,
+            openWorldHint = false
+        ),
+        description =
             "COUNT HOMOZYGOUS variants ONLY (1/1 genotypes) for a specific SAMPLE in genomic region in 1000 Genomes.\n" +
             "Returns: Integer count of homozygous variants matching criteria in the specified sample.\n" +
             "Filters: REF/ALT, AF (KGP/gnomAD), VEP impact/biotype/consequences, variant type, AlphaMissense class/score, ClinVar significance.\n\n" +
@@ -601,8 +806,12 @@ public class OneKGPdMCPServer {
             "- Filters: ALL filters are combined with AND logic\n" +
             "- CSV parameters: OR logic. Example: impact='HIGH,MODERATE' returns variants with HIGH OR MODERATE impact\n\n" +
 
-            "RETURNS: Integer. 0 if no matches.")
-    public Long countHomozygousVariantsInRegionInSample(
+            "RETURNS: Refer to the Output Schema for field definitions.",
+        outputSchema = @Tool.OutputSchema(
+            generator = CountSchemaGenerator.class
+        )
+    )
+    public Map<String, Long> countHomozygousVariantsInRegionInSample(
                 @ToolArg(description = CHROMOSOME_DESC) String chromosome,
                 @ToolArg(description = START_DESC) int start,
                 @ToolArg(description = END_DESC) int end,
@@ -632,14 +841,25 @@ public class OneKGPdMCPServer {
                 @ToolArg(description = MAXLEN_DESC, required = false) Integer maxVariantLengthBp) {
         boolean selectHom = true;
         boolean selectHet = false;
-        return client.countVariantsInRegionInSample(chromosome, start, end, sampleId, selectHom, selectHet, refAllele, altAllele,
+        Long count = client.countVariantsInRegionInSample(chromosome, start, end, sampleId, selectHom, selectHet, refAllele, altAllele,
                         minVariantLengthBp, maxVariantLengthBp, biallelicOnly, multiallelicOnly, excludeMales, excludeFemales, afLessThan,
                         afGreaterThan, gnomadGenomeAfLessThan, gnomadGenomeAfGreaterThan, gnomadExomeAfLessThan, gnomadExomeAfGreaterThan,
                         vepImpact, vepBiotype, vepFeature, vepVariantType, vepConsequences, alphaMissenseClass, alphaMissenseScoreLessThan,
                         alphaMissenseScoreGreaterThan, clinSignificance);
+        return Map.of("count", count);
     }
 
-    @Tool(description =
+    @Tool(
+        title = "countHeterozygousVariantsInRegionInSample",
+        structuredContent = true,
+        annotations = @Tool.Annotations(
+            title = "countHeterozygousVariantsInRegionInSample",
+            readOnlyHint = true,
+            destructiveHint = false,
+            idempotentHint = true,
+            openWorldHint = false
+        ),
+        description =
             "COUNT HETEROZYGOUS variants ONLY (0/1 genotypes) for a specific SAMPLE in genomic region in 1000 Genomes.\n" +
             "Returns: Integer count of heterozygous variants matching criteria in the specified sample.\n" +
             "Filters: REF/ALT, AF (KGP/gnomAD), VEP impact/biotype/consequences, variant type, AlphaMissense class/score, ClinVar significance.\n\n" +
@@ -658,8 +878,12 @@ public class OneKGPdMCPServer {
             "- Filters: ALL filters are combined with AND logic\n" +
             "- CSV parameters: OR logic. Example: impact='HIGH,MODERATE' returns variants with HIGH OR MODERATE impact\n\n" +
 
-            "RETURNS: Integer. 0 if no matches.")
-    public Long countHeterozygousVariantsInRegionInSample(
+            "RETURNS: Refer to the Output Schema for field definitions.",
+        outputSchema = @Tool.OutputSchema(
+            generator = CountSchemaGenerator.class
+        )
+    )
+    public Map<String, Long> countHeterozygousVariantsInRegionInSample(
                 @ToolArg(description = CHROMOSOME_DESC) String chromosome,
                 @ToolArg(description = START_DESC) int start,
                 @ToolArg(description = END_DESC) int end,
@@ -689,14 +913,25 @@ public class OneKGPdMCPServer {
                 @ToolArg(description = MAXLEN_DESC, required = false) Integer maxVariantLengthBp) {
         boolean selectHom = false;
         boolean selectHet = true;
-        return client.countVariantsInRegionInSample(chromosome, start, end, sampleId, selectHom, selectHet, refAllele, altAllele,
+        Long count = client.countVariantsInRegionInSample(chromosome, start, end, sampleId, selectHom, selectHet, refAllele, altAllele,
                         minVariantLengthBp, maxVariantLengthBp, biallelicOnly, multiallelicOnly, excludeMales, excludeFemales, afLessThan,
                         afGreaterThan, gnomadGenomeAfLessThan, gnomadGenomeAfGreaterThan, gnomadExomeAfLessThan, gnomadExomeAfGreaterThan,
                         vepImpact, vepBiotype, vepFeature, vepVariantType, vepConsequences, alphaMissenseClass, alphaMissenseScoreLessThan,
                         alphaMissenseScoreGreaterThan, clinSignificance);
+        return Map.of("count", count);
     }
 
-    @Tool(description =
+    @Tool(
+        title = "selectVariantsInRegionInSample",
+        structuredContent = true,
+        annotations = @Tool.Annotations(
+            title = "selectVariantsInRegionInSample",
+            readOnlyHint = true,
+            destructiveHint = false,
+            idempotentHint = true,
+            openWorldHint = false
+        ),
+        description =
             "SELECT ALL variants (Homozygous + Heterozygous) for a specific SAMPLE in genomic region in 1000 Genomes.\n" +
             "Returns: variants with gnomADe/gnomADg AF, AlphaMissense score, HGVSp, sample genotype.\n" +
             "Filters: REF/ALT, AF (KGP/gnomAD), VEP impact/biotype/consequences, variant type, AlphaMissense class/score, ClinVar significance.\n\n" +
@@ -716,8 +951,13 @@ public class OneKGPdMCPServer {
             "- CSV parameters: OR logic. Example: impact='HIGH,MODERATE' returns variants with HIGH OR MODERATE impact\n" +
             "- Pagination: skip, limit (max=50)\n\n" +
 
-            "RETURNS: JSON array. Empty array [] if no matches. gnomADe/gnomADg fields contain gnomAD Exome/Genome AF")
-    public String selectVariantsInRegionInSample(
+            "RETURNS: Refer to the Output Schema for field definitions. Empty array [] if no matches.",
+        outputSchema = @Tool.OutputSchema(
+            from = VariantView.class,
+            generator = VariantArraySchemaGenerator.class
+        )
+    )
+    public Map<String, List<VariantView>> selectVariantsInRegionInSample(
                 @ToolArg(description = CHROMOSOME_DESC) String chromosome,
                 @ToolArg(description = START_DESC) int start,
                 @ToolArg(description = END_DESC) int end,
@@ -749,14 +989,31 @@ public class OneKGPdMCPServer {
                 @ToolArg(description = LIM_DESC, required = false) Integer limit) {
         boolean selectHom = true;
         boolean selectHet = true;
-        return client.selectVariantsInRegionInSample(chromosome, start, end, sampleId, selectHom, selectHet, refAllele, altAllele,
+
+        List<Variant> variants = client.selectVariantsInRegionInSample(chromosome, start, end, sampleId, selectHom, selectHet, refAllele, altAllele,
                         minVariantLengthBp, maxVariantLengthBp, biallelicOnly, multiallelicOnly, excludeMales, excludeFemales, afLessThan,
                         afGreaterThan, gnomadGenomeAfLessThan, gnomadGenomeAfGreaterThan, gnomadExomeAfLessThan, gnomadExomeAfGreaterThan,
                         vepImpact, vepBiotype, vepFeature, vepVariantType, vepConsequences, alphaMissenseClass, alphaMissenseScoreLessThan,
                         alphaMissenseScoreGreaterThan, clinSignificance, skip, limit);
+
+        List<VariantView> vv = variants.stream()
+            .map(VariantView::fromGrpc)
+            .toList();
+
+        return Map.of("variants", vv);
     }
 
-    @Tool(description =
+    @Tool(
+        title = "selectHomozygousVariantsInRegionInSample",
+        structuredContent = true,
+        annotations = @Tool.Annotations(
+            title = "selectHomozygousVariantsInRegionInSample",
+            readOnlyHint = true,
+            destructiveHint = false,
+            idempotentHint = true,
+            openWorldHint = false
+        ),
+        description =
             "SELECT HOMOZYGOUS variants ONLY (1/1 genotypes) for a specific SAMPLE in genomic region in 1000 Genomes.\n" +
             "Returns: variants with gnomADe/gnomADg AF, AlphaMissense score, HGVSp, sample genotype.\n" +
             "Filters: REF/ALT, AF (KGP/gnomAD), VEP impact/biotype/consequences, variant type, AlphaMissense class/score, ClinVar significance.\n\n" +
@@ -773,8 +1030,13 @@ public class OneKGPdMCPServer {
             "- CSV parameters: OR logic. Example: impact='HIGH,MODERATE' returns variants with HIGH OR MODERATE impact\n" +
             "- Pagination: skip, limit (max=50)\n\n" +
 
-            "RETURNS: JSON array. Empty array [] if no matches. gnomADe/gnomADg fields contain gnomAD Exome/Genome AF")
-    public String selectHomozygousVariantsInRegionInSample(
+            "RETURNS: Refer to the Output Schema for field definitions. Empty array [] if no matches.",
+        outputSchema = @Tool.OutputSchema(
+            from = VariantView.class,
+            generator = VariantArraySchemaGenerator.class
+        )
+    )
+    public Map<String, List<VariantView>> selectHomozygousVariantsInRegionInSample(
                 @ToolArg(description = CHROMOSOME_DESC) String chromosome,
                 @ToolArg(description = START_DESC) int start,
                 @ToolArg(description = END_DESC) int end,
@@ -806,14 +1068,31 @@ public class OneKGPdMCPServer {
                 @ToolArg(description = LIM_DESC, required = false) Integer limit) {
         boolean selectHom = true;
         boolean selectHet = false;
-        return client.selectVariantsInRegionInSample(chromosome, start, end, sampleId, selectHom, selectHet, refAllele, altAllele,
+
+        List<Variant> variants = client.selectVariantsInRegionInSample(chromosome, start, end, sampleId, selectHom, selectHet, refAllele, altAllele,
                         minVariantLengthBp, maxVariantLengthBp, biallelicOnly, multiallelicOnly, excludeMales, excludeFemales, afLessThan,
                         afGreaterThan, gnomadGenomeAfLessThan, gnomadGenomeAfGreaterThan, gnomadExomeAfLessThan, gnomadExomeAfGreaterThan,
                         vepImpact, vepBiotype, vepFeature, vepVariantType, vepConsequences, alphaMissenseClass, alphaMissenseScoreLessThan,
                         alphaMissenseScoreGreaterThan, clinSignificance, skip, limit);
+
+        List<VariantView> vv = variants.stream()
+            .map(VariantView::fromGrpc)
+            .toList();
+
+        return Map.of("variants", vv);
     }
 
-    @Tool(description =
+    @Tool(
+        title = "selectHeterozygousVariantsInRegionInSample",
+        structuredContent = true,
+        annotations = @Tool.Annotations(
+            title = "selectHeterozygousVariantsInRegionInSample",
+            readOnlyHint = true,
+            destructiveHint = false,
+            idempotentHint = true,
+            openWorldHint = false
+        ),
+        description =
             "SELECT HETEROZYGOUS variants ONLY (0/1 genotypes) for a specific SAMPLE in genomic region in 1000 Genomes.\n" +
             "Returns: variants with gnomADe/gnomADg AF, AlphaMissense score, HGVSp, sample genotype.\n" +
             "Filters: REF/ALT, AF (KGP/gnomAD), VEP impact/biotype/consequences, variant type, AlphaMissense class/score, ClinVar significance.\n\n" +
@@ -830,8 +1109,13 @@ public class OneKGPdMCPServer {
             "- CSV parameters: OR logic. Example: impact='HIGH,MODERATE' returns variants with HIGH OR MODERATE impact\n" +
             "- Pagination: skip, limit (max=50)\n\n" +
 
-            "RETURNS: JSON array. Empty array [] if no matches. gnomADe/gnomADg fields contain gnomAD Exome/Genome AF")
-    public String selectHeterozygousVariantsInRegionInSample(
+            "RETURNS: Refer to the Output Schema for field definitions. Empty array [] if no matches.",
+        outputSchema = @Tool.OutputSchema(
+            from = VariantView.class,
+            generator = VariantArraySchemaGenerator.class
+        )
+    )
+    public Map<String, List<VariantView>> selectHeterozygousVariantsInRegionInSample(
                 @ToolArg(description = CHROMOSOME_DESC) String chromosome,
                 @ToolArg(description = START_DESC) int start,
                 @ToolArg(description = END_DESC) int end,
@@ -863,16 +1147,33 @@ public class OneKGPdMCPServer {
                 @ToolArg(description = LIM_DESC, required = false) Integer limit) {
         boolean selectHom = false;
         boolean selectHet = true;
-        return client.selectVariantsInRegionInSample(chromosome, start, end, sampleId, selectHom, selectHet, refAllele, altAllele,
+
+        List<Variant> variants = client.selectVariantsInRegionInSample(chromosome, start, end, sampleId, selectHom, selectHet, refAllele, altAllele,
                         minVariantLengthBp, maxVariantLengthBp, biallelicOnly, multiallelicOnly, excludeMales, excludeFemales, afLessThan,
                         afGreaterThan, gnomadGenomeAfLessThan, gnomadGenomeAfGreaterThan, gnomadExomeAfLessThan, gnomadExomeAfGreaterThan,
                         vepImpact, vepBiotype, vepFeature, vepVariantType, vepConsequences, alphaMissenseClass, alphaMissenseScoreLessThan,
                         alphaMissenseScoreGreaterThan, clinSignificance, skip, limit);
+
+        List<VariantView> vv = variants.stream()
+            .map(VariantView::fromGrpc)
+            .toList();
+
+        return Map.of("variants", vv);
     }
 
     // Count/Select Samples
 
-    @Tool(description =
+    @Tool(
+        title = "countSamplesWithVariants",
+        structuredContent = true,
+        annotations = @Tool.Annotations(
+            title = "countSamplesWithVariants",
+            readOnlyHint = true,
+            destructiveHint = false,
+            idempotentHint = true,
+            openWorldHint = false
+        ),
+        description =
             "COUNT SAMPLES with ANY variants (Homozygous + Heterozygous) in genomic region in 1000 Genomes.\n" +
             "Returns: Integer count of unique samples having variants matching criteria.\n" +
             "Filters: REF/ALT, AF (KGP/gnomAD), VEP impact/biotype/consequences, variant type, AlphaMissense class/score, ClinVar significance.\n\n" +
@@ -891,8 +1192,12 @@ public class OneKGPdMCPServer {
             "- Filters: ALL filters are combined with AND logic\n" +
             "- CSV parameters: OR logic. Example: impact='HIGH,MODERATE' returns variants with HIGH OR MODERATE impact\n\n" +
 
-            "RETURNS: Integer. 0 if no matches.")
-    public Long countSamplesWithVariants(
+            "RETURNS: Refer to the Output Schema for field definitions.",
+        outputSchema = @Tool.OutputSchema(
+            generator = CountSchemaGenerator.class
+        )
+    )
+    public Map<String, Long> countSamplesWithVariants(
                 @ToolArg(description = CHROMOSOME_DESC) String chromosome,
                 @ToolArg(description = START_DESC) int start,
                 @ToolArg(description = END_DESC) int end,
@@ -921,14 +1226,25 @@ public class OneKGPdMCPServer {
                 @ToolArg(description = MAXLEN_DESC, required = false) Integer maxVariantLengthBp) {
         boolean selectHom = true;
         boolean selectHet = true;
-        return client.countSamplesInRegion(chromosome, start, end, selectHom, selectHet, refAllele, altAllele, minVariantLengthBp,
+        Long count = client.countSamplesInRegion(chromosome, start, end, selectHom, selectHet, refAllele, altAllele, minVariantLengthBp,
                         maxVariantLengthBp, biallelicOnly, multiallelicOnly, excludeMales, excludeFemales, afLessThan, afGreaterThan,
                         gnomadGenomeAfLessThan, gnomadGenomeAfGreaterThan, gnomadExomeAfLessThan, gnomadExomeAfGreaterThan, vepImpact, vepBiotype,
                         vepFeature, vepVariantType, vepConsequences, alphaMissenseClass, alphaMissenseScoreLessThan, alphaMissenseScoreGreaterThan,
                         clinSignificance);
+        return Map.of("count", count);
     }
 
-    @Tool(description =
+    @Tool(
+        title = "countSamplesWithHomVariants",
+        structuredContent = true,
+        annotations = @Tool.Annotations(
+            title = "countSamplesWithHomVariants",
+            readOnlyHint = true,
+            destructiveHint = false,
+            idempotentHint = true,
+            openWorldHint = false
+        ),
+        description =
             "COUNT SAMPLES with HOMOZYGOUS variants ONLY (1/1 genotypes) in genomic region in 1000 Genomes.\n" +
             "Returns: Integer count of unique samples having homozygous variants matching criteria.\n" +
             "Filters: REF/ALT, AF (KGP/gnomAD), VEP impact/biotype/consequences, variant type, AlphaMissense class/score, ClinVar significance.\n\n" +
@@ -947,8 +1263,12 @@ public class OneKGPdMCPServer {
             "- Filters: ALL filters are combined with AND logic\n" +
             "- CSV parameters: OR logic. Example: impact='HIGH,MODERATE' returns variants with HIGH OR MODERATE impact\n\n" +
 
-            "RETURNS: Integer. 0 if no matches.")
-    public Long countSamplesWithHomVariants(
+            "RETURNS: Refer to the Output Schema for field definitions.",
+        outputSchema = @Tool.OutputSchema(
+            generator = CountSchemaGenerator.class
+        )
+    )
+    public Map<String, Long> countSamplesWithHomVariants(
                 @ToolArg(description = CHROMOSOME_DESC) String chromosome,
                 @ToolArg(description = START_DESC) int start,
                 @ToolArg(description = END_DESC) int end,
@@ -977,14 +1297,25 @@ public class OneKGPdMCPServer {
                 @ToolArg(description = MAXLEN_DESC, required = false) Integer maxVariantLengthBp) {
         boolean selectHom = true;
         boolean selectHet = false;
-        return client.countSamplesInRegion(chromosome, start, end, selectHom, selectHet, refAllele, altAllele, minVariantLengthBp,
+        Long count = client.countSamplesInRegion(chromosome, start, end, selectHom, selectHet, refAllele, altAllele, minVariantLengthBp,
                         maxVariantLengthBp, biallelicOnly, multiallelicOnly, excludeMales, excludeFemales, afLessThan, afGreaterThan,
                         gnomadGenomeAfLessThan, gnomadGenomeAfGreaterThan, gnomadExomeAfLessThan, gnomadExomeAfGreaterThan, vepImpact, vepBiotype,
                         vepFeature, vepVariantType, vepConsequences, alphaMissenseClass, alphaMissenseScoreLessThan, alphaMissenseScoreGreaterThan,
                         clinSignificance);
+        return Map.of("count", count);
     }
 
-    @Tool(description =
+    @Tool(
+        title = "countSamplesWithHetVariants",
+        structuredContent = true,
+        annotations = @Tool.Annotations(
+            title = "countSamplesWithHetVariants",
+            readOnlyHint = true,
+            destructiveHint = false,
+            idempotentHint = true,
+            openWorldHint = false
+        ),
+        description =
             "COUNT SAMPLES with HETEROZYGOUS variants ONLY (0/1 genotypes) in genomic region in 1000 Genomes.\n" +
             "Returns: Integer count of unique samples having heterozygous variants matching criteria.\n" +
             "Filters: REF/ALT, AF (KGP/gnomAD), VEP impact/biotype/consequences, variant type, AlphaMissense class/score, ClinVar significance.\n\n" +
@@ -1003,8 +1334,12 @@ public class OneKGPdMCPServer {
             "- Filters: ALL filters are combined with AND logic\n" +
             "- CSV parameters: OR logic. Example: impact='HIGH,MODERATE' returns variants with HIGH OR MODERATE impact\n\n" +
 
-            "RETURNS: Integer. 0 if no matches.")
-    public Long countSamplesWithHetVariants(
+            "RETURNS: Refer to the Output Schema for field definitions.",
+        outputSchema = @Tool.OutputSchema(
+            generator = CountSchemaGenerator.class
+        )
+    )
+    public Map<String, Long> countSamplesWithHetVariants(
                 @ToolArg(description = CHROMOSOME_DESC) String chromosome,
                 @ToolArg(description = START_DESC) int start,
                 @ToolArg(description = END_DESC) int end,
@@ -1033,14 +1368,25 @@ public class OneKGPdMCPServer {
                 @ToolArg(description = MAXLEN_DESC, required = false) Integer maxVariantLengthBp) {
         boolean selectHom = false;
         boolean selectHet = true;
-        return client.countSamplesInRegion(chromosome, start, end, selectHom, selectHet, refAllele, altAllele, minVariantLengthBp,
+        Long count = client.countSamplesInRegion(chromosome, start, end, selectHom, selectHet, refAllele, altAllele, minVariantLengthBp,
                         maxVariantLengthBp, biallelicOnly, multiallelicOnly, excludeMales, excludeFemales, afLessThan, afGreaterThan,
                         gnomadGenomeAfLessThan, gnomadGenomeAfGreaterThan, gnomadExomeAfLessThan, gnomadExomeAfGreaterThan, vepImpact, vepBiotype,
                         vepFeature, vepVariantType, vepConsequences, alphaMissenseClass, alphaMissenseScoreLessThan, alphaMissenseScoreGreaterThan,
                         clinSignificance);
+        return Map.of("count", count);
     }
 
-    @Tool(description =
+    @Tool(
+        title = "selectSamplesWithVariants",
+        structuredContent = true,
+        annotations = @Tool.Annotations(
+            title = "selectSamplesWithVariants",
+            readOnlyHint = true,
+            destructiveHint = false,
+            idempotentHint = true,
+            openWorldHint = false
+        ),
+        description =
             "SELECT SAMPLES with ANY variants (Homozygous + Heterozygous) in genomic region in 1000 Genomes.\n" +
             "Returns: unique sample IDs having variants matching criteria.\n" +
             "Filters: REF/ALT, AF (KGP/gnomAD), VEP impact/biotype/consequences, variant type, AlphaMissense class/score, ClinVar significance.\n\n" +
@@ -1059,8 +1405,12 @@ public class OneKGPdMCPServer {
             "- Filters: ALL filters are combined with AND logic\n" +
             "- CSV parameters: OR logic. Example: impact='HIGH,MODERATE' returns variants with HIGH OR MODERATE impact\n\n" +
 
-            "RETURNS: JSON array of sample IDs. Empty array [] if no matches.")
-    public String selectSamplesWithVariants(
+            "RETURNS: Refer to the Output Schema for field definitions. Empty array [] if no matches.",
+        outputSchema = @Tool.OutputSchema(
+            generator = SampleIdArraySchemaGenerator.class
+        )
+    )
+    public Map<String, List<String>> selectSamplesWithVariants(
                 @ToolArg(description = CHROMOSOME_DESC) String chromosome,
                 @ToolArg(description = START_DESC) int start,
                 @ToolArg(description = END_DESC) int end,
@@ -1089,14 +1439,25 @@ public class OneKGPdMCPServer {
                 @ToolArg(description = MAXLEN_DESC, required = false) Integer maxVariantLengthBp) {
         boolean selectHom = true;
         boolean selectHet = true;
-        return client.selectSamplesInRegion(chromosome, start, end, selectHom, selectHet, refAllele, altAllele, minVariantLengthBp,
+        List<String> samples = client.selectSamplesInRegion(chromosome, start, end, selectHom, selectHet, refAllele, altAllele, minVariantLengthBp,
                         maxVariantLengthBp, biallelicOnly, multiallelicOnly, excludeMales, excludeFemales, afLessThan, afGreaterThan,
                         gnomadGenomeAfLessThan, gnomadGenomeAfGreaterThan, gnomadExomeAfLessThan, gnomadExomeAfGreaterThan, vepImpact, vepBiotype,
                         vepFeature, vepVariantType, vepConsequences, alphaMissenseClass, alphaMissenseScoreLessThan, alphaMissenseScoreGreaterThan,
                         clinSignificance);
+        return Map.of("samples", samples);
     }
 
-    @Tool(description =
+    @Tool(
+        title = "selectSamplesWithHomVariants",
+        structuredContent = true,
+        annotations = @Tool.Annotations(
+            title = "selectSamplesWithHomVariants",
+            readOnlyHint = true,
+            destructiveHint = false,
+            idempotentHint = true,
+            openWorldHint = false
+        ),
+        description =
             "SELECT SAMPLES with HOMOZYGOUS variants ONLY (1/1 genotypes) in genomic region in 1000 Genomes.\n" +
             "Returns: unique sample IDs having homozygous variants matching criteria.\n" +
             "Filters: REF/ALT, AF (KGP/gnomAD), VEP impact/biotype/consequences, variant type, AlphaMissense class/score, ClinVar significance.\n\n" +
@@ -1112,8 +1473,12 @@ public class OneKGPdMCPServer {
             "- Filters: ALL filters are combined with AND logic\n" +
             "- CSV parameters: OR logic. Example: impact='HIGH,MODERATE' returns variants with HIGH OR MODERATE impact\n\n" +
 
-            "RETURNS: JSON array of sample IDs. Empty array [] if no matches.")
-    public String selectSamplesWithHomVariants(
+            "RETURNS: Refer to the Output Schema for field definitions. Empty array [] if no matches.",
+        outputSchema = @Tool.OutputSchema(
+            generator = SampleIdArraySchemaGenerator.class
+        )
+    )
+    public Map<String, List<String>> selectSamplesWithHomVariants(
                 @ToolArg(description = CHROMOSOME_DESC) String chromosome,
                 @ToolArg(description = START_DESC) int start,
                 @ToolArg(description = END_DESC) int end,
@@ -1142,14 +1507,25 @@ public class OneKGPdMCPServer {
                 @ToolArg(description = MAXLEN_DESC, required = false) Integer maxVariantLengthBp) {
         boolean selectHom = true;
         boolean selectHet = false;
-        return client.selectSamplesInRegion(chromosome, start, end, selectHom, selectHet, refAllele, altAllele, minVariantLengthBp,
+        List<String> samples = client.selectSamplesInRegion(chromosome, start, end, selectHom, selectHet, refAllele, altAllele, minVariantLengthBp,
                         maxVariantLengthBp, biallelicOnly, multiallelicOnly, excludeMales, excludeFemales, afLessThan, afGreaterThan,
                         gnomadGenomeAfLessThan, gnomadGenomeAfGreaterThan, gnomadExomeAfLessThan, gnomadExomeAfGreaterThan, vepImpact, vepBiotype,
                         vepFeature, vepVariantType, vepConsequences, alphaMissenseClass, alphaMissenseScoreLessThan, alphaMissenseScoreGreaterThan,
                         clinSignificance);
+        return Map.of("samples", samples);
     }
 
-    @Tool(description =
+    @Tool(
+        title = "selectSamplesWithHetVariants",
+        structuredContent = true,
+        annotations = @Tool.Annotations(
+            title = "selectSamplesWithHetVariants",
+            readOnlyHint = true,
+            destructiveHint = false,
+            idempotentHint = true,
+            openWorldHint = false
+        ),
+        description =
             "SELECT SAMPLES with HETEROZYGOUS variants ONLY (0/1 genotypes) in genomic region in 1000 Genomes.\n" +
             "Returns: unique sample IDs having heterozygous variants matching criteria.\n" +
             "Filters: REF/ALT, AF (KGP/gnomAD), VEP impact/biotype/consequences, variant type, AlphaMissense class/score, ClinVar significance.\n\n" +
@@ -1165,8 +1541,12 @@ public class OneKGPdMCPServer {
             "- Filters: ALL filters are combined with AND logic\n" +
             "- CSV parameters: OR logic. Example: impact='HIGH,MODERATE' returns variants with HIGH OR MODERATE impact\n\n" +
 
-            "RETURNS: JSON array of sample IDs. Empty array [] if no matches.")
-    public String selectSamplesWithHetVariants(
+            "RETURNS: Refer to the Output Schema for field definitions. Empty array [] if no matches.",
+        outputSchema = @Tool.OutputSchema(
+            generator = SampleIdArraySchemaGenerator.class
+        )
+    )
+    public Map<String, List<String>> selectSamplesWithHetVariants(
                 @ToolArg(description = CHROMOSOME_DESC) String chromosome,
                 @ToolArg(description = START_DESC) int start,
                 @ToolArg(description = END_DESC) int end,
@@ -1195,14 +1575,25 @@ public class OneKGPdMCPServer {
                 @ToolArg(description = MAXLEN_DESC, required = false) Integer maxVariantLengthBp) {
         boolean selectHom = false;
         boolean selectHet = true;
-        return client.selectSamplesInRegion(chromosome, start, end, selectHom, selectHet, refAllele, altAllele,
+        List<String> samples = client.selectSamplesInRegion(chromosome, start, end, selectHom, selectHet, refAllele, altAllele,
                         minVariantLengthBp, maxVariantLengthBp, biallelicOnly, multiallelicOnly, excludeMales, excludeFemales, afLessThan,
                         afGreaterThan, gnomadGenomeAfLessThan, gnomadGenomeAfGreaterThan, gnomadExomeAfLessThan, gnomadExomeAfGreaterThan,
                         vepImpact, vepBiotype, vepFeature, vepVariantType, vepConsequences, alphaMissenseClass, alphaMissenseScoreLessThan,
                         alphaMissenseScoreGreaterThan, clinSignificance);
+        return Map.of("samples", samples);
     }
 
-    @Tool(description =
+    @Tool(
+        title = "deNovoInTrio",
+        structuredContent = true,
+        annotations = @Tool.Annotations(
+            title = "deNovoInTrio",
+            readOnlyHint = true,
+            destructiveHint = false,
+            idempotentHint = true,
+            openWorldHint = false
+        ),
+        description =
             "SELECT DE NOVO variants in proband from a trio analysis in 1000 Genomes.\n" +
             "Returns: variants present in proband but absent in both parents (new mutations).\n" +
             "Filters: REF/ALT, AF (KGP/gnomAD), VEP impact/biotype/consequences, variant type, AlphaMissense class/score, ClinVar significance.\n\n" +
@@ -1219,8 +1610,13 @@ public class OneKGPdMCPServer {
             "- CSV parameters: OR logic. Example: impact='HIGH,MODERATE' returns variants with HIGH OR MODERATE impact\n" +
             "- Pagination: skip, limit (max=50)\n\n" +
 
-            "RETURNS: JSON array. Empty array [] if no matches. gnomADe/gnomADg fields contain gnomAD Exome/Genome AF")
-    public String deNovoInTrio(
+            "RETURNS: Refer to the Output Schema for field definitions. Empty array [] if no matches.",
+        outputSchema = @Tool.OutputSchema(
+            from = VariantView.class,
+            generator = VariantArraySchemaGenerator.class
+        )
+    )
+    public Map<String, List<VariantView>> deNovoInTrio(
                 @ToolArg(description = "sample id for parent 1") String parent1,
                 @ToolArg(description = "sample id for parent 2") String parent2,
                 @ToolArg(description = "sample id for proband") String proband,
@@ -1252,14 +1648,31 @@ public class OneKGPdMCPServer {
                 @ToolArg(description = MAXLEN_DESC, required = false) Integer maxVariantLengthBp,
                 @ToolArg(description = SKIP_DESC, required = false) Integer skip,
                 @ToolArg(description = LIM_DESC, required = false) Integer limit) {
-        return client.selectDeNovo(parent1, parent2, proband, chromosome, start, end, refAllele, altAllele, minVariantLengthBp,
+
+        List<Variant> variants = client.selectDeNovo(parent1, parent2, proband, chromosome, start, end, refAllele, altAllele, minVariantLengthBp,
                         maxVariantLengthBp, biallelicOnly, multiallelicOnly, excludeMales, excludeFemales, afLessThan, afGreaterThan,
                         gnomadGenomeAfLessThan, gnomadGenomeAfGreaterThan, gnomadExomeAfLessThan, gnomadExomeAfGreaterThan, vepImpact,
                         vepBiotype, vepFeature, vepVariantType, vepConsequences, alphaMissenseClass, alphaMissenseScoreLessThan,
                         alphaMissenseScoreGreaterThan, clinSignificance, skip, limit);
+
+        List<VariantView> vv = variants.stream()
+            .map(VariantView::fromGrpc)
+            .toList();
+
+        return Map.of("variants", vv);
     }
 
-    @Tool(description =
+    @Tool(
+        title = "hetDominantInTrio",
+        structuredContent = true,
+        annotations = @Tool.Annotations(
+            title = "hetDominantInTrio",
+            readOnlyHint = true,
+            destructiveHint = false,
+            idempotentHint = true,
+            openWorldHint = false
+        ),
+        description =
             "SELECT HETEROZYGOUS DOMINANT variants in affected child from a trio analysis in 1000 Genomes.\n" +
             "Returns: heterozygous variants shared between affected parent and proband, absent in unaffected parent.\n" +
             "Filters: REF/ALT, AF (KGP/gnomAD), VEP impact/biotype/consequences, variant type, AlphaMissense class/score, ClinVar significance.\n\n" +
@@ -1276,8 +1689,13 @@ public class OneKGPdMCPServer {
             "- CSV parameters: OR logic. Example: impact='HIGH,MODERATE' returns variants with HIGH OR MODERATE impact\n" +
             "- Pagination: skip, limit (max=50)\n\n" +
 
-            "RETURNS: JSON array. Empty array [] if no matches. gnomADe/gnomADg fields contain gnomAD Exome/Genome AF")
-    public String hetDominantInTrio(
+            "RETURNS: Refer to the Output Schema for field definitions. Empty array [] if no matches.",
+        outputSchema = @Tool.OutputSchema(
+            from = VariantView.class,
+            generator = VariantArraySchemaGenerator.class
+        )
+    )
+    public Map<String, List<VariantView>> hetDominantInTrio(
                 @ToolArg(description = "sample id for affected parent") String affectedParent,
                 @ToolArg(description = "sample id for unaffected parent") String unaffectedParent,
                 @ToolArg(description = "sample id for proband") String proband,
@@ -1309,14 +1727,31 @@ public class OneKGPdMCPServer {
                 @ToolArg(description = MAXLEN_DESC, required = false) Integer maxVariantLengthBp,
                 @ToolArg(description = SKIP_DESC, required = false) Integer skip,
                 @ToolArg(description = LIM_DESC, required = false) Integer limit) {
-        return client.selectHetDominant(affectedParent, unaffectedParent, proband, chromosome, start, end, refAllele, altAllele,
+
+        List<Variant> variants = client.selectHetDominant(affectedParent, unaffectedParent, proband, chromosome, start, end, refAllele, altAllele,
                         minVariantLengthBp, maxVariantLengthBp, biallelicOnly, multiallelicOnly, excludeMales, excludeFemales, afLessThan,
                         afGreaterThan, gnomadGenomeAfLessThan, gnomadGenomeAfGreaterThan, gnomadExomeAfLessThan, gnomadExomeAfGreaterThan,
                         vepImpact, vepBiotype, vepFeature, vepVariantType, vepConsequences, alphaMissenseClass, alphaMissenseScoreLessThan,
                         alphaMissenseScoreGreaterThan, clinSignificance, skip, limit);
+
+        List<VariantView> vv = variants.stream()
+            .map(VariantView::fromGrpc)
+            .toList();
+
+        return Map.of("variants", vv);
     }
 
-    @Tool(description =
+    @Tool(
+        title = "homRecessiveInTrio",
+        structuredContent = true,
+        annotations = @Tool.Annotations(
+            title = "homRecessiveInTrio",
+            readOnlyHint = true,
+            destructiveHint = false,
+            idempotentHint = true,
+            openWorldHint = false
+        ),
+        description =
             "SELECT HOMOZYGOUS RECESSIVE variants in affected child from a trio analysis in 1000 Genomes.\n" +
             "Returns: homozygous variants in proband where both unaffected parents are heterozygous carriers.\n" +
             "Filters: REF/ALT, AF (KGP/gnomAD), VEP impact/biotype/consequences, variant type, AlphaMissense class/score, ClinVar significance.\n\n" +
@@ -1333,8 +1768,13 @@ public class OneKGPdMCPServer {
             "- CSV parameters: OR logic. Example: impact='HIGH,MODERATE' returns variants with HIGH OR MODERATE impact\n" +
             "- Pagination: skip, limit (max=50)\n\n" +
 
-            "RETURNS: JSON array. Empty array [] if no matches. gnomADe/gnomADg fields contain gnomAD Exome/Genome AF")
-    public String homRecessiveInTrio(
+            "RETURNS: Refer to the Output Schema for field definitions. Empty array [] if no matches.",
+        outputSchema = @Tool.OutputSchema(
+            from = VariantView.class,
+            generator = VariantArraySchemaGenerator.class
+        )
+    )
+    public Map<String, List<VariantView>> homRecessiveInTrio(
                 @ToolArg(description = "sample id for unaffected parent 1") String unaffectedParent1,
                 @ToolArg(description = "sample id for unaffected parent 2") String unaffectedParent2,
                 @ToolArg(description = "sample id for proband") String proband,
@@ -1366,24 +1806,44 @@ public class OneKGPdMCPServer {
                 @ToolArg(description = MAXLEN_DESC, required = false) Integer maxVariantLengthBp,
                 @ToolArg(description = SKIP_DESC, required = false) Integer skip,
                 @ToolArg(description = LIM_DESC, required = false) Integer limit) {
-        return client.selectHomRecessive(unaffectedParent1, unaffectedParent2, proband, chromosome, start, end, refAllele, altAllele,
+
+        List<Variant> variants = client.selectHomRecessive(unaffectedParent1, unaffectedParent2, proband, chromosome, start, end, refAllele, altAllele,
                         minVariantLengthBp, maxVariantLengthBp, biallelicOnly, multiallelicOnly, excludeMales, excludeFemales, afLessThan,
                         afGreaterThan, gnomadGenomeAfLessThan, gnomadGenomeAfGreaterThan, gnomadExomeAfLessThan, gnomadExomeAfGreaterThan,
                         vepImpact, vepBiotype, vepFeature, vepVariantType, vepConsequences, alphaMissenseClass, alphaMissenseScoreLessThan,
                         alphaMissenseScoreGreaterThan, clinSignificance, skip, limit);
+
+        List<VariantView> vv = variants.stream()
+            .map(VariantView::fromGrpc)
+            .toList();
+
+        return Map.of("variants", vv);
     }
 
-    @Tool(description =
-        "Returns DEGREE OF RELATEDNESS (kinship) between TWO SAMPLES in 1000 Genomes Project.\n" +
-        "Possible results: TWINS_MONOZYGOTIC, FIRST_DEGREE, SECOND_DEGREE, THIRD_DEGREE, UNRELATED.\n\n" +
+    public record KinshipResult(String degree) {}
 
-        "PARAMETERS:\n" +
-        "- Required: sample1, sample2 (sample IDs)\n\n" +
+    @Tool(
+        title = "getKinshipDegree",
+        structuredContent = true,
+        annotations = @Tool.Annotations(
+            title = "getKinshipDegree",
+            readOnlyHint = true,
+            destructiveHint = false,
+            idempotentHint = true,
+            openWorldHint = false
+        ),
+        description =
+            "Retrieve degree of relatedness (kinship) between two samples in 1000 Genomes Project.\n" +
+            "RETURNS: Refer to the Output Schema for field definitions.",
+        outputSchema = @Tool.OutputSchema(
+            from = KinshipResult.class,
+            generator = KinshipSchemaGenerator.class
+        )
+    )
+    public KinshipResult getKinshipDegree(
+        @ToolArg(description = "First sample ID") String sample1,
+        @ToolArg(description = "Second sample ID") String sample2 ) {
 
-        "RETURNS: String.")
-    public String getKinshipDegree(
-                @ToolArg(description = "sample id 1") String sample1,
-                @ToolArg(description = "sample id 2") String sample2 ) {
-        return client.kinship(sample1, sample2);
+        return new KinshipResult(client.kinship(sample1, sample2));
     }
 }
