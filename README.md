@@ -116,6 +116,37 @@ _e.g._ `http://localhost:9000/mcp` or `https://db.dnaerys.org:443/mcp`
 
 > How many variants exist in 1000 Genome Project ?
 
+## Test Coverage
+
+| Component | Type | Tests | Status |
+|-----------|------|-------|--------|
+| Entity Mappers (9 classes) | Unit | 314 | ✅ Complete |
+| DnaerysClient | Unit | 61 | ✅ Complete |
+| DnaerysClient | Integration | 5 | ✅ Complete |
+| OneKGPdMCPServer | Unit | 31 | ✅ Complete |
+| OneKGPdMCPServer | Integration | 7 | ✅ Complete |
+
+**Total: 419 tests (407 unit + 12 integration)**
+
+### Running Tests
+
+```bash
+# Unit tests only (no server required)
+./mvnw test
+
+# Integration tests (requires db.dnaerys.org access)
+./mvnw verify -DskipIntegrationTests=false
+
+# Update test baselines after data changes
+./mvnw verify -DskipIntegrationTests=false -DupdateBaseline=true
+```
+
+See [TEST_SPECIFICATION.md](./docs/TEST_SPECIFICATION.md) for detailed test documentation.
+
+---
+
+_Test part of this project is written by Claude. Fun part is written by humans._
+
 ## License
 
 This project is licensed under the Apache License 2.0 - see the [LICENSE](./LICENSE) file for details.

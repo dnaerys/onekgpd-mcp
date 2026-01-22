@@ -34,7 +34,7 @@ public class ReadConfig {
         Properties p = new Properties();
         // defaults for missing values
         p.setProperty("dnaerysHost","db.dnaerys.org");
-        p.setProperty("dnaerysGRPCPort","7443");
+        p.setProperty("dnaerysGRPCPort","443");
         p.setProperty("ssl","true");
 
         try (InputStream inputStream = Thread.currentThread().getContextClassLoader().getResourceAsStream(propFileName)) {
@@ -45,7 +45,7 @@ public class ReadConfig {
             // discards all values from failed stream
             Properties pd = new Properties();
             pd.setProperty("dnaerysHost","db.dnaerys.org");
-            pd.setProperty("dnaerysGRPCPort","7443");
+            pd.setProperty("dnaerysGRPCPort","443");
             pd.setProperty("ssl","true");
             return pd;
         }

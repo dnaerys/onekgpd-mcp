@@ -22,7 +22,7 @@ public class GrpcChannel {
         String grpcPort = ReadConfig.getProp().getProperty("dnaerysGRPCPort");
         String ssl = ReadConfig.getProp().getProperty("ssl");
 
-        int port = 7443; // default
+        int port = 443; // default
         try {
             port = Integer.parseInt(grpcPort);
         } catch (NumberFormatException e) {
