@@ -1,9 +1,12 @@
 package org.dnaerys.mcp;
 
+import io.quarkiverse.mcp.server.ToolCallException;
+import io.quarkiverse.mcp.server.ToolResponse;
 import org.dnaerys.client.DnaerysClient;
 import org.dnaerys.client.GrpcChannel;
 import org.dnaerys.cluster.grpc.*;
 import org.dnaerys.mcp.generator.VariantView;
+import org.dnaerys.testdata.TestInjectionHelper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -44,6 +47,7 @@ class OneKGPdMCPServerTest {
     @BeforeEach
     void setUp() {
         server = new OneKGPdMCPServer();
+        TestInjectionHelper.injectMcpResponse(server);
     }
 
     // ========================================
@@ -69,7 +73,8 @@ class OneKGPdMCPServerTest {
                     .build();
                 when(mockBlockingStub.datasetInfo(any(DatasetInfoRequest.class))).thenReturn(response);
 
-                DnaerysClient.SampleCounts result = server.getSampleCounts();
+                ToolResponse toolResponse = server.getSampleCounts();
+                DnaerysClient.SampleCounts result = (DnaerysClient.SampleCounts) toolResponse.structuredContent();
 
                 assertThat(result).isNotNull();
                 assertThat(result.total()).isEqualTo(3202);
@@ -80,6 +85,7 @@ class OneKGPdMCPServerTest {
 
         @Test
         @DisplayName("getVariantsTotal returns Map with 'count' key")
+        @SuppressWarnings("unchecked")
         void testGetVariantsTotalReturnsMap() {
             try (MockedStatic<GrpcChannel> mockedStatic = mockStatic(GrpcChannel.class)) {
                 mockedStatic.when(GrpcChannel::getInstance).thenReturn(mockGrpcChannel);
@@ -90,85 +96,11 @@ class OneKGPdMCPServerTest {
                     .build();
                 when(mockBlockingStub.datasetInfo(any(DatasetInfoRequest.class))).thenReturn(response);
 
-                Map<String, Long> result = server.getVariantsTotal();
+                ToolResponse toolResponse = server.getVariantsTotal();
+                Map<String, Long> result = (Map<String, Long>) toolResponse.structuredContent();
 
                 assertThat(result).containsKey("count");
                 assertThat(result.get("count")).isEqualTo(138044723L);
-            }
-        }
-
-        @Test
-        @DisplayName("getSampleIds returns Map with 'samples' key")
-        void testGetSampleIdsReturnsMap() {
-            try (MockedStatic<GrpcChannel> mockedStatic = mockStatic(GrpcChannel.class)) {
-                mockedStatic.when(GrpcChannel::getInstance).thenReturn(mockGrpcChannel);
-                when(mockGrpcChannel.getBlockingStub()).thenReturn(mockBlockingStub);
-
-                Cohort cohort = Cohort.newBuilder()
-                    .addFemaleSamplesNames("HG00405")
-                    .addMaleSamplesNames("HG00403")
-                    .build();
-                DatasetInfoResponse response = DatasetInfoResponse.newBuilder()
-                    .addCohorts(cohort)
-                    .build();
-                when(mockBlockingStub.datasetInfo(any(DatasetInfoRequest.class))).thenReturn(response);
-
-                Map<String, List<String>> result = server.getSampleIds();
-
-                assertThat(result).containsKey("samples");
-                assertThat(result.get("samples")).contains("HG00405", "HG00403");
-            }
-        }
-
-        @Test
-        @DisplayName("getFemaleSamplesIds returns only female samples")
-        void testGetFemaleSamplesIdsReturnsOnlyFemales() {
-            try (MockedStatic<GrpcChannel> mockedStatic = mockStatic(GrpcChannel.class)) {
-                mockedStatic.when(GrpcChannel::getInstance).thenReturn(mockGrpcChannel);
-                when(mockGrpcChannel.getBlockingStub()).thenReturn(mockBlockingStub);
-
-                Cohort cohort = Cohort.newBuilder()
-                    .addFemaleSamplesNames("HG00405")
-                    .addFemaleSamplesNames("NA12878")
-                    .addMaleSamplesNames("HG00403")
-                    .build();
-                DatasetInfoResponse response = DatasetInfoResponse.newBuilder()
-                    .addCohorts(cohort)
-                    .build();
-                when(mockBlockingStub.datasetInfo(any(DatasetInfoRequest.class))).thenReturn(response);
-
-                Map<String, List<String>> result = server.getFemaleSamplesIds();
-
-                assertThat(result).containsKey("samples");
-                assertThat(result.get("samples"))
-                    .contains("HG00405", "NA12878")
-                    .doesNotContain("HG00403");
-            }
-        }
-
-        @Test
-        @DisplayName("getMaleSamplesIds returns only male samples")
-        void testGetMaleSamplesIdsReturnsOnlyMales() {
-            try (MockedStatic<GrpcChannel> mockedStatic = mockStatic(GrpcChannel.class)) {
-                mockedStatic.when(GrpcChannel::getInstance).thenReturn(mockGrpcChannel);
-                when(mockGrpcChannel.getBlockingStub()).thenReturn(mockBlockingStub);
-
-                Cohort cohort = Cohort.newBuilder()
-                    .addFemaleSamplesNames("HG00405")
-                    .addMaleSamplesNames("HG00403")
-                    .addMaleSamplesNames("NA12877")
-                    .build();
-                DatasetInfoResponse response = DatasetInfoResponse.newBuilder()
-                    .addCohorts(cohort)
-                    .build();
-                when(mockBlockingStub.datasetInfo(any(DatasetInfoRequest.class))).thenReturn(response);
-
-                Map<String, List<String>> result = server.getMaleSamplesIds();
-
-                assertThat(result).containsKey("samples");
-                assertThat(result.get("samples"))
-                    .contains("HG00403", "NA12877")
-                    .doesNotContain("HG00405");
             }
         }
     }
@@ -183,6 +115,7 @@ class OneKGPdMCPServerTest {
 
         @Test
         @DisplayName("countVariantsInRegion returns Map with 'count' key")
+        @SuppressWarnings("unchecked")
         void testCountVariantsInRegionReturnsMap() {
             try (MockedStatic<GrpcChannel> mockedStatic = mockStatic(GrpcChannel.class)) {
                 mockedStatic.when(GrpcChannel::getInstance).thenReturn(mockGrpcChannel);
@@ -194,12 +127,13 @@ class OneKGPdMCPServerTest {
                 when(mockBlockingStub.countVariantsInRegion(any(CountAllelesInRegionRequest.class)))
                     .thenReturn(response);
 
-                Map<String, Long> result = server.countVariantsInRegion(
+                ToolResponse toolResponse = server.countVariantsInRegion(
                     "17", 43044295, 43170245,  // BRCA1
                     null, null, null, null, null, null, null, null,
                     null, null, null, null, null, null, null, null, null,
                     null, null, null, null, null, null
                 );
+                Map<String, Long> result = (Map<String, Long>) toolResponse.structuredContent();
 
                 assertThat(result).containsKey("count");
                 assertThat(result.get("count")).isEqualTo(5573L);
@@ -261,19 +195,22 @@ class OneKGPdMCPServerTest {
         }
 
         @Test
-        @DisplayName("countVariantsInRegion returns 0 for invalid chromosome")
+        @DisplayName("countVariantsInRegion throws ToolCallException for invalid chromosome")
         void testCountVariantsInRegionInvalidChromosome() {
-            // Invalid chromosome should return 0 without making gRPC call
-            // (validation happens before gRPC call)
-            Map<String, Long> result = server.countVariantsInRegion(
-                "99", 1000, 2000,  // Invalid chromosome
-                null, null, null, null, null, null, null, null,
-                null, null, null, null, null, null, null, null, null,
-                null, null, null, null, null, null
+            // Invalid chromosome should throw ToolCallException
+            // (validation happens in DnaerysClient which throws RuntimeException,
+            // caught by McpResponse.handle() and converted to ToolCallException)
+            ToolCallException thrown = org.junit.jupiter.api.Assertions.assertThrows(
+                ToolCallException.class,
+                () -> server.countVariantsInRegion(
+                    "99", 1000, 2000,  // Invalid chromosome
+                    null, null, null, null, null, null, null, null,
+                    null, null, null, null, null, null, null, null, null,
+                    null, null, null, null, null, null
+                )
             );
 
-            assertThat(result).containsKey("count");
-            assertThat(result.get("count")).isZero();
+            assertThat(thrown.getMessage()).contains("Invalid Chromosome");
         }
     }
 
@@ -287,6 +224,7 @@ class OneKGPdMCPServerTest {
 
         @Test
         @DisplayName("MCP-002: selectVariantsInRegion returns Map with 'variants' key")
+        @SuppressWarnings("unchecked")
         void testSelectVariantsInRegionReturnsMap() {
             try (MockedStatic<GrpcChannel> mockedStatic = mockStatic(GrpcChannel.class)) {
                 mockedStatic.when(GrpcChannel::getInstance).thenReturn(mockGrpcChannel);
@@ -302,19 +240,19 @@ class OneKGPdMCPServerTest {
                     .addVariants(variant)
                     .build();
 
-                @SuppressWarnings("unchecked")
                 Iterator<AllelesResponse> iterator = mock(Iterator.class);
                 when(iterator.hasNext()).thenReturn(true, false);
                 when(iterator.next()).thenReturn(allelesResponse);
                 when(mockBlockingStub.selectVariantsInRegion(any(AllelesInRegionRequest.class)))
                     .thenReturn(iterator);
 
-                Map<String, List<VariantView>> result = server.selectVariantsInRegion(
+                ToolResponse toolResponse = server.selectVariantsInRegion(
                     "17", 43044295, 43170245,  // BRCA1
                     null, null, null, null, null, null, null, null,
                     null, null, null, null, null, null, null, null, null,
                     null, null, null, null, null, null, null, null
                 );
+                Map<String, List<VariantView>> result = (Map<String, List<VariantView>>) toolResponse.structuredContent();
 
                 assertThat(result).containsKey("variants");
                 assertThat(result.get("variants")).isNotEmpty();
@@ -322,17 +260,20 @@ class OneKGPdMCPServerTest {
         }
 
         @Test
-        @DisplayName("selectVariantsInRegion returns empty list for invalid region")
+        @DisplayName("selectVariantsInRegion throws ToolCallException for invalid region")
         void testSelectVariantsInRegionInvalidRegion() {
-            Map<String, List<VariantView>> result = server.selectVariantsInRegion(
-                "1", 2000, 1000,  // Inverted coordinates
-                null, null, null, null, null, null, null, null,
-                null, null, null, null, null, null, null, null, null,
-                null, null, null, null, null, null, null, null
+            // Inverted coordinates should throw ToolCallException
+            ToolCallException thrown = org.junit.jupiter.api.Assertions.assertThrows(
+                ToolCallException.class,
+                () -> server.selectVariantsInRegion(
+                    "1", 2000, 1000,  // Inverted coordinates
+                    null, null, null, null, null, null, null, null,
+                    null, null, null, null, null, null, null, null, null,
+                    null, null, null, null, null, null, null, null
+                )
             );
 
-            assertThat(result).containsKey("variants");
-            assertThat(result.get("variants")).isEmpty();
+            assertThat(thrown.getMessage()).contains("Invalid 'start' or 'end'");
         }
     }
 
@@ -346,6 +287,7 @@ class OneKGPdMCPServerTest {
 
         @Test
         @DisplayName("countSamplesWithVariants returns Map with 'count' key")
+        @SuppressWarnings("unchecked")
         void testCountSamplesWithVariantsReturnsMap() {
             try (MockedStatic<GrpcChannel> mockedStatic = mockStatic(GrpcChannel.class)) {
                 mockedStatic.when(GrpcChannel::getInstance).thenReturn(mockGrpcChannel);
@@ -357,12 +299,13 @@ class OneKGPdMCPServerTest {
                 when(mockBlockingStub.countSamplesInRegion(any(SamplesInRegionRequest.class)))
                     .thenReturn(response);
 
-                Map<String, Long> result = server.countSamplesWithVariants(
+                ToolResponse toolResponse = server.countSamplesWithVariants(
                     "1", 1000, 2000,
                     null, null, null, null, null, null, null, null,
                     null, null, null, null, null, null, null, null, null,
                     null, null, null, null, null, null
                 );
+                Map<String, Long> result = (Map<String, Long>) toolResponse.structuredContent();
 
                 assertThat(result).containsKey("count");
                 assertThat(result.get("count")).isEqualTo(150L);
@@ -371,6 +314,7 @@ class OneKGPdMCPServerTest {
 
         @Test
         @DisplayName("selectSamplesWithVariants returns Map with 'samples' key")
+        @SuppressWarnings("unchecked")
         void testSelectSamplesWithVariantsReturnsMap() {
             try (MockedStatic<GrpcChannel> mockedStatic = mockStatic(GrpcChannel.class)) {
                 mockedStatic.when(GrpcChannel::getInstance).thenReturn(mockGrpcChannel);
@@ -383,12 +327,13 @@ class OneKGPdMCPServerTest {
                 when(mockBlockingStub.selectSamplesInRegion(any(SamplesInRegionRequest.class)))
                     .thenReturn(response);
 
-                Map<String, List<String>> result = server.selectSamplesWithVariants(
+                ToolResponse toolResponse = server.selectSamplesWithVariants(
                     "1", 1000, 2000,
                     null, null, null, null, null, null, null, null,
                     null, null, null, null, null, null, null, null, null,
                     null, null, null, null, null, null
                 );
+                Map<String, List<String>> result = (Map<String, List<String>>) toolResponse.structuredContent();
 
                 assertThat(result).containsKey("samples");
                 assertThat(result.get("samples")).contains("HG00403", "HG00405");
@@ -578,6 +523,7 @@ class OneKGPdMCPServerTest {
 
         @Test
         @DisplayName("deNovoInTrio returns Map with 'variants' key")
+        @SuppressWarnings("unchecked")
         void testDeNovoInTrioReturnsMap() {
             try (MockedStatic<GrpcChannel> mockedStatic = mockStatic(GrpcChannel.class)) {
                 mockedStatic.when(GrpcChannel::getInstance).thenReturn(mockGrpcChannel);
@@ -591,20 +537,20 @@ class OneKGPdMCPServerTest {
                     .addVariants(variant)
                     .build();
 
-                @SuppressWarnings("unchecked")
                 Iterator<AllelesResponse> iterator = mock(Iterator.class);
                 when(iterator.hasNext()).thenReturn(true, false);
                 when(iterator.next()).thenReturn(allelesResponse);
                 when(mockBlockingStub.selectDeNovo(any(DeNovoRequest.class)))
                     .thenReturn(iterator);
 
-                Map<String, List<VariantView>> result = server.deNovoInTrio(
+                ToolResponse toolResponse = server.deNovoInTrio(
                     "HG00403", "HG00404", "HG00405",  // trio
                     "1", 1000, 2000,
                     null, null, null, null, null, null, null, null,
                     null, null, null, null, null, null, null, null, null,
                     null, null, null, null, null, null, null, null
                 );
+                Map<String, List<VariantView>> result = (Map<String, List<VariantView>>) toolResponse.structuredContent();
 
                 assertThat(result).containsKey("variants");
                 assertThat(result.get("variants")).isNotEmpty();
@@ -641,18 +587,21 @@ class OneKGPdMCPServerTest {
         }
 
         @Test
-        @DisplayName("deNovoInTrio returns empty list for null parent")
+        @DisplayName("deNovoInTrio throws ToolCallException for null parent")
         void testDeNovoInTrioNullParent() {
-            Map<String, List<VariantView>> result = server.deNovoInTrio(
-                null, "HG00404", "HG00405",  // null parent
-                "1", 1000, 2000,
-                null, null, null, null, null, null, null, null,
-                null, null, null, null, null, null, null, null, null,
-                null, null, null, null, null, null, null, null
+            // Null parent should throw ToolCallException
+            ToolCallException thrown = org.junit.jupiter.api.Assertions.assertThrows(
+                ToolCallException.class,
+                () -> server.deNovoInTrio(
+                    null, "HG00404", "HG00405",  // null parent
+                    "1", 1000, 2000,
+                    null, null, null, null, null, null, null, null,
+                    null, null, null, null, null, null, null, null, null,
+                    null, null, null, null, null, null, null, null
+                )
             );
 
-            assertThat(result).containsKey("variants");
-            assertThat(result.get("variants")).isEmpty();
+            assertThat(thrown.getMessage()).contains("parent1 must not be empty");
         }
 
         @Test
@@ -729,6 +678,16 @@ class OneKGPdMCPServerTest {
                 mockedStatic.when(GrpcChannel::getInstance).thenReturn(mockGrpcChannel);
                 when(mockGrpcChannel.getBlockingStub()).thenReturn(mockBlockingStub);
 
+                // Mock datasetInfo to return sample IDs (required for kinship validation)
+                Cohort cohort = Cohort.newBuilder()
+                    .addMaleSamplesNames("HG00403")
+                    .addFemaleSamplesNames("HG00405")
+                    .build();
+                DatasetInfoResponse datasetResponse = DatasetInfoResponse.newBuilder()
+                    .addCohorts(cohort)
+                    .build();
+                when(mockBlockingStub.datasetInfo(any(DatasetInfoRequest.class))).thenReturn(datasetResponse);
+
                 Relatedness relatedness = Relatedness.newBuilder()
                     .setDegree(KinshipDegree.FIRST_DEGREE)
                     .build();
@@ -738,7 +697,8 @@ class OneKGPdMCPServerTest {
                 when(mockBlockingStub.kinshipDuo(any(KinshipDuoRequest.class)))
                     .thenReturn(response);
 
-                OneKGPdMCPServer.KinshipResult result = server.getKinshipDegree("HG00403", "HG00405");
+                ToolResponse toolResponse = server.getKinshipDegree("HG00403", "HG00405");
+                OneKGPdMCPServer.KinshipResult result = (OneKGPdMCPServer.KinshipResult) toolResponse.structuredContent();
 
                 assertThat(result.degree()).isEqualTo("FIRST_DEGREE");
             }
@@ -751,7 +711,22 @@ class OneKGPdMCPServerTest {
                 mockedStatic.when(GrpcChannel::getInstance).thenReturn(mockGrpcChannel);
                 when(mockGrpcChannel.getBlockingStub()).thenReturn(mockBlockingStub);
 
-                KinshipResponse response = KinshipResponse.newBuilder().build();
+                // Mock datasetInfo to return sample IDs (required for kinship validation)
+                Cohort cohort = Cohort.newBuilder()
+                    .addMaleSamplesNames("HG00403")
+                    .addFemaleSamplesNames("HG00405")
+                    .build();
+                DatasetInfoResponse datasetResponse = DatasetInfoResponse.newBuilder()
+                    .addCohorts(cohort)
+                    .build();
+                when(mockBlockingStub.datasetInfo(any(DatasetInfoRequest.class))).thenReturn(datasetResponse);
+
+                Relatedness relatedness = Relatedness.newBuilder()
+                    .setDegree(KinshipDegree.FIRST_DEGREE)
+                    .build();
+                KinshipResponse response = KinshipResponse.newBuilder()
+                    .addRel(relatedness)
+                    .build();
                 when(mockBlockingStub.kinshipDuo(any(KinshipDuoRequest.class)))
                     .thenReturn(response);
 
@@ -765,34 +740,74 @@ class OneKGPdMCPServerTest {
         }
 
         @Test
-        @DisplayName("getKinshipDegree returns empty string for null sample")
+        @DisplayName("getKinshipDegree throws exception for null sample")
         void testGetKinshipDegreeNullSample() {
-            OneKGPdMCPServer.KinshipResult result = server.getKinshipDegree(null, "HG00405");
-            assertThat(result.degree()).isEmpty();
+            try (MockedStatic<GrpcChannel> mockedStatic = mockStatic(GrpcChannel.class)) {
+                mockedStatic.when(GrpcChannel::getInstance).thenReturn(mockGrpcChannel);
+                when(mockGrpcChannel.getBlockingStub()).thenReturn(mockBlockingStub);
+
+                // Mock empty dataset (sample will not be found)
+                DatasetInfoResponse datasetResponse = DatasetInfoResponse.newBuilder().build();
+                when(mockBlockingStub.datasetInfo(any(DatasetInfoRequest.class))).thenReturn(datasetResponse);
+
+                ToolCallException thrown = org.junit.jupiter.api.Assertions.assertThrows(
+                    ToolCallException.class,
+                    () -> server.getKinshipDegree(null, "HG00405")
+                );
+
+                assertThat(thrown.getMessage()).contains("does not exist");
+            }
         }
 
         @Test
-        @DisplayName("getKinshipDegree returns empty string for empty sample")
+        @DisplayName("getKinshipDegree throws exception for empty sample")
         void testGetKinshipDegreeEmptySample() {
-            OneKGPdMCPServer.KinshipResult result = server.getKinshipDegree("", "HG00405");
-            assertThat(result.degree()).isEmpty();
+            try (MockedStatic<GrpcChannel> mockedStatic = mockStatic(GrpcChannel.class)) {
+                mockedStatic.when(GrpcChannel::getInstance).thenReturn(mockGrpcChannel);
+                when(mockGrpcChannel.getBlockingStub()).thenReturn(mockBlockingStub);
+
+                // Mock empty dataset (sample will not be found)
+                DatasetInfoResponse datasetResponse = DatasetInfoResponse.newBuilder().build();
+                when(mockBlockingStub.datasetInfo(any(DatasetInfoRequest.class))).thenReturn(datasetResponse);
+
+                ToolCallException thrown = org.junit.jupiter.api.Assertions.assertThrows(
+                    ToolCallException.class,
+                    () -> server.getKinshipDegree("", "HG00405")
+                );
+
+                assertThat(thrown.getMessage()).contains("does not exist");
+            }
         }
 
         @Test
-        @DisplayName("getKinshipDegree returns empty string for empty response")
+        @DisplayName("getKinshipDegree throws exception for empty response")
         void testGetKinshipDegreeEmptyResponse() {
             try (MockedStatic<GrpcChannel> mockedStatic = mockStatic(GrpcChannel.class)) {
                 mockedStatic.when(GrpcChannel::getInstance).thenReturn(mockGrpcChannel);
                 when(mockGrpcChannel.getBlockingStub()).thenReturn(mockBlockingStub);
 
-                // Return empty response
+                // Mock datasetInfo to return sample IDs (required for kinship validation)
+                Cohort cohort = Cohort.newBuilder()
+                    .addMaleSamplesNames("HG00403")
+                    .addFemaleSamplesNames("HG00405")
+                    .build();
+                DatasetInfoResponse datasetResponse = DatasetInfoResponse.newBuilder()
+                    .addCohorts(cohort)
+                    .build();
+                when(mockBlockingStub.datasetInfo(any(DatasetInfoRequest.class))).thenReturn(datasetResponse);
+
+                // Return empty kinship response (no relatedness found)
                 KinshipResponse response = KinshipResponse.newBuilder().build();
                 when(mockBlockingStub.kinshipDuo(any(KinshipDuoRequest.class)))
                     .thenReturn(response);
 
-                OneKGPdMCPServer.KinshipResult result = server.getKinshipDegree("HG00403", "HG00405");
+                // Empty response will cause NoSuchElementException from getFirst()
+                ToolCallException thrown = org.junit.jupiter.api.Assertions.assertThrows(
+                    ToolCallException.class,
+                    () -> server.getKinshipDegree("HG00403", "HG00405")
+                );
 
-                assertThat(result.degree()).isEmpty();
+                assertThat(thrown).isNotNull();
             }
         }
     }
@@ -806,53 +821,62 @@ class OneKGPdMCPServerTest {
     class ErrorHandlingTests {
 
         @Test
-        @DisplayName("gRPC error returns 0 for variant count")
-        void testGrpcErrorReturnsZeroCount() {
+        @DisplayName("gRPC error throws ToolCallException for variant count")
+        void testGrpcErrorThrowsExceptionForCount() {
             try (MockedStatic<GrpcChannel> mockedStatic = mockStatic(GrpcChannel.class)) {
                 mockedStatic.when(GrpcChannel::getInstance).thenThrow(new RuntimeException("Connection failed"));
 
-                Map<String, Long> result = server.countVariantsInRegion(
-                    "1", 1000, 2000,
-                    null, null, null, null, null, null, null, null,
-                    null, null, null, null, null, null, null, null, null,
-                    null, null, null, null, null, null
+                ToolCallException thrown = org.junit.jupiter.api.Assertions.assertThrows(
+                    ToolCallException.class,
+                    () -> server.countVariantsInRegion(
+                        "1", 1000, 2000,
+                        null, null, null, null, null, null, null, null,
+                        null, null, null, null, null, null, null, null, null,
+                        null, null, null, null, null, null
+                    )
                 );
 
-                assertThat(result.get("count")).isZero();
+                assertThat(thrown.getMessage()).contains("Connection failed");
             }
         }
 
         @Test
-        @DisplayName("gRPC error returns empty list for select")
-        void testGrpcErrorReturnsEmptyList() {
+        @DisplayName("gRPC error throws ToolCallException for select")
+        void testGrpcErrorThrowsExceptionForSelect() {
             try (MockedStatic<GrpcChannel> mockedStatic = mockStatic(GrpcChannel.class)) {
                 mockedStatic.when(GrpcChannel::getInstance).thenThrow(new RuntimeException("Connection failed"));
 
-                Map<String, List<VariantView>> result = server.selectVariantsInRegion(
-                    "1", 1000, 2000,
-                    null, null, null, null, null, null, null, null,
-                    null, null, null, null, null, null, null, null, null,
-                    null, null, null, null, null, null, null, null
+                ToolCallException thrown = org.junit.jupiter.api.Assertions.assertThrows(
+                    ToolCallException.class,
+                    () -> server.selectVariantsInRegion(
+                        "1", 1000, 2000,
+                        null, null, null, null, null, null, null, null,
+                        null, null, null, null, null, null, null, null, null,
+                        null, null, null, null, null, null, null, null
+                    )
                 );
 
-                assertThat(result.get("variants")).isEmpty();
+                assertThat(thrown.getMessage()).contains("Connection failed");
             }
         }
 
         @Test
-        @DisplayName("gRPC error returns empty map for samples")
-        void testGrpcErrorReturnsEmptySamplesList() {
+        @DisplayName("gRPC error throws ToolCallException for samples")
+        void testGrpcErrorThrowsExceptionForSamples() {
             try (MockedStatic<GrpcChannel> mockedStatic = mockStatic(GrpcChannel.class)) {
                 mockedStatic.when(GrpcChannel::getInstance).thenThrow(new RuntimeException("Connection failed"));
 
-                Map<String, List<String>> result = server.selectSamplesWithVariants(
-                    "1", 1000, 2000,
-                    null, null, null, null, null, null, null, null,
-                    null, null, null, null, null, null, null, null, null,
-                    null, null, null, null, null, null
+                ToolCallException thrown = org.junit.jupiter.api.Assertions.assertThrows(
+                    ToolCallException.class,
+                    () -> server.selectSamplesWithVariants(
+                        "1", 1000, 2000,
+                        null, null, null, null, null, null, null, null,
+                        null, null, null, null, null, null, null, null, null,
+                        null, null, null, null, null, null
+                    )
                 );
 
-                assertThat(result.get("samples")).isEmpty();
+                assertThat(thrown.getMessage()).contains("Connection failed");
             }
         }
     }

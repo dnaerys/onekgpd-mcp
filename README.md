@@ -49,6 +49,12 @@ Project can be run locally with MCP over _stdio_ and/or _http_ transports
 ./mvnw package -DskipTests -Dquarkus.package.jar.type=uber-jar
 ```
 
+with skipping test compilation
+
+```shell script
+./mvnw package -Dmaven.test.skip=true -Dquarkus.package.jar.type=uber-jar
+```
+
 - run it locally with _dev profile_
     - both _stdio_ and _http_ transports are enabled 
     - http transport is on quarkus [http.port](./src/main/resources/application.properties)

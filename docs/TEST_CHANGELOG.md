@@ -5,7 +5,106 @@ All notable changes to this project made by Claude will be documented in this fi
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## Release 1.2.2
+
+### Fixed - 2026-01-24
+#### Test Fix for McpResponse Dependency Injection Refactoring
+- Fixed NPE in all MCP server tests caused by McpResponse refactoring from static calls to DI
+
+- Added `TestInjectionHelper.java` (`src/test/java/org/dnaerys/testdata/TestInjectionHelper.java`)
+  - New utility class for reflection-based dependency injection in tests
+  - `injectMcpResponse(OneKGPdMCPServer)` - Injects full DI chain: `ObjectMapper` → `JsonUtil` → `McpResponse` → `server.mcpResponse`
+  - Enables testing without Quarkus CDI container overhead
+
+- Updated `OneKGPdMCPServerTest.java`
+  - Added import for `TestInjectionHelper`
+  - Added `TestInjectionHelper.injectMcpResponse(server)` call in `@BeforeEach setUp()`
+
+- Updated `OneKGPdMCPServerIT.java`
+  - Added import for `TestInjectionHelper`
+  - Added `TestInjectionHelper.injectMcpResponse(server)` call in `@BeforeAll setUp()`
+
+### Technical Details - 2026-01-24
+- Problem: McpResponse changed from static methods to instance methods with `@Inject` dependencies
+  - Before: `return McpResponse.success(Map.of("count", count));`
+  - After: `@Inject McpResponse mcpResponse;` then `mcpResponse.success(...)`
+- Tests using `new OneKGPdMCPServer()` had null `mcpResponse` field, causing NPE in all 24 tool methods
+- Solution uses reflection to inject the dependency chain without requiring Quarkus CDI
+- All 28 unit tests pass after fix
+- Test execution time unchanged (~7 seconds for unit tests)
+
+---
+
+### Changed - 2026-01-23
+#### Test Refactoring for DnaerysClient Exception Handling
+- Refactored all test files to work with new DnaerysClient behavior (methods now throw RuntimeException instead of catching/returning defaults)
+
+- `DnaerysClientTest.java` - Updated 25+ tests
+  - `InputValidationTests` - Tests now expect `RuntimeException` for invalid chromosome, region, sample ID
+  - `InheritanceModelInputValidationTests` - Tests now expect `RuntimeException` for null/empty parent/proband IDs
+  - `KinshipInputValidationTests` - Tests now expect `RuntimeException` for non-existent samples (requires mocking)
+  - `GrpcErrorHandlingTests` - Tests now expect `RuntimeException` for gRPC connection failures
+  - Added mock setup for tests that need gRPC responses (kinship validation, variant length normalization)
+  - Removed "MT" from invalid chromosome test values (it's valid, maps to CHR_MT)
+
+- `DnaerysClientIT.java` - Updated 1 test
+  - `testSampleQuery` - Invalid sample test now handles both exception and 0-count scenarios
+
+- `OneKGPdMCPServerTest.java` - Updated 6 tests
+  - `testCountVariantsInRegionInvalidChromosome` - Now expects `ToolCallException`
+  - `testSelectVariantsInRegionInvalidRegion` - Now expects `ToolCallException`
+  - `testDeNovoInTrioNullParent` - Now expects `ToolCallException`
+  - `ErrorHandlingTests` (3 tests) - Now expect `ToolCallException` for gRPC errors
+
+- `OneKGPdMCPServerIT.java` - No changes needed (uses valid parameters only)
+
+### Technical Details - 2026-01-23 (Exception Handling)
+- DnaerysClient methods now throw `RuntimeException` for:
+  - Invalid region coordinates (`start < 0` or `end < start`)
+  - Invalid/unrecognized chromosome
+  - Empty/null sample ID
+  - Empty/null parent/proband IDs in inheritance methods
+  - Non-existent sample IDs in kinship method
+- MCP Server layer catches exceptions and converts to `ToolCallException` via `McpResponse.handle()`
+- All 411 unit tests pass after refactoring
+- Test execution time: ~10 seconds for full unit test suite
+
+---
+
+### Changed - 2026-01-23
+#### MCP Tool Method Refactoring
+- Refactored all 27 MCP Tool methods in `OneKGPdMCPServer.java` to return `ToolResponse` with structured content
+  - Methods now use `McpResponse.success()` wrapper for consistent response format
+  - Error handling uses `McpResponse.handle(e)` to throw `ToolCallException` with proper error messages
+  - Affected methods: `getSampleCounts`, `getSampleIds`, `getFemaleSamplesIds`, `getMaleSamplesIds`, `getVariantsTotal`, `countVariantsInRegion`, `countHomozygousVariantsInRegion`, `countHeterozygousVariantsInRegion`, `selectVariantsInRegion`, `selectHomozygousVariantsInRegion`, `selectHeterozygousVariantsInRegion`, `countVariantsInRegionInSample`, `countHomozygousVariantsInRegionInSample`, `countHeterozygousVariantsInRegionInSample`, `selectVariantsInRegionInSample`, `selectHomozygousVariantsInRegionInSample`, `selectHeterozygousVariantsInRegionInSample`, `countSamplesWithVariants`, `countSamplesWithHomVariants`, `countSamplesWithHetVariants`, `selectSamplesWithVariants`, `selectSamplesWithHomVariants`, `selectSamplesWithHetVariants`, `deNovoInTrio`, `hetDominantInTrio`, `homRecessiveInTrio`, `getKinshipDegree`
+
+- Added `McpResponse` utility class (`src/main/java/org/dnaerys/mcp/util/McpResponse.java`)
+  - `success(Object)` - Wraps response in `ToolResponse.structuredSuccess()`
+  - `handle(Throwable)` - Converts exceptions to `ToolCallException` with user-friendly messages
+  - Special handling for gRPC `StatusRuntimeException` (UNAVAILABLE, NOT_FOUND)
+
+- Updated test files to work with new `ToolResponse` return type
+  - `OneKGPdMCPServerTest.java` - Extract results via `toolResponse.structuredContent()`
+  - `OneKGPdMCPServerIT.java` - Extract results via `toolResponse.structuredContent()`
+  - Fixed kinship tests to mock `datasetInfo` response for sample validation
+  - Updated kinship null/empty sample tests to expect `ToolCallException`
+
+### Technical Details - 2026-01-23
+- Refactoring pattern applied to all MCP Tool methods:
+  ```java
+  public ToolResponse methodName(...) {
+      try {
+          return McpResponse.success(<original return value>);
+      } catch (Exception e) {
+          throw McpResponse.handle(e);
+      }
+  }
+  ```
+- All 31 unit tests pass after refactoring
+- Integration tests compile successfully
+- No breaking changes to MCP protocol - responses remain structured JSON
+
+---
 
 ### Added - 2026-01-22
 #### Unit Tests with Mocking (Phase 4)

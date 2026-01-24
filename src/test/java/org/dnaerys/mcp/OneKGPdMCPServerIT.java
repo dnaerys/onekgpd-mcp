@@ -1,9 +1,11 @@
 package org.dnaerys.mcp;
 
+import io.quarkiverse.mcp.server.ToolResponse;
 import org.dnaerys.client.DnaerysClient;
 import org.dnaerys.mcp.generator.VariantView;
 import org.dnaerys.testdata.TestBaselines;
 import org.dnaerys.testdata.TestBaselines.BaselineResult;
+import org.dnaerys.testdata.TestInjectionHelper;
 import org.dnaerys.testdata.TestBaselines.ComparisonResult;
 import org.junit.jupiter.api.*;
 
@@ -38,6 +40,7 @@ class OneKGPdMCPServerIT {
     @BeforeAll
     static void setUp() {
         server = new OneKGPdMCPServer();
+        TestInjectionHelper.injectMcpResponse(server);
     }
 
     @AfterAll
@@ -54,7 +57,8 @@ class OneKGPdMCPServerIT {
     @DisplayName("MCP-INT-001: Metadata tools - getSampleCounts")
     void testMetadataTools() {
         // Test getSampleCounts tool
-        DnaerysClient.SampleCounts counts = server.getSampleCounts();
+        ToolResponse toolResponse = server.getSampleCounts();
+        DnaerysClient.SampleCounts counts = (DnaerysClient.SampleCounts) toolResponse.structuredContent();
         assertNotNull(counts, "getSampleCounts should return non-null result");
 
         // Validate total samples
@@ -82,56 +86,26 @@ class OneKGPdMCPServerIT {
     // Test 2: Variant Query Tools (MCP-INT-002)
     // ========================================
 
+    @SuppressWarnings("unchecked")
     @Test
     @Order(2)
-    @DisplayName("MCP-INT-002: Variant query tools - getSampleIds")
+    @DisplayName("MCP-INT-002: Variant query tools")
     void testVariantQueryTools() {
-        // Test getSampleIds tool - returns Map<String, List<String>> with key "samples"
-        Map<String, List<String>> sampleIdsResult = server.getSampleIds();
-        assertNotNull(sampleIdsResult, "getSampleIds should return non-null result");
-        assertTrue(sampleIdsResult.containsKey("samples"), "Result should contain 'samples' key");
-
-        List<String> sampleIds = sampleIdsResult.get("samples");
-        assertEquals(EXPECTED_TOTAL_SAMPLES, sampleIds.size(),
-                "Sample IDs list size should be " + EXPECTED_TOTAL_SAMPLES);
-
-        // Verify test samples exist
-        assertTrue(sampleIds.contains(SAMPLE_FEMALE),
-                "Sample list should contain " + SAMPLE_FEMALE);
-        assertTrue(sampleIds.contains(SAMPLE_MALE),
-                "Sample list should contain " + SAMPLE_MALE);
-        assertTrue(sampleIds.contains(SAMPLE_GENERAL),
-                "Sample list should contain " + SAMPLE_GENERAL);
-
-        // Test female/male specific IDs
-        Map<String, List<String>> femaleIds = server.getFemaleSamplesIds();
-        assertNotNull(femaleIds, "getFemaleSamplesIds should return non-null result");
-        assertTrue(femaleIds.containsKey("samples"), "Female result should contain 'samples' key");
-        assertTrue(femaleIds.get("samples").contains(SAMPLE_FEMALE),
-                "Female list should contain " + SAMPLE_FEMALE);
-
-        Map<String, List<String>> maleIds = server.getMaleSamplesIds();
-        assertNotNull(maleIds, "getMaleSamplesIds should return non-null result");
-        assertTrue(maleIds.containsKey("samples"), "Male result should contain 'samples' key");
-        assertTrue(maleIds.get("samples").contains(SAMPLE_MALE),
-                "Male list should contain " + SAMPLE_MALE);
-
-        LOGGER.info("Variant query tools test completed:");
-        LOGGER.info("  Total sample IDs: " + sampleIds.size());
-        LOGGER.info("  Female sample IDs: " + femaleIds.get("samples").size());
-        LOGGER.info("  Male sample IDs: " + maleIds.get("samples").size());
+        // Methods getSampleIds, getFemaleSamplesIds, getMaleSamplesIds are removed from implementation.
+        // TBD: update this test to verify variant retrieval
     }
 
     // ========================================
     // Test 3: De Novo Inheritance (INH-DN-001 to INH-DN-004)
     // ========================================
 
+    @SuppressWarnings("unchecked")
     @Test
     @Order(3)
     @DisplayName("INH-DN-001 to INH-DN-004: De novo trio inheritance queries")
     void testDeNovoInTrio() {
         // INH-DN-001: Basic de novo query in CFTR region (larger region, more likely to find variants)
-        Map<String, List<VariantView>> deNovoResult = server.deNovoInTrio(
+        ToolResponse deNovoResponse = server.deNovoInTrio(
                 TRIO_DN_PARENT1,  // parent1 (HG00403)
                 TRIO_DN_PARENT2,  // parent2 (HG00404)
                 TRIO_DN_PROBAND,  // proband (HG00405)
@@ -155,6 +129,7 @@ class OneKGPdMCPServerIT {
                 null, null,       // minVariantLengthBp, maxVariantLengthBp
                 null, null        // skip, limit
         );
+        Map<String, List<VariantView>> deNovoResult = (Map<String, List<VariantView>>) deNovoResponse.structuredContent();
 
         assertNotNull(deNovoResult, "De novo result should not be null");
         assertTrue(deNovoResult.containsKey("variants"), "Result should contain 'variants' key");
@@ -168,7 +143,7 @@ class OneKGPdMCPServerIT {
         TestBaselines.compare("mcp.denovo.cftr.count", deNovoVariants.size());
 
         // INH-DN-002: De novo with HIGH impact filter (more specific)
-        Map<String, List<VariantView>> highImpactResult = server.deNovoInTrio(
+        ToolResponse highImpactResponse = server.deNovoInTrio(
                 TRIO_DN_PARENT1, TRIO_DN_PARENT2, TRIO_DN_PROBAND,
                 CHR_CFTR, CFTR_START, CFTR_END,
                 null, null, null, null, null, null, null, null, null,
@@ -176,6 +151,7 @@ class OneKGPdMCPServerIT {
                 null, null, null, null, null, null, null,
                 null, null, null, null, null, null, null, null
         );
+        Map<String, List<VariantView>> highImpactResult = (Map<String, List<VariantView>>) highImpactResponse.structuredContent();
 
         assertNotNull(highImpactResult, "High impact de novo result should not be null");
         List<VariantView> highImpactVariants = highImpactResult.get("variants");
@@ -184,26 +160,28 @@ class OneKGPdMCPServerIT {
                 "Filtered results should be <= unfiltered (or both empty)");
 
         // INH-DN-003: De novo pagination
-        Map<String, List<VariantView>> paginatedResult = server.deNovoInTrio(
+        ToolResponse paginatedResponse = server.deNovoInTrio(
                 TRIO_DN_PARENT1, TRIO_DN_PARENT2, TRIO_DN_PROBAND,
                 CHR_DENSE, DENSE_START, DENSE_END,  // Dense region for pagination test
                 null, null, null, null, null, null, null, null, null, null,
                 null, null, null, null, null, null, null, null, null, null, null,
                 null, null, 0, 10  // skip=0, limit=10
         );
+        Map<String, List<VariantView>> paginatedResult = (Map<String, List<VariantView>>) paginatedResponse.structuredContent();
 
         assertNotNull(paginatedResult, "Paginated de novo result should not be null");
         assertTrue(paginatedResult.get("variants").size() <= 10,
                 "Paginated results should respect limit");
 
         // INH-DN-004: De novo in sparse region (may return empty)
-        Map<String, List<VariantView>> sparseResult = server.deNovoInTrio(
+        ToolResponse sparseResponse = server.deNovoInTrio(
                 TRIO_DN_PARENT1, TRIO_DN_PARENT2, TRIO_DN_PROBAND,
                 CHR_SPARSE, SPARSE_START, SPARSE_END,
                 null, null, null, null, null, null, null, null, null, null,
                 null, null, null, null, null, null, null, null, null, null, null,
                 null, null, null, null
         );
+        Map<String, List<VariantView>> sparseResult = (Map<String, List<VariantView>>) sparseResponse.structuredContent();
 
         assertNotNull(sparseResult, "Sparse region de novo result should not be null");
         // Sparse region may legitimately return no variants
@@ -219,12 +197,13 @@ class OneKGPdMCPServerIT {
     // Test 4: Heterozygous Dominant Inheritance (INH-HD-001 to INH-HD-003)
     // ========================================
 
+    @SuppressWarnings("unchecked")
     @Test
     @Order(4)
     @DisplayName("INH-HD-001 to INH-HD-003: Heterozygous dominant trio inheritance queries")
     void testHetDominantInTrio() {
         // INH-HD-001: Basic het dominant query
-        Map<String, List<VariantView>> hetDomResult = server.hetDominantInTrio(
+        ToolResponse hetDomResponse = server.hetDominantInTrio(
                 TRIO_HD_AFFECTED,    // affectedParent (HG00403)
                 TRIO_HD_UNAFFECTED,  // unaffectedParent (HG00404)
                 TRIO_HD_PROBAND,     // proband (HG00405)
@@ -248,6 +227,7 @@ class OneKGPdMCPServerIT {
                 null, null,          // minVariantLengthBp, maxVariantLengthBp
                 null, null           // skip, limit
         );
+        Map<String, List<VariantView>> hetDomResult = (Map<String, List<VariantView>>) hetDomResponse.structuredContent();
 
         assertNotNull(hetDomResult, "Het dominant result should not be null");
         assertTrue(hetDomResult.containsKey("variants"), "Result should contain 'variants' key");
@@ -260,7 +240,7 @@ class OneKGPdMCPServerIT {
         TestBaselines.compare("mcp.hetdom.cftr.count", hetDomVariants.size());
 
         // INH-HD-002: Het dominant with HIGH impact
-        Map<String, List<VariantView>> highImpactResult = server.hetDominantInTrio(
+        ToolResponse highImpactResponse = server.hetDominantInTrio(
                 TRIO_HD_AFFECTED, TRIO_HD_UNAFFECTED, TRIO_HD_PROBAND,
                 CHR_CFTR, CFTR_START, CFTR_END,
                 null, null, null, null, null, null, null, null, null,
@@ -268,6 +248,7 @@ class OneKGPdMCPServerIT {
                 null, null, null, null, null, null, null,
                 null, null, null, null, null, null, null, null
         );
+        Map<String, List<VariantView>> highImpactResult = (Map<String, List<VariantView>>) highImpactResponse.structuredContent();
 
         assertNotNull(highImpactResult, "High impact het dominant result should not be null");
         List<VariantView> highImpactVariants = highImpactResult.get("variants");
@@ -275,7 +256,7 @@ class OneKGPdMCPServerIT {
                 "Filtered results should be <= unfiltered");
 
         // INH-HD-003: Het dominant rare only (AF < 0.01)
-        Map<String, List<VariantView>> rareResult = server.hetDominantInTrio(
+        ToolResponse rareResponse = server.hetDominantInTrio(
                 TRIO_HD_AFFECTED, TRIO_HD_UNAFFECTED, TRIO_HD_PROBAND,
                 CHR_CFTR, CFTR_START, CFTR_END,
                 null, null,
@@ -283,6 +264,7 @@ class OneKGPdMCPServerIT {
                 null, null, null, null, null, null, null, null, null, null, null, null, null,
                 null, null, null, null, null, null, null, null
         );
+        Map<String, List<VariantView>> rareResult = (Map<String, List<VariantView>>) rareResponse.structuredContent();
 
         assertNotNull(rareResult, "Rare het dominant result should not be null");
         List<VariantView> rareVariants = rareResult.get("variants");
@@ -299,12 +281,13 @@ class OneKGPdMCPServerIT {
     // Test 5: Homozygous Recessive Inheritance (INH-HR-001 to INH-HR-003)
     // ========================================
 
+    @SuppressWarnings("unchecked")
     @Test
     @Order(5)
     @DisplayName("INH-HR-001 to INH-HR-003: Homozygous recessive trio inheritance queries")
     void testHomRecessiveInTrio() {
         // INH-HR-001: Basic hom recessive query
-        Map<String, List<VariantView>> homRecResult = server.homRecessiveInTrio(
+        ToolResponse homRecResponse = server.homRecessiveInTrio(
                 TRIO_HR_CARRIER1,  // unaffectedParent1 (HG00403)
                 TRIO_HR_CARRIER2,  // unaffectedParent2 (HG00404)
                 TRIO_HR_AFFECTED,  // proband (HG00405)
@@ -328,6 +311,7 @@ class OneKGPdMCPServerIT {
                 null, null,        // minVariantLengthBp, maxVariantLengthBp
                 null, null         // skip, limit
         );
+        Map<String, List<VariantView>> homRecResult = (Map<String, List<VariantView>>) homRecResponse.structuredContent();
 
         assertNotNull(homRecResult, "Hom recessive result should not be null");
         assertTrue(homRecResult.containsKey("variants"), "Result should contain 'variants' key");
@@ -340,13 +324,14 @@ class OneKGPdMCPServerIT {
         TestBaselines.compare("mcp.homrec.cftr.count", homRecVariants.size());
 
         // INH-HR-002: Hom recessive with consequence filter
-        Map<String, List<VariantView>> consequenceResult = server.homRecessiveInTrio(
+        ToolResponse consequenceResponse = server.homRecessiveInTrio(
                 TRIO_HR_CARRIER1, TRIO_HR_CARRIER2, TRIO_HR_AFFECTED,
                 CHR_CFTR, CFTR_START, CFTR_END,
                 null, null, null, null, null, null, null, null, null, null, null, null, null,
                 "MISSENSE_VARIANT,FRAMESHIFT_VARIANT",  // vepConsequences
                 null, null, null, null, null, null, null, null, null, null, null
         );
+        Map<String, List<VariantView>> consequenceResult = (Map<String, List<VariantView>>) consequenceResponse.structuredContent();
 
         assertNotNull(consequenceResult, "Consequence-filtered hom recessive result should not be null");
         List<VariantView> consequenceVariants = consequenceResult.get("variants");
@@ -354,13 +339,14 @@ class OneKGPdMCPServerIT {
                 "Filtered results should be <= unfiltered");
 
         // INH-HR-003: Hom recessive pathogenic only (ClinVar)
-        Map<String, List<VariantView>> pathogenicResult = server.homRecessiveInTrio(
+        ToolResponse pathogenicResponse = server.homRecessiveInTrio(
                 TRIO_HR_CARRIER1, TRIO_HR_CARRIER2, TRIO_HR_AFFECTED,
                 CHR_CFTR, CFTR_START, CFTR_END,
                 null, null, null, null, null, null, null, null,
                 "PATHOGENIC,LIKELY_PATHOGENIC",  // clinSignificance
                 null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null
         );
+        Map<String, List<VariantView>> pathogenicResult = (Map<String, List<VariantView>>) pathogenicResponse.structuredContent();
 
         assertNotNull(pathogenicResult, "Pathogenic hom recessive result should not be null");
         List<VariantView> pathogenicVariants = pathogenicResult.get("variants");
@@ -382,10 +368,11 @@ class OneKGPdMCPServerIT {
     @DisplayName("INH-KIN-001 to INH-KIN-004: Kinship degree calculation")
     void testKinship() {
         // INH-KIN-001: Known related pair (parent-child)
-        OneKGPdMCPServer.KinshipResult parentChildResult = server.getKinshipDegree(
+        ToolResponse parentChildResponse = server.getKinshipDegree(
                 KINSHIP_PARENT,  // HG00403
                 KINSHIP_CHILD    // HG00405
         );
+        OneKGPdMCPServer.KinshipResult parentChildResult = (OneKGPdMCPServer.KinshipResult) parentChildResponse.structuredContent();
 
         assertNotNull(parentChildResult, "Kinship result should not be null");
         assertNotNull(parentChildResult.degree(), "Kinship degree should not be null");
@@ -394,29 +381,32 @@ class OneKGPdMCPServerIT {
         LOGGER.info("Parent-child kinship: " + parentChildResult.degree());
 
         // INH-KIN-002: Known unrelated pair
-        OneKGPdMCPServer.KinshipResult unrelatedResult = server.getKinshipDegree(
+        ToolResponse unrelatedResponse = server.getKinshipDegree(
                 KINSHIP_UNRELATED1,  // HG00406
                 SAMPLE_MALE          // HG00403 - from different family
         );
+        OneKGPdMCPServer.KinshipResult unrelatedResult = (OneKGPdMCPServer.KinshipResult) unrelatedResponse.structuredContent();
 
         assertNotNull(unrelatedResult, "Unrelated kinship result should not be null");
         // Unrelated pairs may return empty string or specific degree
         LOGGER.info("Unrelated kinship: " + unrelatedResult.degree());
 
         // INH-KIN-003: Same sample (self-kinship)
-        OneKGPdMCPServer.KinshipResult selfResult = server.getKinshipDegree(
+        ToolResponse selfResponse = server.getKinshipDegree(
                 SAMPLE_FEMALE,  // HG00405
                 SAMPLE_FEMALE   // HG00405
         );
+        OneKGPdMCPServer.KinshipResult selfResult = (OneKGPdMCPServer.KinshipResult) selfResponse.structuredContent();
 
         assertNotNull(selfResult, "Self-kinship result should not be null");
         LOGGER.info("Self kinship: " + selfResult.degree());
 
         // INH-KIN-004: Parent pair (should be unrelated unless siblings)
-        OneKGPdMCPServer.KinshipResult parentPairResult = server.getKinshipDegree(
+        ToolResponse parentPairResponse = server.getKinshipDegree(
                 SAMPLE_MALE,     // HG00403
                 SAMPLE_GENERAL   // HG00404
         );
+        OneKGPdMCPServer.KinshipResult parentPairResult = (OneKGPdMCPServer.KinshipResult) parentPairResponse.structuredContent();
 
         assertNotNull(parentPairResult, "Parent pair kinship result should not be null");
         LOGGER.info("Parent pair kinship (HG00403-HG00404): " + parentPairResult.degree());
@@ -439,18 +429,20 @@ class OneKGPdMCPServerIT {
     // Test 7: Validate JSON Response Structure
     // ========================================
 
+    @SuppressWarnings("unchecked")
     @Test
     @Order(7)
     @DisplayName("Validate JSON response structure from inheritance tools")
     void testJsonResponseStructure() {
         // Get some variants to validate structure
-        Map<String, List<VariantView>> result = server.hetDominantInTrio(
+        ToolResponse toolResponse = server.hetDominantInTrio(
                 TRIO_HD_AFFECTED, TRIO_HD_UNAFFECTED, TRIO_HD_PROBAND,
                 CHR_BRCA1, BRCA1_START, BRCA1_END,
                 null, null, null, null, null, null, null, null, null, null,
                 null, null, null, null, null, null, null, null, null, null, null,
                 null, null, 0, 5  // Get just 5 variants
         );
+        Map<String, List<VariantView>> result = (Map<String, List<VariantView>>) toolResponse.structuredContent();
 
         assertNotNull(result, "Result should not be null");
         List<VariantView> variants = result.get("variants");

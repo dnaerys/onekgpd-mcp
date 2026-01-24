@@ -18,13 +18,16 @@ package org.dnaerys.mcp;
 
 import io.quarkiverse.mcp.server.Tool;
 import io.quarkiverse.mcp.server.ToolArg;
+import io.quarkiverse.mcp.server.ToolResponse;
 import io.quarkus.logging.Log;
 import io.quarkus.runtime.Startup;
 import jakarta.enterprise.context.ApplicationScoped;
 
+import jakarta.inject.Inject;
 import org.dnaerys.client.DnaerysClient;
 import org.dnaerys.cluster.grpc.Variant;
 import org.dnaerys.mcp.generator.*;
+import org.dnaerys.mcp.util.McpResponse;
 
 import java.util.List;
 import java.util.Map;
@@ -32,6 +35,9 @@ import java.util.Map;
 @SuppressWarnings("unused")
 @ApplicationScoped
 public class OneKGPdMCPServer {
+
+    @Inject
+    McpResponse mcpResponse;
 
     private final DnaerysClient client = new DnaerysClient();
 
@@ -155,80 +161,19 @@ public class OneKGPdMCPServer {
             idempotentHint = true,  // required to override Quarkus' defaults
             openWorldHint = false
         ),
-        description =
-            "Retrieve the total, male, and female SAMPLE COUNTS for 1000 Genomes Project\n\n" +
-            "RETURNS: Refer to the Output Schema for field definitions.",
+        description = "Retrieve the total, male, and female sample counts for the 1000 Genomes Project.",
         outputSchema = @Tool.OutputSchema(
             from = DnaerysClient.SampleCounts.class,
             generator = SampleCountsSchemaGenerator.class
         )
     )
-    public DnaerysClient.SampleCounts getSampleCounts() {
-        return client.getSampleCounts();
-    }
-
-    @Tool(
-        title = "getSampleIds",
-        structuredContent = true, // We now know this is required for Schema validation
-        annotations = @Tool.Annotations(
-            title = "getSampleIds",
-            readOnlyHint = true,
-            destructiveHint = false, // required to override Quarkus' defaults
-            idempotentHint = true,  // required to override Quarkus' defaults
-            openWorldHint = false
-        ),
-        description =
-            "Retrieve ALL Sample ID in 1000 Genomes Project\n\n" +
-            "RETURNS: Refer to the Output Schema for field definitions.",
-        outputSchema = @Tool.OutputSchema(
-            from = Map.class, // Change this to Map
-            generator = SampleIdArraySchemaGenerator.class
-        )
-    )
-    public Map<String, List<String>> getSampleIds() {
-        return Map.of("samples", client.getSampleIds(DnaerysClient.Gender.BOTH));
-    }
-
-    @Tool(
-        title = "getFemaleSamplesIds",
-        structuredContent = true,
-        annotations = @Tool.Annotations(
-            title = "getFemaleSamplesIds",
-            readOnlyHint = true,
-            destructiveHint = false,
-            idempotentHint = true,
-            openWorldHint = false
-        ),
-        description =
-            "Retrieve all FEMALE Sample IDs in the 1000 Genomes Project\n\n" +
-            "RETURNS: Refer to the Output Schema for field definitions.",
-        outputSchema = @Tool.OutputSchema(
-            generator = SampleIdArraySchemaGenerator.class
-        )
-    )
-    public Map<String, List<String>> getFemaleSamplesIds() {
-        return Map.of("samples", client.getSampleIds(DnaerysClient.Gender.FEMALE));
-    }
-
-    @Tool(
-        title = "getMaleSamplesIds",
-        structuredContent = true,
-        annotations = @Tool.Annotations(
-            title = "getMaleSamplesIds",
-            readOnlyHint = true,
-            destructiveHint = false,
-            idempotentHint = true,
-            openWorldHint = false
-        ),
-        description =
-            "Retrieve all MALE Sample IDs in the 1000 Genomes Project\n\n" +
-            "RETURNS: Refer to the Output Schema for field definitions.",
-        outputSchema = @Tool.OutputSchema(
-            generator = SampleIdArraySchemaGenerator.class
-        )
-    )
-    public Map<String, List<String>> getMaleSamplesIds() {
-        return Map.of("samples", client.getSampleIds(DnaerysClient.Gender.MALE));
+    public ToolResponse getSampleCounts() {
+        try {
+            DnaerysClient.SampleCounts counts = client.getSampleCounts();
+            return mcpResponse.success(counts);
+        } catch (Exception e) {
+            throw McpResponse.handle(e);
+        }
     }
 
     @Tool(
@@ -248,8 +193,12 @@ public class OneKGPdMCPServer {
             generator = CountSchemaGenerator.class
         )
     )
-    public Map<String, Long> getVariantsTotal() {
-        return Map.of("count", client.variantsTotal());
+    public ToolResponse getVariantsTotal() {
+        try {
+            return mcpResponse.success(Map.of("count", client.variantsTotal()));
+        } catch (Exception e) {
+            throw McpResponse.handle(e);
+        }
     }
 
     // Count/Select Variants in Region
@@ -288,7 +237,7 @@ public class OneKGPdMCPServer {
             generator = CountSchemaGenerator.class
         )
     )
-    public Map<String, Long> countVariantsInRegion(
+    public ToolResponse countVariantsInRegion(
                 @ToolArg(description = CHROMOSOME_DESC) String chromosome,
                 @ToolArg(description = START_DESC) int start,
                 @ToolArg(description = END_DESC) int end,
@@ -315,14 +264,18 @@ public class OneKGPdMCPServer {
                 @ToolArg(description = EXFEMALE_DESC, required = false) Boolean excludeFemales,
                 @ToolArg(description = MINLEN_DESC, required = false) Integer minVariantLengthBp,
                 @ToolArg(description = MAXLEN_DESC, required = false) Integer maxVariantLengthBp) {
-        boolean selectHom = true;
-        boolean selectHet = true;
-        Long count = client.countVariantsInRegion(chromosome, start, end, selectHom, selectHet, refAllele, altAllele, minVariantLengthBp,
-                        maxVariantLengthBp, biallelicOnly, multiallelicOnly, excludeMales, excludeFemales, afLessThan, afGreaterThan,
-                        gnomadGenomeAfLessThan, gnomadGenomeAfGreaterThan, gnomadExomeAfLessThan, gnomadExomeAfGreaterThan, vepImpact,
-                        vepBiotype, vepFeature, vepVariantType, vepConsequences, alphaMissenseClass, alphaMissenseScoreLessThan,
-                        alphaMissenseScoreGreaterThan, clinSignificance);
-        return Map.of("count", count);
+        try {
+            boolean selectHom = true;
+            boolean selectHet = true;
+            Long count = client.countVariantsInRegion(chromosome, start, end, selectHom, selectHet, refAllele, altAllele, minVariantLengthBp,
+                            maxVariantLengthBp, biallelicOnly, multiallelicOnly, excludeMales, excludeFemales, afLessThan, afGreaterThan,
+                            gnomadGenomeAfLessThan, gnomadGenomeAfGreaterThan, gnomadExomeAfLessThan, gnomadExomeAfGreaterThan, vepImpact,
+                            vepBiotype, vepFeature, vepVariantType, vepConsequences, alphaMissenseClass, alphaMissenseScoreLessThan,
+                            alphaMissenseScoreGreaterThan, clinSignificance);
+            return mcpResponse.success(Map.of("count", count));
+        } catch (Exception e) {
+            throw McpResponse.handle(e);
+        }
     }
 
     @Tool(
@@ -359,7 +312,7 @@ public class OneKGPdMCPServer {
             generator = CountSchemaGenerator.class
         )
     )
-    public Map<String, Long> countHomozygousVariantsInRegion(
+    public ToolResponse countHomozygousVariantsInRegion(
                 @ToolArg(description = CHROMOSOME_DESC) String chromosome,
                 @ToolArg(description = START_DESC) int start,
                 @ToolArg(description = END_DESC) int end,
@@ -386,13 +339,17 @@ public class OneKGPdMCPServer {
                 @ToolArg(description = EXFEMALE_DESC, required = false) Boolean excludeFemales,
                 @ToolArg(description = MINLEN_DESC, required = false) Integer minVariantLengthBp,
                 @ToolArg(description = MAXLEN_DESC, required = false) Integer maxVariantLengthBp) {
-        boolean selectHom = true;
-        boolean selectHet = false;
-        Long count = client.countVariantsInRegion(chromosome, start, end, selectHom, selectHet, refAllele, altAllele, minVariantLengthBp,
-                        maxVariantLengthBp, biallelicOnly, multiallelicOnly, excludeMales, excludeFemales, afLessThan, afGreaterThan,
-                        gnomadGenomeAfLessThan, gnomadGenomeAfGreaterThan, gnomadExomeAfLessThan, gnomadExomeAfGreaterThan, vepImpact,
-                        vepBiotype, vepFeature, vepVariantType, vepConsequences, alphaMissenseClass, alphaMissenseScoreLessThan, alphaMissenseScoreGreaterThan, clinSignificance);
-        return Map.of("count", count);
+        try {
+            boolean selectHom = true;
+            boolean selectHet = false;
+            Long count = client.countVariantsInRegion(chromosome, start, end, selectHom, selectHet, refAllele, altAllele, minVariantLengthBp,
+                            maxVariantLengthBp, biallelicOnly, multiallelicOnly, excludeMales, excludeFemales, afLessThan, afGreaterThan,
+                            gnomadGenomeAfLessThan, gnomadGenomeAfGreaterThan, gnomadExomeAfLessThan, gnomadExomeAfGreaterThan, vepImpact,
+                            vepBiotype, vepFeature, vepVariantType, vepConsequences, alphaMissenseClass, alphaMissenseScoreLessThan, alphaMissenseScoreGreaterThan, clinSignificance);
+            return mcpResponse.success(Map.of("count", count));
+        } catch (Exception e) {
+            throw McpResponse.handle(e);
+        }
     }
 
     @Tool(
@@ -429,7 +386,7 @@ public class OneKGPdMCPServer {
             generator = CountSchemaGenerator.class
         )
     )
-    public Map<String, Long> countHeterozygousVariantsInRegion(
+    public ToolResponse countHeterozygousVariantsInRegion(
                 @ToolArg(description = CHROMOSOME_DESC) String chromosome,
                 @ToolArg(description = START_DESC) int start,
                 @ToolArg(description = END_DESC) int end,
@@ -456,14 +413,18 @@ public class OneKGPdMCPServer {
                 @ToolArg(description = EXFEMALE_DESC, required = false) Boolean excludeFemales,
                 @ToolArg(description = MINLEN_DESC, required = false) Integer minVariantLengthBp,
                 @ToolArg(description = MAXLEN_DESC, required = false) Integer maxVariantLengthBp) {
-        boolean selectHom = false;
-        boolean selectHet = true;
-        Long count = client.countVariantsInRegion(chromosome, start, end, selectHom, selectHet, refAllele, altAllele, minVariantLengthBp,
-                        maxVariantLengthBp, biallelicOnly, multiallelicOnly, excludeMales, excludeFemales, afLessThan, afGreaterThan,
-                        gnomadGenomeAfLessThan, gnomadGenomeAfGreaterThan, gnomadExomeAfLessThan, gnomadExomeAfGreaterThan, vepImpact,
-                        vepBiotype, vepFeature, vepVariantType, vepConsequences, alphaMissenseClass, alphaMissenseScoreLessThan,
-                        alphaMissenseScoreGreaterThan, clinSignificance);
-        return Map.of("count", count);
+        try {
+            boolean selectHom = false;
+            boolean selectHet = true;
+            Long count = client.countVariantsInRegion(chromosome, start, end, selectHom, selectHet, refAllele, altAllele, minVariantLengthBp,
+                            maxVariantLengthBp, biallelicOnly, multiallelicOnly, excludeMales, excludeFemales, afLessThan, afGreaterThan,
+                            gnomadGenomeAfLessThan, gnomadGenomeAfGreaterThan, gnomadExomeAfLessThan, gnomadExomeAfGreaterThan, vepImpact,
+                            vepBiotype, vepFeature, vepVariantType, vepConsequences, alphaMissenseClass, alphaMissenseScoreLessThan,
+                            alphaMissenseScoreGreaterThan, clinSignificance);
+            return mcpResponse.success(Map.of("count", count));
+        } catch (Exception e) {
+            throw McpResponse.handle(e);
+        }
     }
 
     @Tool(
@@ -502,7 +463,7 @@ public class OneKGPdMCPServer {
             generator = VariantArraySchemaGenerator.class
         )
     )
-    public Map<String, List<VariantView>> selectVariantsInRegion(
+    public ToolResponse selectVariantsInRegion(
                 @ToolArg(description = CHROMOSOME_DESC) String chromosome,
                 @ToolArg(description = START_DESC) int start,
                 @ToolArg(description = END_DESC) int end,
@@ -531,20 +492,25 @@ public class OneKGPdMCPServer {
                 @ToolArg(description = MAXLEN_DESC, required = false) Integer maxVariantLengthBp,
                 @ToolArg(description = SKIP_DESC, required = false) Integer skip,
                 @ToolArg(description = LIM_DESC, required = false) Integer limit) {
-        boolean selectHom = true;
-        boolean selectHet = true;
+        try {
+            boolean selectHom = true;
+            boolean selectHet = true;
 
-        List<Variant> variants = client.selectVariantsInRegion(chromosome, start, end, selectHom, selectHet, refAllele, altAllele,
-            minVariantLengthBp, maxVariantLengthBp, biallelicOnly, multiallelicOnly, excludeMales, excludeFemales, afLessThan, afGreaterThan,
-            gnomadGenomeAfLessThan, gnomadGenomeAfGreaterThan, gnomadExomeAfLessThan, gnomadExomeAfGreaterThan, vepImpact, vepBiotype,
-            vepFeature, vepVariantType, vepConsequences, alphaMissenseClass, alphaMissenseScoreLessThan, alphaMissenseScoreGreaterThan,
-            clinSignificance, skip, limit);
+            List<Variant> variants = client.selectVariantsInRegion(chromosome, start, end, selectHom, selectHet, refAllele, altAllele,
+                minVariantLengthBp, maxVariantLengthBp, biallelicOnly, multiallelicOnly, excludeMales, excludeFemales, afLessThan, afGreaterThan,
+                gnomadGenomeAfLessThan, gnomadGenomeAfGreaterThan, gnomadExomeAfLessThan, gnomadExomeAfGreaterThan, vepImpact, vepBiotype,
+                vepFeature, vepVariantType, vepConsequences, alphaMissenseClass, alphaMissenseScoreLessThan, alphaMissenseScoreGreaterThan,
+                clinSignificance, skip, limit);
 
-        List<VariantView> vv = variants.stream()
-            .map(VariantView::fromGrpc)
-            .toList();
+            List<VariantView> vv = variants.stream()
+                .map(VariantView::fromGrpc)
+                .toList();
 
-        return Map.of("variants", vv);
+            Map<String, Object> structured = Map.of("variants", vv);
+            return mcpResponse.success(structured, vv);
+        } catch (Exception e) {
+            throw McpResponse.handle(e);
+        }
     }
 
     @Tool(
@@ -580,7 +546,7 @@ public class OneKGPdMCPServer {
             generator = VariantArraySchemaGenerator.class
         )
     )
-    public Map<String, List<VariantView>> selectHomozygousVariantsInRegion(
+    public ToolResponse selectHomozygousVariantsInRegion(
                 @ToolArg(description = CHROMOSOME_DESC) String chromosome,
                 @ToolArg(description = START_DESC) int start,
                 @ToolArg(description = END_DESC) int end,
@@ -609,20 +575,25 @@ public class OneKGPdMCPServer {
                 @ToolArg(description = MAXLEN_DESC, required = false) Integer maxVariantLengthBp,
                 @ToolArg(description = SKIP_DESC, required = false) Integer skip,
                 @ToolArg(description = LIM_DESC, required = false) Integer limit) {
-        boolean selectHom = true;
-        boolean selectHet = false;
+        try {
+            boolean selectHom = true;
+            boolean selectHet = false;
 
-        List<Variant> variants = client.selectVariantsInRegion(chromosome, start, end, selectHom, selectHet, refAllele, altAllele,
-            minVariantLengthBp, maxVariantLengthBp, biallelicOnly, multiallelicOnly, excludeMales, excludeFemales, afLessThan, afGreaterThan,
-            gnomadGenomeAfLessThan, gnomadGenomeAfGreaterThan, gnomadExomeAfLessThan, gnomadExomeAfGreaterThan, vepImpact, vepBiotype,
-            vepFeature, vepVariantType, vepConsequences, alphaMissenseClass, alphaMissenseScoreLessThan, alphaMissenseScoreGreaterThan,
-            clinSignificance, skip, limit);
+            List<Variant> variants = client.selectVariantsInRegion(chromosome, start, end, selectHom, selectHet, refAllele, altAllele,
+                minVariantLengthBp, maxVariantLengthBp, biallelicOnly, multiallelicOnly, excludeMales, excludeFemales, afLessThan, afGreaterThan,
+                gnomadGenomeAfLessThan, gnomadGenomeAfGreaterThan, gnomadExomeAfLessThan, gnomadExomeAfGreaterThan, vepImpact, vepBiotype,
+                vepFeature, vepVariantType, vepConsequences, alphaMissenseClass, alphaMissenseScoreLessThan, alphaMissenseScoreGreaterThan,
+                clinSignificance, skip, limit);
 
-        List<VariantView> vv = variants.stream()
-            .map(VariantView::fromGrpc)
-            .toList();
+            List<VariantView> vv = variants.stream()
+                .map(VariantView::fromGrpc)
+                .toList();
 
-        return Map.of("variants", vv);
+            Map<String, Object> structured = Map.of("variants", vv);
+            return mcpResponse.success(structured, vv);
+        } catch (Exception e) {
+            throw McpResponse.handle(e);
+        }
     }
 
     @Tool(
@@ -658,7 +629,7 @@ public class OneKGPdMCPServer {
             generator = VariantArraySchemaGenerator.class
         )
     )
-    public Map<String, List<VariantView>> selectHeterozygousVariantsInRegion(
+    public ToolResponse selectHeterozygousVariantsInRegion(
                 @ToolArg(description = CHROMOSOME_DESC) String chromosome,
                 @ToolArg(description = START_DESC) int start,
                 @ToolArg(description = END_DESC) int end,
@@ -687,20 +658,25 @@ public class OneKGPdMCPServer {
                 @ToolArg(description = MAXLEN_DESC, required = false) Integer maxVariantLengthBp,
                 @ToolArg(description = SKIP_DESC, required = false) Integer skip,
                 @ToolArg(description = LIM_DESC, required = false) Integer limit) {
-        boolean selectHom = false;
-        boolean selectHet = true;
+        try {
+            boolean selectHom = false;
+            boolean selectHet = true;
 
-        List<Variant> variants = client.selectVariantsInRegion(chromosome, start, end, selectHom, selectHet, refAllele, altAllele,
-            minVariantLengthBp, maxVariantLengthBp, biallelicOnly, multiallelicOnly, excludeMales, excludeFemales, afLessThan, afGreaterThan,
-            gnomadGenomeAfLessThan, gnomadGenomeAfGreaterThan, gnomadExomeAfLessThan, gnomadExomeAfGreaterThan, vepImpact, vepBiotype,
-            vepFeature, vepVariantType, vepConsequences, alphaMissenseClass, alphaMissenseScoreLessThan, alphaMissenseScoreGreaterThan,
-            clinSignificance, skip, limit);
+            List<Variant> variants = client.selectVariantsInRegion(chromosome, start, end, selectHom, selectHet, refAllele, altAllele,
+                minVariantLengthBp, maxVariantLengthBp, biallelicOnly, multiallelicOnly, excludeMales, excludeFemales, afLessThan, afGreaterThan,
+                gnomadGenomeAfLessThan, gnomadGenomeAfGreaterThan, gnomadExomeAfLessThan, gnomadExomeAfGreaterThan, vepImpact, vepBiotype,
+                vepFeature, vepVariantType, vepConsequences, alphaMissenseClass, alphaMissenseScoreLessThan, alphaMissenseScoreGreaterThan,
+                clinSignificance, skip, limit);
 
-        List<VariantView> vv = variants.stream()
-            .map(VariantView::fromGrpc)
-            .toList();
+            List<VariantView> vv = variants.stream()
+                .map(VariantView::fromGrpc)
+                .toList();
 
-        return Map.of("variants", vv);
+            Map<String, Object> structured = Map.of("variants", vv);
+            return mcpResponse.success(structured, vv);
+        } catch (Exception e) {
+            throw McpResponse.handle(e);
+        }
     }
 
     // Count/Select Variants in Samples
@@ -739,7 +715,7 @@ public class OneKGPdMCPServer {
             generator = CountSchemaGenerator.class
         )
     )
-    public Map<String, Long> countVariantsInRegionInSample(
+    public ToolResponse countVariantsInRegionInSample(
                 @ToolArg(description = CHROMOSOME_DESC) String chromosome,
                 @ToolArg(description = START_DESC) int start,
                 @ToolArg(description = END_DESC) int end,
@@ -767,14 +743,18 @@ public class OneKGPdMCPServer {
                 @ToolArg(description = EXFEMALE_DESC, required = false) Boolean excludeFemales,
                 @ToolArg(description = MINLEN_DESC, required = false) Integer minVariantLengthBp,
                 @ToolArg(description = MAXLEN_DESC, required = false) Integer maxVariantLengthBp) {
-        boolean selectHom = true;
-        boolean selectHet = true;
-        Long count = client.countVariantsInRegionInSample(chromosome, start, end, sampleId, selectHom, selectHet, refAllele, altAllele,
-                        minVariantLengthBp, maxVariantLengthBp, biallelicOnly, multiallelicOnly, excludeMales, excludeFemales, afLessThan,
-                        afGreaterThan, gnomadGenomeAfLessThan, gnomadGenomeAfGreaterThan, gnomadExomeAfLessThan, gnomadExomeAfGreaterThan,
-                        vepImpact, vepBiotype, vepFeature, vepVariantType, vepConsequences, alphaMissenseClass, alphaMissenseScoreLessThan,
-                        alphaMissenseScoreGreaterThan, clinSignificance);
-        return Map.of("count", count);
+        try {
+            boolean selectHom = true;
+            boolean selectHet = true;
+            Long count = client.countVariantsInRegionInSample(chromosome, start, end, sampleId, selectHom, selectHet, refAllele, altAllele,
+                            minVariantLengthBp, maxVariantLengthBp, biallelicOnly, multiallelicOnly, excludeMales, excludeFemales, afLessThan,
+                            afGreaterThan, gnomadGenomeAfLessThan, gnomadGenomeAfGreaterThan, gnomadExomeAfLessThan, gnomadExomeAfGreaterThan,
+                            vepImpact, vepBiotype, vepFeature, vepVariantType, vepConsequences, alphaMissenseClass, alphaMissenseScoreLessThan,
+                            alphaMissenseScoreGreaterThan, clinSignificance);
+            return mcpResponse.success(Map.of("count", count));
+        } catch (Exception e) {
+            throw McpResponse.handle(e);
+        }
     }
 
     @Tool(
@@ -811,7 +791,7 @@ public class OneKGPdMCPServer {
             generator = CountSchemaGenerator.class
         )
     )
-    public Map<String, Long> countHomozygousVariantsInRegionInSample(
+    public ToolResponse countHomozygousVariantsInRegionInSample(
                 @ToolArg(description = CHROMOSOME_DESC) String chromosome,
                 @ToolArg(description = START_DESC) int start,
                 @ToolArg(description = END_DESC) int end,
@@ -839,14 +819,18 @@ public class OneKGPdMCPServer {
                 @ToolArg(description = EXFEMALE_DESC, required = false) Boolean excludeFemales,
                 @ToolArg(description = MINLEN_DESC, required = false) Integer minVariantLengthBp,
                 @ToolArg(description = MAXLEN_DESC, required = false) Integer maxVariantLengthBp) {
-        boolean selectHom = true;
-        boolean selectHet = false;
-        Long count = client.countVariantsInRegionInSample(chromosome, start, end, sampleId, selectHom, selectHet, refAllele, altAllele,
-                        minVariantLengthBp, maxVariantLengthBp, biallelicOnly, multiallelicOnly, excludeMales, excludeFemales, afLessThan,
-                        afGreaterThan, gnomadGenomeAfLessThan, gnomadGenomeAfGreaterThan, gnomadExomeAfLessThan, gnomadExomeAfGreaterThan,
-                        vepImpact, vepBiotype, vepFeature, vepVariantType, vepConsequences, alphaMissenseClass, alphaMissenseScoreLessThan,
-                        alphaMissenseScoreGreaterThan, clinSignificance);
-        return Map.of("count", count);
+        try {
+            boolean selectHom = true;
+            boolean selectHet = false;
+            Long count = client.countVariantsInRegionInSample(chromosome, start, end, sampleId, selectHom, selectHet, refAllele, altAllele,
+                            minVariantLengthBp, maxVariantLengthBp, biallelicOnly, multiallelicOnly, excludeMales, excludeFemales, afLessThan,
+                            afGreaterThan, gnomadGenomeAfLessThan, gnomadGenomeAfGreaterThan, gnomadExomeAfLessThan, gnomadExomeAfGreaterThan,
+                            vepImpact, vepBiotype, vepFeature, vepVariantType, vepConsequences, alphaMissenseClass, alphaMissenseScoreLessThan,
+                            alphaMissenseScoreGreaterThan, clinSignificance);
+            return mcpResponse.success(Map.of("count", count));
+        } catch (Exception e) {
+            throw McpResponse.handle(e);
+        }
     }
 
     @Tool(
@@ -883,7 +867,7 @@ public class OneKGPdMCPServer {
             generator = CountSchemaGenerator.class
         )
     )
-    public Map<String, Long> countHeterozygousVariantsInRegionInSample(
+    public ToolResponse countHeterozygousVariantsInRegionInSample(
                 @ToolArg(description = CHROMOSOME_DESC) String chromosome,
                 @ToolArg(description = START_DESC) int start,
                 @ToolArg(description = END_DESC) int end,
@@ -911,14 +895,18 @@ public class OneKGPdMCPServer {
                 @ToolArg(description = EXFEMALE_DESC, required = false) Boolean excludeFemales,
                 @ToolArg(description = MINLEN_DESC, required = false) Integer minVariantLengthBp,
                 @ToolArg(description = MAXLEN_DESC, required = false) Integer maxVariantLengthBp) {
-        boolean selectHom = false;
-        boolean selectHet = true;
-        Long count = client.countVariantsInRegionInSample(chromosome, start, end, sampleId, selectHom, selectHet, refAllele, altAllele,
-                        minVariantLengthBp, maxVariantLengthBp, biallelicOnly, multiallelicOnly, excludeMales, excludeFemales, afLessThan,
-                        afGreaterThan, gnomadGenomeAfLessThan, gnomadGenomeAfGreaterThan, gnomadExomeAfLessThan, gnomadExomeAfGreaterThan,
-                        vepImpact, vepBiotype, vepFeature, vepVariantType, vepConsequences, alphaMissenseClass, alphaMissenseScoreLessThan,
-                        alphaMissenseScoreGreaterThan, clinSignificance);
-        return Map.of("count", count);
+        try {
+            boolean selectHom = false;
+            boolean selectHet = true;
+            Long count = client.countVariantsInRegionInSample(chromosome, start, end, sampleId, selectHom, selectHet, refAllele, altAllele,
+                            minVariantLengthBp, maxVariantLengthBp, biallelicOnly, multiallelicOnly, excludeMales, excludeFemales, afLessThan,
+                            afGreaterThan, gnomadGenomeAfLessThan, gnomadGenomeAfGreaterThan, gnomadExomeAfLessThan, gnomadExomeAfGreaterThan,
+                            vepImpact, vepBiotype, vepFeature, vepVariantType, vepConsequences, alphaMissenseClass, alphaMissenseScoreLessThan,
+                            alphaMissenseScoreGreaterThan, clinSignificance);
+            return mcpResponse.success(Map.of("count", count));
+        } catch (Exception e) {
+            throw McpResponse.handle(e);
+        }
     }
 
     @Tool(
@@ -957,7 +945,7 @@ public class OneKGPdMCPServer {
             generator = VariantArraySchemaGenerator.class
         )
     )
-    public Map<String, List<VariantView>> selectVariantsInRegionInSample(
+    public ToolResponse selectVariantsInRegionInSample(
                 @ToolArg(description = CHROMOSOME_DESC) String chromosome,
                 @ToolArg(description = START_DESC) int start,
                 @ToolArg(description = END_DESC) int end,
@@ -987,20 +975,25 @@ public class OneKGPdMCPServer {
                 @ToolArg(description = MAXLEN_DESC, required = false) Integer maxVariantLengthBp,
                 @ToolArg(description = SKIP_DESC, required = false) Integer skip,
                 @ToolArg(description = LIM_DESC, required = false) Integer limit) {
-        boolean selectHom = true;
-        boolean selectHet = true;
+        try {
+            boolean selectHom = true;
+            boolean selectHet = true;
 
-        List<Variant> variants = client.selectVariantsInRegionInSample(chromosome, start, end, sampleId, selectHom, selectHet, refAllele, altAllele,
-                        minVariantLengthBp, maxVariantLengthBp, biallelicOnly, multiallelicOnly, excludeMales, excludeFemales, afLessThan,
-                        afGreaterThan, gnomadGenomeAfLessThan, gnomadGenomeAfGreaterThan, gnomadExomeAfLessThan, gnomadExomeAfGreaterThan,
-                        vepImpact, vepBiotype, vepFeature, vepVariantType, vepConsequences, alphaMissenseClass, alphaMissenseScoreLessThan,
-                        alphaMissenseScoreGreaterThan, clinSignificance, skip, limit);
+            List<Variant> variants = client.selectVariantsInRegionInSample(chromosome, start, end, sampleId, selectHom, selectHet, refAllele, altAllele,
+                            minVariantLengthBp, maxVariantLengthBp, biallelicOnly, multiallelicOnly, excludeMales, excludeFemales, afLessThan,
+                            afGreaterThan, gnomadGenomeAfLessThan, gnomadGenomeAfGreaterThan, gnomadExomeAfLessThan, gnomadExomeAfGreaterThan,
+                            vepImpact, vepBiotype, vepFeature, vepVariantType, vepConsequences, alphaMissenseClass, alphaMissenseScoreLessThan,
+                            alphaMissenseScoreGreaterThan, clinSignificance, skip, limit);
 
-        List<VariantView> vv = variants.stream()
-            .map(VariantView::fromGrpc)
-            .toList();
+            List<VariantView> vv = variants.stream()
+                .map(VariantView::fromGrpc)
+                .toList();
 
-        return Map.of("variants", vv);
+            Map<String, Object> structured = Map.of("variants", vv);
+            return mcpResponse.success(structured, vv);
+        } catch (Exception e) {
+            throw McpResponse.handle(e);
+        }
     }
 
     @Tool(
@@ -1036,7 +1029,7 @@ public class OneKGPdMCPServer {
             generator = VariantArraySchemaGenerator.class
         )
     )
-    public Map<String, List<VariantView>> selectHomozygousVariantsInRegionInSample(
+    public ToolResponse selectHomozygousVariantsInRegionInSample(
                 @ToolArg(description = CHROMOSOME_DESC) String chromosome,
                 @ToolArg(description = START_DESC) int start,
                 @ToolArg(description = END_DESC) int end,
@@ -1066,20 +1059,25 @@ public class OneKGPdMCPServer {
                 @ToolArg(description = MAXLEN_DESC, required = false) Integer maxVariantLengthBp,
                 @ToolArg(description = SKIP_DESC, required = false) Integer skip,
                 @ToolArg(description = LIM_DESC, required = false) Integer limit) {
-        boolean selectHom = true;
-        boolean selectHet = false;
+        try {
+            boolean selectHom = true;
+            boolean selectHet = false;
 
-        List<Variant> variants = client.selectVariantsInRegionInSample(chromosome, start, end, sampleId, selectHom, selectHet, refAllele, altAllele,
-                        minVariantLengthBp, maxVariantLengthBp, biallelicOnly, multiallelicOnly, excludeMales, excludeFemales, afLessThan,
-                        afGreaterThan, gnomadGenomeAfLessThan, gnomadGenomeAfGreaterThan, gnomadExomeAfLessThan, gnomadExomeAfGreaterThan,
-                        vepImpact, vepBiotype, vepFeature, vepVariantType, vepConsequences, alphaMissenseClass, alphaMissenseScoreLessThan,
-                        alphaMissenseScoreGreaterThan, clinSignificance, skip, limit);
+            List<Variant> variants = client.selectVariantsInRegionInSample(chromosome, start, end, sampleId, selectHom, selectHet, refAllele, altAllele,
+                            minVariantLengthBp, maxVariantLengthBp, biallelicOnly, multiallelicOnly, excludeMales, excludeFemales, afLessThan,
+                            afGreaterThan, gnomadGenomeAfLessThan, gnomadGenomeAfGreaterThan, gnomadExomeAfLessThan, gnomadExomeAfGreaterThan,
+                            vepImpact, vepBiotype, vepFeature, vepVariantType, vepConsequences, alphaMissenseClass, alphaMissenseScoreLessThan,
+                            alphaMissenseScoreGreaterThan, clinSignificance, skip, limit);
 
-        List<VariantView> vv = variants.stream()
-            .map(VariantView::fromGrpc)
-            .toList();
+            List<VariantView> vv = variants.stream()
+                .map(VariantView::fromGrpc)
+                .toList();
 
-        return Map.of("variants", vv);
+            Map<String, Object> structured = Map.of("variants", vv);
+            return mcpResponse.success(structured, vv);
+        } catch (Exception e) {
+            throw McpResponse.handle(e);
+        }
     }
 
     @Tool(
@@ -1115,7 +1113,7 @@ public class OneKGPdMCPServer {
             generator = VariantArraySchemaGenerator.class
         )
     )
-    public Map<String, List<VariantView>> selectHeterozygousVariantsInRegionInSample(
+    public ToolResponse selectHeterozygousVariantsInRegionInSample(
                 @ToolArg(description = CHROMOSOME_DESC) String chromosome,
                 @ToolArg(description = START_DESC) int start,
                 @ToolArg(description = END_DESC) int end,
@@ -1145,20 +1143,25 @@ public class OneKGPdMCPServer {
                 @ToolArg(description = MAXLEN_DESC, required = false) Integer maxVariantLengthBp,
                 @ToolArg(description = SKIP_DESC, required = false) Integer skip,
                 @ToolArg(description = LIM_DESC, required = false) Integer limit) {
-        boolean selectHom = false;
-        boolean selectHet = true;
+        try {
+            boolean selectHom = false;
+            boolean selectHet = true;
 
-        List<Variant> variants = client.selectVariantsInRegionInSample(chromosome, start, end, sampleId, selectHom, selectHet, refAllele, altAllele,
-                        minVariantLengthBp, maxVariantLengthBp, biallelicOnly, multiallelicOnly, excludeMales, excludeFemales, afLessThan,
-                        afGreaterThan, gnomadGenomeAfLessThan, gnomadGenomeAfGreaterThan, gnomadExomeAfLessThan, gnomadExomeAfGreaterThan,
-                        vepImpact, vepBiotype, vepFeature, vepVariantType, vepConsequences, alphaMissenseClass, alphaMissenseScoreLessThan,
-                        alphaMissenseScoreGreaterThan, clinSignificance, skip, limit);
+            List<Variant> variants = client.selectVariantsInRegionInSample(chromosome, start, end, sampleId, selectHom, selectHet, refAllele, altAllele,
+                            minVariantLengthBp, maxVariantLengthBp, biallelicOnly, multiallelicOnly, excludeMales, excludeFemales, afLessThan,
+                            afGreaterThan, gnomadGenomeAfLessThan, gnomadGenomeAfGreaterThan, gnomadExomeAfLessThan, gnomadExomeAfGreaterThan,
+                            vepImpact, vepBiotype, vepFeature, vepVariantType, vepConsequences, alphaMissenseClass, alphaMissenseScoreLessThan,
+                            alphaMissenseScoreGreaterThan, clinSignificance, skip, limit);
 
-        List<VariantView> vv = variants.stream()
-            .map(VariantView::fromGrpc)
-            .toList();
+            List<VariantView> vv = variants.stream()
+                .map(VariantView::fromGrpc)
+                .toList();
 
-        return Map.of("variants", vv);
+            Map<String, Object> structured = Map.of("variants", vv);
+            return mcpResponse.success(structured, vv);
+        } catch (Exception e) {
+            throw McpResponse.handle(e);
+        }
     }
 
     // Count/Select Samples
@@ -1197,7 +1200,7 @@ public class OneKGPdMCPServer {
             generator = CountSchemaGenerator.class
         )
     )
-    public Map<String, Long> countSamplesWithVariants(
+    public ToolResponse countSamplesWithVariants(
                 @ToolArg(description = CHROMOSOME_DESC) String chromosome,
                 @ToolArg(description = START_DESC) int start,
                 @ToolArg(description = END_DESC) int end,
@@ -1224,14 +1227,18 @@ public class OneKGPdMCPServer {
                 @ToolArg(description = EXFEMALE_DESC, required = false) Boolean excludeFemales,
                 @ToolArg(description = MINLEN_DESC, required = false) Integer minVariantLengthBp,
                 @ToolArg(description = MAXLEN_DESC, required = false) Integer maxVariantLengthBp) {
-        boolean selectHom = true;
-        boolean selectHet = true;
-        Long count = client.countSamplesInRegion(chromosome, start, end, selectHom, selectHet, refAllele, altAllele, minVariantLengthBp,
-                        maxVariantLengthBp, biallelicOnly, multiallelicOnly, excludeMales, excludeFemales, afLessThan, afGreaterThan,
-                        gnomadGenomeAfLessThan, gnomadGenomeAfGreaterThan, gnomadExomeAfLessThan, gnomadExomeAfGreaterThan, vepImpact, vepBiotype,
-                        vepFeature, vepVariantType, vepConsequences, alphaMissenseClass, alphaMissenseScoreLessThan, alphaMissenseScoreGreaterThan,
-                        clinSignificance);
-        return Map.of("count", count);
+        try {
+            boolean selectHom = true;
+            boolean selectHet = true;
+            Long count = client.countSamplesInRegion(chromosome, start, end, selectHom, selectHet, refAllele, altAllele, minVariantLengthBp,
+                            maxVariantLengthBp, biallelicOnly, multiallelicOnly, excludeMales, excludeFemales, afLessThan, afGreaterThan,
+                            gnomadGenomeAfLessThan, gnomadGenomeAfGreaterThan, gnomadExomeAfLessThan, gnomadExomeAfGreaterThan, vepImpact, vepBiotype,
+                            vepFeature, vepVariantType, vepConsequences, alphaMissenseClass, alphaMissenseScoreLessThan, alphaMissenseScoreGreaterThan,
+                            clinSignificance);
+            return mcpResponse.success(Map.of("count", count));
+        } catch (Exception e) {
+            throw McpResponse.handle(e);
+        }
     }
 
     @Tool(
@@ -1268,7 +1275,7 @@ public class OneKGPdMCPServer {
             generator = CountSchemaGenerator.class
         )
     )
-    public Map<String, Long> countSamplesWithHomVariants(
+    public ToolResponse countSamplesWithHomVariants(
                 @ToolArg(description = CHROMOSOME_DESC) String chromosome,
                 @ToolArg(description = START_DESC) int start,
                 @ToolArg(description = END_DESC) int end,
@@ -1295,14 +1302,18 @@ public class OneKGPdMCPServer {
                 @ToolArg(description = EXFEMALE_DESC, required = false) Boolean excludeFemales,
                 @ToolArg(description = MINLEN_DESC, required = false) Integer minVariantLengthBp,
                 @ToolArg(description = MAXLEN_DESC, required = false) Integer maxVariantLengthBp) {
-        boolean selectHom = true;
-        boolean selectHet = false;
-        Long count = client.countSamplesInRegion(chromosome, start, end, selectHom, selectHet, refAllele, altAllele, minVariantLengthBp,
-                        maxVariantLengthBp, biallelicOnly, multiallelicOnly, excludeMales, excludeFemales, afLessThan, afGreaterThan,
-                        gnomadGenomeAfLessThan, gnomadGenomeAfGreaterThan, gnomadExomeAfLessThan, gnomadExomeAfGreaterThan, vepImpact, vepBiotype,
-                        vepFeature, vepVariantType, vepConsequences, alphaMissenseClass, alphaMissenseScoreLessThan, alphaMissenseScoreGreaterThan,
-                        clinSignificance);
-        return Map.of("count", count);
+        try {
+            boolean selectHom = true;
+            boolean selectHet = false;
+            Long count = client.countSamplesInRegion(chromosome, start, end, selectHom, selectHet, refAllele, altAllele, minVariantLengthBp,
+                            maxVariantLengthBp, biallelicOnly, multiallelicOnly, excludeMales, excludeFemales, afLessThan, afGreaterThan,
+                            gnomadGenomeAfLessThan, gnomadGenomeAfGreaterThan, gnomadExomeAfLessThan, gnomadExomeAfGreaterThan, vepImpact, vepBiotype,
+                            vepFeature, vepVariantType, vepConsequences, alphaMissenseClass, alphaMissenseScoreLessThan, alphaMissenseScoreGreaterThan,
+                            clinSignificance);
+            return mcpResponse.success(Map.of("count", count));
+        } catch (Exception e) {
+            throw McpResponse.handle(e);
+        }
     }
 
     @Tool(
@@ -1339,7 +1350,7 @@ public class OneKGPdMCPServer {
             generator = CountSchemaGenerator.class
         )
     )
-    public Map<String, Long> countSamplesWithHetVariants(
+    public ToolResponse countSamplesWithHetVariants(
                 @ToolArg(description = CHROMOSOME_DESC) String chromosome,
                 @ToolArg(description = START_DESC) int start,
                 @ToolArg(description = END_DESC) int end,
@@ -1366,14 +1377,18 @@ public class OneKGPdMCPServer {
                 @ToolArg(description = EXFEMALE_DESC, required = false) Boolean excludeFemales,
                 @ToolArg(description = MINLEN_DESC, required = false) Integer minVariantLengthBp,
                 @ToolArg(description = MAXLEN_DESC, required = false) Integer maxVariantLengthBp) {
-        boolean selectHom = false;
-        boolean selectHet = true;
-        Long count = client.countSamplesInRegion(chromosome, start, end, selectHom, selectHet, refAllele, altAllele, minVariantLengthBp,
-                        maxVariantLengthBp, biallelicOnly, multiallelicOnly, excludeMales, excludeFemales, afLessThan, afGreaterThan,
-                        gnomadGenomeAfLessThan, gnomadGenomeAfGreaterThan, gnomadExomeAfLessThan, gnomadExomeAfGreaterThan, vepImpact, vepBiotype,
-                        vepFeature, vepVariantType, vepConsequences, alphaMissenseClass, alphaMissenseScoreLessThan, alphaMissenseScoreGreaterThan,
-                        clinSignificance);
-        return Map.of("count", count);
+        try {
+            boolean selectHom = false;
+            boolean selectHet = true;
+            Long count = client.countSamplesInRegion(chromosome, start, end, selectHom, selectHet, refAllele, altAllele, minVariantLengthBp,
+                            maxVariantLengthBp, biallelicOnly, multiallelicOnly, excludeMales, excludeFemales, afLessThan, afGreaterThan,
+                            gnomadGenomeAfLessThan, gnomadGenomeAfGreaterThan, gnomadExomeAfLessThan, gnomadExomeAfGreaterThan, vepImpact, vepBiotype,
+                            vepFeature, vepVariantType, vepConsequences, alphaMissenseClass, alphaMissenseScoreLessThan, alphaMissenseScoreGreaterThan,
+                            clinSignificance);
+            return mcpResponse.success(Map.of("count", count));
+        } catch (Exception e) {
+            throw McpResponse.handle(e);
+        }
     }
 
     @Tool(
@@ -1410,7 +1425,7 @@ public class OneKGPdMCPServer {
             generator = SampleIdArraySchemaGenerator.class
         )
     )
-    public Map<String, List<String>> selectSamplesWithVariants(
+    public ToolResponse selectSamplesWithVariants(
                 @ToolArg(description = CHROMOSOME_DESC) String chromosome,
                 @ToolArg(description = START_DESC) int start,
                 @ToolArg(description = END_DESC) int end,
@@ -1437,14 +1452,19 @@ public class OneKGPdMCPServer {
                 @ToolArg(description = EXFEMALE_DESC, required = false) Boolean excludeFemales,
                 @ToolArg(description = MINLEN_DESC, required = false) Integer minVariantLengthBp,
                 @ToolArg(description = MAXLEN_DESC, required = false) Integer maxVariantLengthBp) {
-        boolean selectHom = true;
-        boolean selectHet = true;
-        List<String> samples = client.selectSamplesInRegion(chromosome, start, end, selectHom, selectHet, refAllele, altAllele, minVariantLengthBp,
-                        maxVariantLengthBp, biallelicOnly, multiallelicOnly, excludeMales, excludeFemales, afLessThan, afGreaterThan,
-                        gnomadGenomeAfLessThan, gnomadGenomeAfGreaterThan, gnomadExomeAfLessThan, gnomadExomeAfGreaterThan, vepImpact, vepBiotype,
-                        vepFeature, vepVariantType, vepConsequences, alphaMissenseClass, alphaMissenseScoreLessThan, alphaMissenseScoreGreaterThan,
-                        clinSignificance);
-        return Map.of("samples", samples);
+        try {
+            boolean selectHom = true;
+            boolean selectHet = true;
+            List<String> samples = client.selectSamplesInRegion(chromosome, start, end, selectHom, selectHet, refAllele, altAllele, minVariantLengthBp,
+                            maxVariantLengthBp, biallelicOnly, multiallelicOnly, excludeMales, excludeFemales, afLessThan, afGreaterThan,
+                            gnomadGenomeAfLessThan, gnomadGenomeAfGreaterThan, gnomadExomeAfLessThan, gnomadExomeAfGreaterThan, vepImpact, vepBiotype,
+                            vepFeature, vepVariantType, vepConsequences, alphaMissenseClass, alphaMissenseScoreLessThan, alphaMissenseScoreGreaterThan,
+                            clinSignificance);
+            Map<String, Object> structured = Map.of("samples", samples);
+            return mcpResponse.success(structured, samples);
+        } catch (Exception e) {
+            throw McpResponse.handle(e);
+        }
     }
 
     @Tool(
@@ -1478,7 +1498,7 @@ public class OneKGPdMCPServer {
             generator = SampleIdArraySchemaGenerator.class
         )
     )
-    public Map<String, List<String>> selectSamplesWithHomVariants(
+    public ToolResponse selectSamplesWithHomVariants(
                 @ToolArg(description = CHROMOSOME_DESC) String chromosome,
                 @ToolArg(description = START_DESC) int start,
                 @ToolArg(description = END_DESC) int end,
@@ -1505,14 +1525,19 @@ public class OneKGPdMCPServer {
                 @ToolArg(description = EXFEMALE_DESC, required = false) Boolean excludeFemales,
                 @ToolArg(description = MINLEN_DESC, required = false) Integer minVariantLengthBp,
                 @ToolArg(description = MAXLEN_DESC, required = false) Integer maxVariantLengthBp) {
-        boolean selectHom = true;
-        boolean selectHet = false;
-        List<String> samples = client.selectSamplesInRegion(chromosome, start, end, selectHom, selectHet, refAllele, altAllele, minVariantLengthBp,
-                        maxVariantLengthBp, biallelicOnly, multiallelicOnly, excludeMales, excludeFemales, afLessThan, afGreaterThan,
-                        gnomadGenomeAfLessThan, gnomadGenomeAfGreaterThan, gnomadExomeAfLessThan, gnomadExomeAfGreaterThan, vepImpact, vepBiotype,
-                        vepFeature, vepVariantType, vepConsequences, alphaMissenseClass, alphaMissenseScoreLessThan, alphaMissenseScoreGreaterThan,
-                        clinSignificance);
-        return Map.of("samples", samples);
+        try {
+            boolean selectHom = true;
+            boolean selectHet = false;
+            List<String> samples = client.selectSamplesInRegion(chromosome, start, end, selectHom, selectHet, refAllele, altAllele, minVariantLengthBp,
+                            maxVariantLengthBp, biallelicOnly, multiallelicOnly, excludeMales, excludeFemales, afLessThan, afGreaterThan,
+                            gnomadGenomeAfLessThan, gnomadGenomeAfGreaterThan, gnomadExomeAfLessThan, gnomadExomeAfGreaterThan, vepImpact, vepBiotype,
+                            vepFeature, vepVariantType, vepConsequences, alphaMissenseClass, alphaMissenseScoreLessThan, alphaMissenseScoreGreaterThan,
+                            clinSignificance);
+            Map<String, Object> structured = Map.of("samples", samples);
+            return mcpResponse.success(structured, samples);
+        } catch (Exception e) {
+            throw McpResponse.handle(e);
+        }
     }
 
     @Tool(
@@ -1546,7 +1571,7 @@ public class OneKGPdMCPServer {
             generator = SampleIdArraySchemaGenerator.class
         )
     )
-    public Map<String, List<String>> selectSamplesWithHetVariants(
+    public ToolResponse selectSamplesWithHetVariants(
                 @ToolArg(description = CHROMOSOME_DESC) String chromosome,
                 @ToolArg(description = START_DESC) int start,
                 @ToolArg(description = END_DESC) int end,
@@ -1573,14 +1598,19 @@ public class OneKGPdMCPServer {
                 @ToolArg(description = EXFEMALE_DESC, required = false) Boolean excludeFemales,
                 @ToolArg(description = MINLEN_DESC, required = false) Integer minVariantLengthBp,
                 @ToolArg(description = MAXLEN_DESC, required = false) Integer maxVariantLengthBp) {
-        boolean selectHom = false;
-        boolean selectHet = true;
-        List<String> samples = client.selectSamplesInRegion(chromosome, start, end, selectHom, selectHet, refAllele, altAllele,
-                        minVariantLengthBp, maxVariantLengthBp, biallelicOnly, multiallelicOnly, excludeMales, excludeFemales, afLessThan,
-                        afGreaterThan, gnomadGenomeAfLessThan, gnomadGenomeAfGreaterThan, gnomadExomeAfLessThan, gnomadExomeAfGreaterThan,
-                        vepImpact, vepBiotype, vepFeature, vepVariantType, vepConsequences, alphaMissenseClass, alphaMissenseScoreLessThan,
-                        alphaMissenseScoreGreaterThan, clinSignificance);
-        return Map.of("samples", samples);
+        try {
+            boolean selectHom = false;
+            boolean selectHet = true;
+            List<String> samples = client.selectSamplesInRegion(chromosome, start, end, selectHom, selectHet, refAllele, altAllele,
+                            minVariantLengthBp, maxVariantLengthBp, biallelicOnly, multiallelicOnly, excludeMales, excludeFemales, afLessThan,
+                            afGreaterThan, gnomadGenomeAfLessThan, gnomadGenomeAfGreaterThan, gnomadExomeAfLessThan, gnomadExomeAfGreaterThan,
+                            vepImpact, vepBiotype, vepFeature, vepVariantType, vepConsequences, alphaMissenseClass, alphaMissenseScoreLessThan,
+                            alphaMissenseScoreGreaterThan, clinSignificance);
+            Map<String, Object> structured = Map.of("samples", samples);
+            return mcpResponse.success(structured, samples);
+        } catch (Exception e) {
+            throw McpResponse.handle(e);
+        }
     }
 
     @Tool(
@@ -1616,7 +1646,7 @@ public class OneKGPdMCPServer {
             generator = VariantArraySchemaGenerator.class
         )
     )
-    public Map<String, List<VariantView>> deNovoInTrio(
+    public ToolResponse deNovoInTrio(
                 @ToolArg(description = "sample id for parent 1") String parent1,
                 @ToolArg(description = "sample id for parent 2") String parent2,
                 @ToolArg(description = "sample id for proband") String proband,
@@ -1648,18 +1678,22 @@ public class OneKGPdMCPServer {
                 @ToolArg(description = MAXLEN_DESC, required = false) Integer maxVariantLengthBp,
                 @ToolArg(description = SKIP_DESC, required = false) Integer skip,
                 @ToolArg(description = LIM_DESC, required = false) Integer limit) {
+        try {
+            List<Variant> variants = client.selectDeNovo(parent1, parent2, proband, chromosome, start, end, refAllele, altAllele, minVariantLengthBp,
+                            maxVariantLengthBp, biallelicOnly, multiallelicOnly, excludeMales, excludeFemales, afLessThan, afGreaterThan,
+                            gnomadGenomeAfLessThan, gnomadGenomeAfGreaterThan, gnomadExomeAfLessThan, gnomadExomeAfGreaterThan, vepImpact,
+                            vepBiotype, vepFeature, vepVariantType, vepConsequences, alphaMissenseClass, alphaMissenseScoreLessThan,
+                            alphaMissenseScoreGreaterThan, clinSignificance, skip, limit);
 
-        List<Variant> variants = client.selectDeNovo(parent1, parent2, proband, chromosome, start, end, refAllele, altAllele, minVariantLengthBp,
-                        maxVariantLengthBp, biallelicOnly, multiallelicOnly, excludeMales, excludeFemales, afLessThan, afGreaterThan,
-                        gnomadGenomeAfLessThan, gnomadGenomeAfGreaterThan, gnomadExomeAfLessThan, gnomadExomeAfGreaterThan, vepImpact,
-                        vepBiotype, vepFeature, vepVariantType, vepConsequences, alphaMissenseClass, alphaMissenseScoreLessThan,
-                        alphaMissenseScoreGreaterThan, clinSignificance, skip, limit);
+            List<VariantView> vv = variants.stream()
+                .map(VariantView::fromGrpc)
+                .toList();
 
-        List<VariantView> vv = variants.stream()
-            .map(VariantView::fromGrpc)
-            .toList();
-
-        return Map.of("variants", vv);
+            Map<String, Object> structured = Map.of("variants", vv);
+            return mcpResponse.success(structured, vv);
+        } catch (Exception e) {
+            throw McpResponse.handle(e);
+        }
     }
 
     @Tool(
@@ -1695,7 +1729,7 @@ public class OneKGPdMCPServer {
             generator = VariantArraySchemaGenerator.class
         )
     )
-    public Map<String, List<VariantView>> hetDominantInTrio(
+    public ToolResponse hetDominantInTrio(
                 @ToolArg(description = "sample id for affected parent") String affectedParent,
                 @ToolArg(description = "sample id for unaffected parent") String unaffectedParent,
                 @ToolArg(description = "sample id for proband") String proband,
@@ -1727,18 +1761,22 @@ public class OneKGPdMCPServer {
                 @ToolArg(description = MAXLEN_DESC, required = false) Integer maxVariantLengthBp,
                 @ToolArg(description = SKIP_DESC, required = false) Integer skip,
                 @ToolArg(description = LIM_DESC, required = false) Integer limit) {
+        try {
+            List<Variant> variants = client.selectHetDominant(affectedParent, unaffectedParent, proband, chromosome, start, end, refAllele, altAllele,
+                            minVariantLengthBp, maxVariantLengthBp, biallelicOnly, multiallelicOnly, excludeMales, excludeFemales, afLessThan,
+                            afGreaterThan, gnomadGenomeAfLessThan, gnomadGenomeAfGreaterThan, gnomadExomeAfLessThan, gnomadExomeAfGreaterThan,
+                            vepImpact, vepBiotype, vepFeature, vepVariantType, vepConsequences, alphaMissenseClass, alphaMissenseScoreLessThan,
+                            alphaMissenseScoreGreaterThan, clinSignificance, skip, limit);
 
-        List<Variant> variants = client.selectHetDominant(affectedParent, unaffectedParent, proband, chromosome, start, end, refAllele, altAllele,
-                        minVariantLengthBp, maxVariantLengthBp, biallelicOnly, multiallelicOnly, excludeMales, excludeFemales, afLessThan,
-                        afGreaterThan, gnomadGenomeAfLessThan, gnomadGenomeAfGreaterThan, gnomadExomeAfLessThan, gnomadExomeAfGreaterThan,
-                        vepImpact, vepBiotype, vepFeature, vepVariantType, vepConsequences, alphaMissenseClass, alphaMissenseScoreLessThan,
-                        alphaMissenseScoreGreaterThan, clinSignificance, skip, limit);
+            List<VariantView> vv = variants.stream()
+                .map(VariantView::fromGrpc)
+                .toList();
 
-        List<VariantView> vv = variants.stream()
-            .map(VariantView::fromGrpc)
-            .toList();
-
-        return Map.of("variants", vv);
+            Map<String, Object> structured = Map.of("variants", vv);
+            return mcpResponse.success(structured, vv);
+        } catch (Exception e) {
+            throw McpResponse.handle(e);
+        }
     }
 
     @Tool(
@@ -1774,7 +1812,7 @@ public class OneKGPdMCPServer {
             generator = VariantArraySchemaGenerator.class
         )
     )
-    public Map<String, List<VariantView>> homRecessiveInTrio(
+    public ToolResponse homRecessiveInTrio(
                 @ToolArg(description = "sample id for unaffected parent 1") String unaffectedParent1,
                 @ToolArg(description = "sample id for unaffected parent 2") String unaffectedParent2,
                 @ToolArg(description = "sample id for proband") String proband,
@@ -1806,18 +1844,22 @@ public class OneKGPdMCPServer {
                 @ToolArg(description = MAXLEN_DESC, required = false) Integer maxVariantLengthBp,
                 @ToolArg(description = SKIP_DESC, required = false) Integer skip,
                 @ToolArg(description = LIM_DESC, required = false) Integer limit) {
+        try {
+            List<Variant> variants = client.selectHomRecessive(unaffectedParent1, unaffectedParent2, proband, chromosome, start, end, refAllele, altAllele,
+                            minVariantLengthBp, maxVariantLengthBp, biallelicOnly, multiallelicOnly, excludeMales, excludeFemales, afLessThan,
+                            afGreaterThan, gnomadGenomeAfLessThan, gnomadGenomeAfGreaterThan, gnomadExomeAfLessThan, gnomadExomeAfGreaterThan,
+                            vepImpact, vepBiotype, vepFeature, vepVariantType, vepConsequences, alphaMissenseClass, alphaMissenseScoreLessThan,
+                            alphaMissenseScoreGreaterThan, clinSignificance, skip, limit);
 
-        List<Variant> variants = client.selectHomRecessive(unaffectedParent1, unaffectedParent2, proband, chromosome, start, end, refAllele, altAllele,
-                        minVariantLengthBp, maxVariantLengthBp, biallelicOnly, multiallelicOnly, excludeMales, excludeFemales, afLessThan,
-                        afGreaterThan, gnomadGenomeAfLessThan, gnomadGenomeAfGreaterThan, gnomadExomeAfLessThan, gnomadExomeAfGreaterThan,
-                        vepImpact, vepBiotype, vepFeature, vepVariantType, vepConsequences, alphaMissenseClass, alphaMissenseScoreLessThan,
-                        alphaMissenseScoreGreaterThan, clinSignificance, skip, limit);
+            List<VariantView> vv = variants.stream()
+                .map(VariantView::fromGrpc)
+                .toList();
 
-        List<VariantView> vv = variants.stream()
-            .map(VariantView::fromGrpc)
-            .toList();
-
-        return Map.of("variants", vv);
+            Map<String, Object> structured = Map.of("variants", vv);
+            return mcpResponse.success(structured, vv);
+        } catch (Exception e) {
+            throw McpResponse.handle(e);
+        }
     }
 
     public record KinshipResult(String degree) {}
@@ -1840,10 +1882,16 @@ public class OneKGPdMCPServer {
             generator = KinshipSchemaGenerator.class
         )
     )
-    public KinshipResult getKinshipDegree(
-        @ToolArg(description = "First sample ID") String sample1,
-        @ToolArg(description = "Second sample ID") String sample2 ) {
+    public ToolResponse getKinshipDegree(
+        @ToolArg(description = "First sample ID (e.g., HG00404)") String sample1,
+        @ToolArg(description = "Second sample ID (e.g., HG00405)") String sample2) {
 
-        return new KinshipResult(client.kinship(sample1, sample2));
+        try {
+            String degree = client.kinship(sample1, sample2);
+            KinshipResult result = new KinshipResult(degree);
+            return mcpResponse.success(result);
+        } catch (Exception e) {
+            throw McpResponse.handle(e);
+        }
     }
 }

@@ -17,8 +17,6 @@
 package org.dnaerys.client;
 
 import java.util.*;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import java.util.stream.Stream;
 
 import org.dnaerys.cluster.grpc.*;
@@ -27,7 +25,6 @@ import org.dnaerys.client.entity.*;
 public class DnaerysClient {
 
     private static final Integer MAX_RETURNED_ITEMS = 50;
-    private static final Logger LOGGER = Logger.getLogger(DnaerysClient.class.getName());
 
     public enum Gender { MALE, FEMALE, BOTH }
 
@@ -158,65 +155,51 @@ public class DnaerysClient {
     }
 
     public long variantsTotal() {
-        try {
-            GrpcChannel channel = GrpcChannel.getInstance();
-            final boolean withSamplesNames = false;
-            DatasetInfoRequest request =
-                DatasetInfoRequest
-                    .newBuilder()
-                    .setReturnSamplesNames(withSamplesNames)
-                    .build();
-            return channel.getBlockingStub().datasetInfo(request).getVariantsTotal();
-        } catch (Exception e) {
-            LOGGER.log(Level.SEVERE, e.getMessage(), e);
-        }
-        return 0L; // default
+        // gRPC call
+        GrpcChannel channel = GrpcChannel.getInstance();
+        final boolean withSamplesNames = false;
+        DatasetInfoRequest request =
+            DatasetInfoRequest
+                .newBuilder()
+                .setReturnSamplesNames(withSamplesNames)
+                .build();
+        return channel.getBlockingStub().datasetInfo(request).getVariantsTotal();
     }
 
     public SampleCounts getSampleCounts() {
-        try {
-            GrpcChannel channel = GrpcChannel.getInstance();
-            DatasetInfoRequest request = DatasetInfoRequest.newBuilder()
-                .setReturnSamplesNames(false)
-                .build();
-            DatasetInfoResponse response = channel.getBlockingStub().datasetInfo(request);
+        // gRPC call
+        GrpcChannel channel = GrpcChannel.getInstance();
+        DatasetInfoRequest request = DatasetInfoRequest.newBuilder()
+            .setReturnSamplesNames(false)
+            .build();
+        DatasetInfoResponse response = channel.getBlockingStub().datasetInfo(request);
 
-            return new SampleCounts(
-                response.getSamplesTotal(),
-                response.getMalesTotal(),
-                response.getFemalesTotal()
-            );
-       } catch (Exception e) {
-            LOGGER.log(Level.SEVERE, "Failed to retrieve sample counts", e);
-            return new SampleCounts(0, 0, 0);
-       }
+        return new SampleCounts(
+            response.getSamplesTotal(),
+            response.getMalesTotal(),
+            response.getFemalesTotal()
+        );
     }
 
     public List<String> getSampleIds(Gender gender) {
-        try {
-            GrpcChannel channel = GrpcChannel.getInstance();
-            DatasetInfoRequest request = DatasetInfoRequest.newBuilder()
-                .setReturnSamplesNames(true)
-                .build();
+        // gRPC call
+        GrpcChannel channel = GrpcChannel.getInstance();
+        DatasetInfoRequest request = DatasetInfoRequest.newBuilder()
+            .setReturnSamplesNames(true)
+            .build();
 
-            DatasetInfoResponse response = channel.getBlockingStub().datasetInfo(request);
-            List<org.dnaerys.cluster.grpc.Cohort> cohorts = response.getCohortsList();
+        DatasetInfoResponse response = channel.getBlockingStub().datasetInfo(request);
+        List<org.dnaerys.cluster.grpc.Cohort> cohorts = response.getCohortsList();
 
-            List<String> result = cohorts.stream()
-                .flatMap(c -> switch (gender) {
-                    case FEMALE -> c.getFemaleSamplesNamesList().stream();
-                    case MALE   -> c.getMaleSamplesNamesList().stream();
-                    case BOTH   -> Stream.concat(
-                        c.getFemaleSamplesNamesList().stream(),
-                        c.getMaleSamplesNamesList().stream());
-                })
-                .toList();
-
-            return result;
-        } catch (Exception e) {
-            LOGGER.log(Level.SEVERE, "Failed to retrieve sample IDs for " + gender, e);
-            return List.of();
-        }
+        return cohorts.stream()
+            .flatMap(c -> switch (gender) {
+                case FEMALE -> c.getFemaleSamplesNamesList().stream();
+                case MALE   -> c.getMaleSamplesNamesList().stream();
+                case BOTH   -> Stream.concat(
+                    c.getFemaleSamplesNamesList().stream(),
+                    c.getMaleSamplesNamesList().stream());
+            })
+            .toList();
     }
 
     public long countVariantsInRegion(
@@ -228,10 +211,12 @@ public class DnaerysClient {
         String featureType, String variantType, String consequences, String alphaMissense,
         Float alphaMissenseScoreLT, Float alphaMissenseScoreGT, String clinSignificance) {
 
-        if (start < 0 || end < start) return 0L;
+        if (start < 0 || end < start)
+            throw new RuntimeException("Invalid 'start' or 'end' of a region");
 
         Chromosome chr = ContigsMapping.contigName2GrpcChr(chromosome);
-        if (chr.equals(Chromosome.UNRECOGNIZED)) return 0L;
+        if (chr.equals(Chromosome.UNRECOGNIZED))
+            throw new RuntimeException("Invalid Chromosome");
 
         int minLen = (varMinLength == null || varMinLength < 0) ? 0 : varMinLength;
         int maxLen = (varMaxLength == null || varMaxLength < 0) ? 0 : varMaxLength;
@@ -259,13 +244,8 @@ public class DnaerysClient {
             .setAnn(annotations)
             .build();
 
-        try {
-            GrpcChannel channel = GrpcChannel.getInstance();
-            return channel.getBlockingStub().countVariantsInRegion(request).getCount();
-        } catch (Exception e) {
-            LOGGER.log(Level.SEVERE, "countVariantsInRegion gRPC call failed", e);
-            return 0L;
-        }
+        GrpcChannel channel = GrpcChannel.getInstance();
+        return channel.getBlockingStub().countVariantsInRegion(request).getCount();
     }
 
     public long countVariantsInRegionInSample(
@@ -277,10 +257,15 @@ public class DnaerysClient {
         String featureType, String variantType, String consequences, String alphaMissense,
         Float alphaMissenseScoreLT, Float alphaMissenseScoreGT, String clinSignificance) {
 
-        if (start < 0 || end < start || sample == null || sample.isEmpty()) return 0L;
+        if (start < 0 || end < start)
+            throw new RuntimeException("Invalid 'start' or 'end' of a region");
+
+        if (sample == null || sample.isEmpty())
+            throw new RuntimeException("Sample ID must not be empty");
 
         Chromosome chr = ContigsMapping.contigName2GrpcChr(chromosome);
-        if (chr.equals(Chromosome.UNRECOGNIZED)) return 0L;
+        if (chr.equals(Chromosome.UNRECOGNIZED))
+            throw new RuntimeException("Invalid Chromosome");
 
         int minLen = (varMinLength == null || varMinLength < 0) ? 0 : varMinLength;
         int maxLen = (varMaxLength == null || varMaxLength < 0) ? 0 : varMaxLength;
@@ -309,13 +294,8 @@ public class DnaerysClient {
             .setAnn(annotations)
             .build();
 
-        try {
-            GrpcChannel channel = GrpcChannel.getInstance();
-            return channel.getBlockingStub().countVariantsInRegionInSamples(request).getCount();
-        } catch (Exception e) {
-            LOGGER.log(Level.SEVERE, "Count gRPC call failed for sample: " + sample, e);
-            return 0L;
-        }
+        GrpcChannel channel = GrpcChannel.getInstance();
+        return channel.getBlockingStub().countVariantsInRegionInSamples(request).getCount();
     }
 
     public List<Variant> selectVariantsInRegion(
@@ -328,13 +308,15 @@ public class DnaerysClient {
             Float alphaMissenseScoreLT, Float alphaMissenseScoreGT, String clinSignificance,
             Integer skip, Integer limit) {
 
-        if (start < 0 || end < start) return List.of();
+        if (start < 0 || end < start)
+            throw new RuntimeException("Invalid 'start' or 'end' of a region");
 
         int finalSkip = (skip == null || skip < 0) ? 0 : skip;
         int finalLimit = (limit == null || limit < 0 || limit > MAX_RETURNED_ITEMS) ? MAX_RETURNED_ITEMS : limit;
 
         Chromosome chr = ContigsMapping.contigName2GrpcChr(chromosome);
-        if (chr.equals(Chromosome.UNRECOGNIZED)) return List.of();
+        if (chr.equals(Chromosome.UNRECOGNIZED))
+            throw new RuntimeException("Invalid Chromosome");
 
         Annotations annotations = composeAnnotations(afLessThan, afGreaterThan, gnomadAfGenLessThan, gnomadAfGenGreaterThan,
             gnomadAfExLessThan, gnomadAfExGreaterThan, impact, bioType, featureType, variantType, consequences, clinSignificance,
@@ -357,17 +339,13 @@ public class DnaerysClient {
             .build();
 
         List<Variant> results = new ArrayList<>();
-        try {
-            GrpcChannel channel = GrpcChannel.getInstance();
-            Iterator<AllelesResponse> responseStream = channel.getBlockingStub().selectVariantsInRegion(request);
+        GrpcChannel channel = GrpcChannel.getInstance();
+        Iterator<AllelesResponse> responseStream = channel.getBlockingStub().selectVariantsInRegion(request);
 
-            while (responseStream.hasNext()) {
-                results.addAll(responseStream.next().getVariantsList());
-            }
-        } catch (Exception e) {
-            LOGGER.log(Level.SEVERE, "gRPC Call Failed", e);
-            return List.of();
+        while (responseStream.hasNext()) {
+            results.addAll(responseStream.next().getVariantsList());
         }
+
         return results;
     }
 
@@ -381,13 +359,18 @@ public class DnaerysClient {
         Float alphaMissenseScoreLT, Float alphaMissenseScoreGT, String clinSignificance,
         Integer skip, Integer limit) {
 
-        if (start < 0 || end < start || sample == null || sample.isEmpty()) List.of();
+        if (start < 0 || end < start)
+            throw new RuntimeException("Invalid 'start' or 'end' of a region");
+
+        if (sample == null || sample.isEmpty())
+            throw new RuntimeException("Sample ID must not be empty");
+
+        Chromosome chr = ContigsMapping.contigName2GrpcChr(chromosome);
+        if (chr.equals(Chromosome.UNRECOGNIZED))
+            throw new RuntimeException("Invalid Chromosome");
 
         int finalSkip = (skip == null || skip < 0) ? 0 : skip;
         int finalLimit = (limit == null || limit < 0 || limit > MAX_RETURNED_ITEMS) ? MAX_RETURNED_ITEMS : limit;
-
-        Chromosome chr = ContigsMapping.contigName2GrpcChr(chromosome);
-        if (chr.equals(Chromosome.UNRECOGNIZED)) List.of();
 
         Annotations annotations = composeAnnotations(afLessThan, afGreaterThan, gnomadAfGenLessThan, gnomadAfGenGreaterThan,
             gnomadAfExLessThan, gnomadAfExGreaterThan, impact, bioType, featureType, variantType, consequences, clinSignificance,
@@ -411,16 +394,11 @@ public class DnaerysClient {
             .build();
 
         List<Variant> results = new ArrayList<>();
-        try {
-            GrpcChannel channel = GrpcChannel.getInstance();
-            Iterator<AllelesResponse> responseStream = channel.getBlockingStub().selectVariantsInRegionInSamples(request);
+        GrpcChannel channel = GrpcChannel.getInstance();
+        Iterator<AllelesResponse> responseStream = channel.getBlockingStub().selectVariantsInRegionInSamples(request);
 
-            while (responseStream.hasNext()) {
-                results.addAll(responseStream.next().getVariantsList());
-            }
-        } catch (Exception e) {
-            LOGGER.log(Level.SEVERE, "gRPC Call Failed for sample: " + sample, e);
-            return List.of();
+        while (responseStream.hasNext()) {
+            results.addAll(responseStream.next().getVariantsList());
         }
 
         return results;
@@ -435,10 +413,12 @@ public class DnaerysClient {
         String featureType, String variantType, String consequences, String alphaMissense,
         Float alphaMissenseScoreLT, Float alphaMissenseScoreGT, String clinSignificance) {
 
-        if (start < 0 || end < start) return 0L;
+        if (start < 0 || end < start)
+            throw new RuntimeException("Invalid 'start' or 'end' of a region");
 
         Chromosome chr = ContigsMapping.contigName2GrpcChr(chromosome);
-        if (chr.equals(Chromosome.UNRECOGNIZED)) return 0L;
+        if (chr.equals(Chromosome.UNRECOGNIZED))
+            throw new RuntimeException("Invalid Chromosome");
 
         int minLen = (varMinLength == null || varMinLength < 0) ? 0 : varMinLength;
         int maxLen = (varMaxLength == null || varMaxLength < 0) ? 0 : varMaxLength;
@@ -466,13 +446,8 @@ public class DnaerysClient {
             .setAnn(annotations)
             .build();
 
-        try {
-            GrpcChannel channel = GrpcChannel.getInstance();
-            return channel.getBlockingStub().countSamplesInRegion(request).getCount();
-        } catch (Exception e) {
-            LOGGER.log(Level.SEVERE, "Count samples gRPC call failed for region: " + chromosome + ":" + start + "-" + end, e);
-            return 0L;
-        }
+        GrpcChannel channel = GrpcChannel.getInstance();
+        return channel.getBlockingStub().countSamplesInRegion(request).getCount();
     }
 
     public List<String> selectSamplesInRegion(
@@ -484,10 +459,12 @@ public class DnaerysClient {
         String featureType, String variantType, String consequences, String alphaMissense,
         Float alphaMissenseScoreLT, Float alphaMissenseScoreGT, String clinSignificance) {
 
-        if (start < 0 || end < start) return List.of();
+        if (start < 0 || end < start)
+            throw new RuntimeException("Invalid 'start' or 'end' of a region");
 
         Chromosome chr = ContigsMapping.contigName2GrpcChr(chromosome);
-        if (chr.equals(Chromosome.UNRECOGNIZED)) return List.of();
+        if (chr.equals(Chromosome.UNRECOGNIZED))
+            throw new RuntimeException("Invalid Chromosome");
 
         int minLen = (varMinLength == null || varMinLength < 0) ? 0 : varMinLength;
         int maxLen = (varMaxLength == null || varMaxLength < 0) ? 0 : varMaxLength;
@@ -515,15 +492,10 @@ public class DnaerysClient {
             .setAnn(annotations)
             .build();
 
-        try {
-            GrpcChannel channel = GrpcChannel.getInstance();
-            List<String> samples = channel.getBlockingStub().selectSamplesInRegion(request).getSamplesList();
-            if (samples == null) return List.of();
-            return samples;
-        } catch (Exception e) {
-            LOGGER.log(Level.SEVERE, "Select samples gRPC call failed", e);
-            return List.of();
-        }
+        GrpcChannel channel = GrpcChannel.getInstance();
+        List<String> samples = channel.getBlockingStub().selectSamplesInRegion(request).getSamplesList();
+        if (samples == null) return List.of();
+        return samples;
     }
 
     public List<Variant> selectDeNovo(
@@ -535,13 +507,21 @@ public class DnaerysClient {
         String consequences, String alphaMissense, Float alphaMissenseScoreLT, Float alphaMissenseScoreGT,
         String clinSignificance, Integer skip, Integer limit) {
 
-        if (parent1 == null || parent1.isEmpty() || parent2 == null || parent2.isEmpty() || proband == null || proband.isEmpty()) {
-            return List.of();
-        }
-        if (start < 0 || end < start) return List.of();
+        if (start < 0 || end < start)
+            throw new RuntimeException("Invalid 'start' or 'end' of a region");
 
         Chromosome chr = ContigsMapping.contigName2GrpcChr(chromosome);
-        if (chr.equals(Chromosome.UNRECOGNIZED)) return List.of();
+        if (chr.equals(Chromosome.UNRECOGNIZED))
+            throw new RuntimeException("Invalid Chromosome");
+
+        if (parent1 == null || parent1.isEmpty())
+            throw new RuntimeException("Sample ID for parent1 must not be empty");
+
+        if (parent2 == null || parent2.isEmpty())
+            throw new RuntimeException("Sample ID for parent2 must not be empty");
+
+        if (proband == null || proband.isEmpty())
+            throw new RuntimeException("Sample ID for proband must not be empty");
 
         int finalSkip = (skip == null || skip < 0) ? 0 : skip;
         int finalLimit = (limit == null || limit < 0 || limit > MAX_RETURNED_ITEMS) ? MAX_RETURNED_ITEMS : limit;
@@ -576,16 +556,11 @@ public class DnaerysClient {
             .build();
 
         List<Variant> variants = new ArrayList<>();
-        try {
-            GrpcChannel channel = GrpcChannel.getInstance();
-            Iterator<AllelesResponse> responseStream = channel.getBlockingStub().selectDeNovo(request);
+        GrpcChannel channel = GrpcChannel.getInstance();
+        Iterator<AllelesResponse> responseStream = channel.getBlockingStub().selectDeNovo(request);
 
-            while (responseStream.hasNext()) {
-                variants.addAll(responseStream.next().getVariantsList());
-            }
-        } catch (Exception e) {
-            LOGGER.log(Level.SEVERE, "DeNovo gRPC call failed for trio: " + parent1 + ", " + parent2 + ", " + proband, e);
-            List.of();
+        while (responseStream.hasNext()) {
+            variants.addAll(responseStream.next().getVariantsList());
         }
 
         return variants;
@@ -601,15 +576,21 @@ public class DnaerysClient {
         Float alphaMissenseScoreLT, Float alphaMissenseScoreGT, String clinSignificance,
         Integer skip, Integer limit) {
 
-        if (affectedParent == null || affectedParent.isEmpty() ||
-            unaffectedParent == null || unaffectedParent.isEmpty() ||
-            proband == null || proband.isEmpty()) {
-            return List.of();
-        }
-        if (start < 0 || end < start) return List.of();
+        if (start < 0 || end < start)
+            throw new RuntimeException("Invalid 'start' or 'end' of a region");
 
         Chromosome chr = ContigsMapping.contigName2GrpcChr(chromosome);
-        if (chr.equals(Chromosome.UNRECOGNIZED)) return List.of();
+        if (chr.equals(Chromosome.UNRECOGNIZED))
+            throw new RuntimeException("Invalid Chromosome");
+
+        if (affectedParent == null || affectedParent.isEmpty())
+            throw new RuntimeException("Sample ID for affectedParent must not be empty");
+
+        if (unaffectedParent == null || unaffectedParent.isEmpty())
+            throw new RuntimeException("Sample ID for unaffectedParent must not be empty");
+
+        if (proband == null || proband.isEmpty())
+            throw new RuntimeException("Sample ID for proband must not be empty");
 
         int finalSkip = (skip == null || skip < 0) ? 0 : skip;
         int finalLimit = (limit == null || limit < 0 || limit > MAX_RETURNED_ITEMS) ? MAX_RETURNED_ITEMS : limit;
@@ -644,16 +625,11 @@ public class DnaerysClient {
             .build();
 
         List<Variant> variants = new ArrayList<>();
-        try {
-            GrpcChannel channel = GrpcChannel.getInstance();
-            Iterator<AllelesResponse> responseStream = channel.getBlockingStub().selectHetDominant(request);
+        GrpcChannel channel = GrpcChannel.getInstance();
+        Iterator<AllelesResponse> responseStream = channel.getBlockingStub().selectHetDominant(request);
 
-            while (responseStream.hasNext()) {
-                variants.addAll(responseStream.next().getVariantsList());
-            }
-        } catch (Exception e) {
-            LOGGER.log(Level.SEVERE, "HetDominant gRPC call failed for trio: " + affectedParent + ", " + unaffectedParent + ", " + proband, e);
-            List.of();
+        while (responseStream.hasNext()) {
+            variants.addAll(responseStream.next().getVariantsList());
         }
 
         return variants;
@@ -669,15 +645,21 @@ public class DnaerysClient {
         Float alphaMissenseScoreLT, Float alphaMissenseScoreGT, String clinSignificance,
         Integer skip, Integer limit) {
 
-        if (unaffectedParent1 == null || unaffectedParent1.isEmpty() ||
-            unaffectedParent2 == null || unaffectedParent2.isEmpty() ||
-            proband == null || proband.isEmpty()) {
-            return List.of();
-        }
-        if (start < 0 || end < start) return List.of();
+        if (start < 0 || end < start)
+            throw new RuntimeException("Invalid 'start' or 'end' of a region");
 
         Chromosome chr = ContigsMapping.contigName2GrpcChr(chromosome);
-        if (chr.equals(Chromosome.UNRECOGNIZED)) return List.of();
+        if (chr.equals(Chromosome.UNRECOGNIZED))
+            throw new RuntimeException("Invalid Chromosome");
+
+        if (unaffectedParent1 == null || unaffectedParent1.isEmpty())
+            throw new RuntimeException("Sample ID for unaffectedParent1 must not be empty");
+
+        if (unaffectedParent2 == null || unaffectedParent2.isEmpty())
+            throw new RuntimeException("Sample ID for unaffectedParent2 must not be empty");
+
+        if (proband == null || proband.isEmpty())
+            throw new RuntimeException("Sample ID for proband must not be empty");
 
         int finalSkip = (skip == null || skip < 0) ? 0 : skip;
         int finalLimit = (limit == null || limit < 0 || limit > MAX_RETURNED_ITEMS) ? MAX_RETURNED_ITEMS : limit;
@@ -712,42 +694,35 @@ public class DnaerysClient {
             .build();
 
         List<Variant> variants = new ArrayList<>();
-        try {
-            GrpcChannel channel = GrpcChannel.getInstance();
-            Iterator<AllelesResponse> responseStream = channel.getBlockingStub().selectHomRecessive(request);
+        GrpcChannel channel = GrpcChannel.getInstance();
+        Iterator<AllelesResponse> responseStream = channel.getBlockingStub().selectHomRecessive(request);
 
-            while (responseStream.hasNext()) {
-                variants.addAll(responseStream.next().getVariantsList());
-            }
-        } catch (Exception e) {
-            LOGGER.log(Level.SEVERE, "HomRecessive gRPC call failed for trio: " + unaffectedParent1 + ", " + unaffectedParent2 + ", " + proband, e);
-            List.of();
+        while (responseStream.hasNext()) {
+            variants.addAll(responseStream.next().getVariantsList());
         }
 
         return variants;
     }
 
     public String kinship(String sample1, String sample2) {
-        if (sample1 == null || sample1.isEmpty() || sample2 == null || sample2.isEmpty()) return "";
-
-        try {
-            GrpcChannel channel = GrpcChannel.getInstance();
-
-            KinshipDuoRequest request =
-                KinshipDuoRequest
-                    .newBuilder()
-                    .setSample1(sample1)
-                    .setSample2(sample2)
-                    .setSeq(true)
-                    .build();
-
-            List<Relatedness> response = channel.getBlockingStub().kinshipDuo(request).getRelList();
-            if (response.isEmpty()) return "";
-            return response.getFirst().getDegree().toString();
-        } catch (Exception e) {
-            LOGGER.log(Level.SEVERE, e.getMessage(), e);
+        // Parameters validation
+        List<String> allSamples = getSampleIds(DnaerysClient.Gender.BOTH);
+        if (!allSamples.contains(sample1)) {
+            throw new RuntimeException("Sample '" + sample1 + "' does not exist");
         }
-
-        return ""; // default
+        if (!allSamples.contains(sample2)) {
+            throw new RuntimeException("Sample '" + sample2 + "' does not exist");
+        }
+        // gRPC call
+        GrpcChannel channel = GrpcChannel.getInstance();
+        KinshipDuoRequest request =
+            KinshipDuoRequest
+                .newBuilder()
+                .setSample1(sample1)
+                .setSample2(sample2)
+                .setSeq(true)
+                .build();
+        List<Relatedness> response = channel.getBlockingStub().kinshipDuo(request).getRelList();
+        return response.getFirst().getDegree().toString();
     }
 }

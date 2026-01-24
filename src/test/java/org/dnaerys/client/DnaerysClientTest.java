@@ -374,132 +374,163 @@ class DnaerysClientTest {
     class InputValidationTests {
 
         @Test
-        @DisplayName("Invalid chromosome returns 0 for count")
+        @DisplayName("Invalid chromosome throws RuntimeException for count")
         void testInvalidChromosomeCount() {
-            long count = client.countVariantsInRegion(
-                "99", 1000, 2000, true, true,
-                null, null, null, null, null, null, null, null,
-                null, null, null, null, null, null,
-                null, null, null, null, null, null, null, null, null
+            RuntimeException thrown = org.junit.jupiter.api.Assertions.assertThrows(
+                RuntimeException.class,
+                () -> client.countVariantsInRegion(
+                    "99", 1000, 2000, true, true,
+                    null, null, null, null, null, null, null, null,
+                    null, null, null, null, null, null,
+                    null, null, null, null, null, null, null, null, null
+                )
             );
 
-            assertThat(count).isZero();
+            assertThat(thrown.getMessage()).contains("Invalid Chromosome");
         }
 
         @Test
-        @DisplayName("Invalid chromosome returns empty list for select")
+        @DisplayName("Invalid chromosome throws RuntimeException for select")
         void testInvalidChromosomeSelect() {
-            List<Variant> variants = client.selectVariantsInRegion(
-                "99", 1000, 2000, true, true,
-                null, null, null, null, null, null, null, null,
-                null, null, null, null, null, null,
-                null, null, null, null, null, null, null, null, null,
-                null, null
+            RuntimeException thrown = org.junit.jupiter.api.Assertions.assertThrows(
+                RuntimeException.class,
+                () -> client.selectVariantsInRegion(
+                    "99", 1000, 2000, true, true,
+                    null, null, null, null, null, null, null, null,
+                    null, null, null, null, null, null,
+                    null, null, null, null, null, null, null, null, null,
+                    null, null
+                )
             );
 
-            assertThat(variants).isEmpty();
+            assertThat(thrown.getMessage()).contains("Invalid Chromosome");
         }
 
         @Test
-        @DisplayName("Negative start position returns 0 for count")
+        @DisplayName("Negative start position throws RuntimeException for count")
         void testNegativeStartCount() {
-            long count = client.countVariantsInRegion(
-                "1", -100, 2000, true, true,
-                null, null, null, null, null, null, null, null,
-                null, null, null, null, null, null,
-                null, null, null, null, null, null, null, null, null
+            RuntimeException thrown = org.junit.jupiter.api.Assertions.assertThrows(
+                RuntimeException.class,
+                () -> client.countVariantsInRegion(
+                    "1", -100, 2000, true, true,
+                    null, null, null, null, null, null, null, null,
+                    null, null, null, null, null, null,
+                    null, null, null, null, null, null, null, null, null
+                )
             );
 
-            assertThat(count).isZero();
+            assertThat(thrown.getMessage()).contains("Invalid 'start' or 'end'");
         }
 
         @Test
-        @DisplayName("Start > End returns 0 for count")
+        @DisplayName("Start > End throws RuntimeException for count")
         void testInvertedCoordinatesCount() {
-            long count = client.countVariantsInRegion(
-                "1", 2000, 1000, true, true,
-                null, null, null, null, null, null, null, null,
-                null, null, null, null, null, null,
-                null, null, null, null, null, null, null, null, null
+            RuntimeException thrown = org.junit.jupiter.api.Assertions.assertThrows(
+                RuntimeException.class,
+                () -> client.countVariantsInRegion(
+                    "1", 2000, 1000, true, true,
+                    null, null, null, null, null, null, null, null,
+                    null, null, null, null, null, null,
+                    null, null, null, null, null, null, null, null, null
+                )
             );
 
-            assertThat(count).isZero();
+            assertThat(thrown.getMessage()).contains("Invalid 'start' or 'end'");
         }
 
         @Test
-        @DisplayName("Start > End returns empty list for select")
+        @DisplayName("Start > End throws RuntimeException for select")
         void testInvertedCoordinatesSelect() {
-            List<Variant> variants = client.selectVariantsInRegion(
-                "1", 2000, 1000, true, true,
-                null, null, null, null, null, null, null, null,
-                null, null, null, null, null, null,
-                null, null, null, null, null, null, null, null, null,
-                null, null
+            RuntimeException thrown = org.junit.jupiter.api.Assertions.assertThrows(
+                RuntimeException.class,
+                () -> client.selectVariantsInRegion(
+                    "1", 2000, 1000, true, true,
+                    null, null, null, null, null, null, null, null,
+                    null, null, null, null, null, null,
+                    null, null, null, null, null, null, null, null, null,
+                    null, null
+                )
             );
 
-            assertThat(variants).isEmpty();
+            assertThat(thrown.getMessage()).contains("Invalid 'start' or 'end'");
         }
 
         @Test
-        @DisplayName("Null sample ID returns 0 for count in sample")
+        @DisplayName("Null sample ID throws RuntimeException for count in sample")
         void testNullSampleIdCount() {
-            long count = client.countVariantsInRegionInSample(
-                "1", 1000, 2000, null, true, true,
-                null, null, null, null, null, null, null, null,
-                null, null, null, null, null, null,
-                null, null, null, null, null, null, null, null, null
+            RuntimeException thrown = org.junit.jupiter.api.Assertions.assertThrows(
+                RuntimeException.class,
+                () -> client.countVariantsInRegionInSample(
+                    "1", 1000, 2000, null, true, true,
+                    null, null, null, null, null, null, null, null,
+                    null, null, null, null, null, null,
+                    null, null, null, null, null, null, null, null, null
+                )
             );
 
-            assertThat(count).isZero();
+            assertThat(thrown.getMessage()).contains("Sample ID must not be empty");
         }
 
         @Test
-        @DisplayName("Empty sample ID returns 0 for count in sample")
+        @DisplayName("Empty sample ID throws RuntimeException for count in sample")
         void testEmptySampleIdCount() {
-            long count = client.countVariantsInRegionInSample(
-                "1", 1000, 2000, "", true, true,
-                null, null, null, null, null, null, null, null,
-                null, null, null, null, null, null,
-                null, null, null, null, null, null, null, null, null
+            RuntimeException thrown = org.junit.jupiter.api.Assertions.assertThrows(
+                RuntimeException.class,
+                () -> client.countVariantsInRegionInSample(
+                    "1", 1000, 2000, "", true, true,
+                    null, null, null, null, null, null, null, null,
+                    null, null, null, null, null, null,
+                    null, null, null, null, null, null, null, null, null
+                )
             );
 
-            assertThat(count).isZero();
+            assertThat(thrown.getMessage()).contains("Sample ID must not be empty");
         }
 
         @ParameterizedTest(name = "Chromosome ''{0}'' is invalid")
-        @ValueSource(strings = {"0", "23", "99", "MT", "chrM", "invalid", ""})
-        @DisplayName("Invalid chromosome values return 0")
+        @ValueSource(strings = {"0", "23", "99", "chrM", "invalid", ""})  // Note: "MT" is valid (maps to CHR_MT)
+        @DisplayName("Invalid chromosome values throw RuntimeException")
         void testVariousInvalidChromosomes(String chromosome) {
-            long count = client.countVariantsInRegion(
-                chromosome, 1000, 2000, true, true,
-                null, null, null, null, null, null, null, null,
-                null, null, null, null, null, null,
-                null, null, null, null, null, null, null, null, null
+            RuntimeException thrown = org.junit.jupiter.api.Assertions.assertThrows(
+                RuntimeException.class,
+                () -> client.countVariantsInRegion(
+                    chromosome, 1000, 2000, true, true,
+                    null, null, null, null, null, null, null, null,
+                    null, null, null, null, null, null,
+                    null, null, null, null, null, null, null, null, null
+                )
             );
 
-            assertThat(count).isZero();
+            assertThat(thrown.getMessage()).contains("Invalid Chromosome");
         }
 
         @Test
-        @DisplayName("Variant min/max length normalization - negative values")
+        @DisplayName("Variant min/max length normalization with valid coordinates")
         void testVariantLengthNormalization() {
-            // When minLen > maxLen, both should be normalized
-            // This is tested indirectly - the client normalizes these values
-            // We verify through the annotation building since that's accessible
-            // The actual length normalization happens in the method before gRPC call
+            // When minLen > maxLen, both should be normalized to 0/MAX_VALUE
+            // This test verifies the method accepts negative length values
+            // (validation passes, but gRPC call will fail without mocking)
+            try (MockedStatic<GrpcChannel> mockedStatic = mockStatic(GrpcChannel.class)) {
+                mockedStatic.when(GrpcChannel::getInstance).thenReturn(mockGrpcChannel);
+                when(mockGrpcChannel.getBlockingStub()).thenReturn(mockBlockingStub);
 
-            // Test that the client doesn't throw on negative values
-            // Actual behavior is normalization to 0/MAX_VALUE
-            long count = client.countVariantsInRegion(
-                "1", 1000, 2000, true, true,
-                null, null, -5, -10, null, null, null, null,
-                null, null, null, null, null, null,
-                null, null, null, null, null, null, null, null, null
-            );
+                CountAllelesResponse response = CountAllelesResponse.newBuilder()
+                    .setCount(100L)
+                    .build();
+                when(mockBlockingStub.countVariantsInRegion(any(CountAllelesInRegionRequest.class)))
+                    .thenReturn(response);
 
-            // Should return 0 since we're not mocking GrpcChannel,
-            // but importantly it should NOT throw
-            assertThat(count).isZero();
+                // Test that negative variant lengths are normalized (not rejected)
+                long count = client.countVariantsInRegion(
+                    "1", 1000, 2000, true, true,
+                    null, null, -5, -10, null, null, null, null,
+                    null, null, null, null, null, null,
+                    null, null, null, null, null, null, null, null, null
+                );
+
+                // Should succeed with normalized values
+                assertThat(count).isEqualTo(100L);
+            }
         }
     }
 
@@ -512,108 +543,219 @@ class DnaerysClientTest {
     class InheritanceModelInputValidationTests {
 
         @Test
-        @DisplayName("selectDeNovo with null parent1 returns empty list")
+        @DisplayName("selectDeNovo with null parent1 throws RuntimeException")
         void testDeNovoNullParent1() {
-            List<Variant> variants = client.selectDeNovo(
-                null, "HG00404", "HG00405",
-                "1", 1000, 2000,
-                null, null, null, null, null, null, null, null,
-                null, null, null, null, null, null,
-                null, null, null, null, null, null, null, null, null,
-                null, null
+            RuntimeException thrown = org.junit.jupiter.api.Assertions.assertThrows(
+                RuntimeException.class,
+                () -> client.selectDeNovo(
+                    null, "HG00404", "HG00405",
+                    "1", 1000, 2000,
+                    null, null, null, null, null, null, null, null,
+                    null, null, null, null, null, null,
+                    null, null, null, null, null, null, null, null, null,
+                    null, null
+                )
             );
 
-            assertThat(variants).isEmpty();
+            assertThat(thrown.getMessage()).contains("parent1 must not be empty");
         }
 
         @Test
-        @DisplayName("selectDeNovo with empty parent1 returns empty list")
+        @DisplayName("selectDeNovo with empty parent1 throws RuntimeException")
         void testDeNovoEmptyParent1() {
-            List<Variant> variants = client.selectDeNovo(
-                "", "HG00404", "HG00405",
-                "1", 1000, 2000,
-                null, null, null, null, null, null, null, null,
-                null, null, null, null, null, null,
-                null, null, null, null, null, null, null, null, null,
-                null, null
+            RuntimeException thrown = org.junit.jupiter.api.Assertions.assertThrows(
+                RuntimeException.class,
+                () -> client.selectDeNovo(
+                    "", "HG00404", "HG00405",
+                    "1", 1000, 2000,
+                    null, null, null, null, null, null, null, null,
+                    null, null, null, null, null, null,
+                    null, null, null, null, null, null, null, null, null,
+                    null, null
+                )
             );
 
-            assertThat(variants).isEmpty();
+            assertThat(thrown.getMessage()).contains("parent1 must not be empty");
         }
 
         @Test
-        @DisplayName("selectDeNovo with null parent2 returns empty list")
+        @DisplayName("selectDeNovo with null parent2 throws RuntimeException")
         void testDeNovoNullParent2() {
-            List<Variant> variants = client.selectDeNovo(
-                "HG00403", null, "HG00405",
-                "1", 1000, 2000,
-                null, null, null, null, null, null, null, null,
-                null, null, null, null, null, null,
-                null, null, null, null, null, null, null, null, null,
-                null, null
+            RuntimeException thrown = org.junit.jupiter.api.Assertions.assertThrows(
+                RuntimeException.class,
+                () -> client.selectDeNovo(
+                    "HG00403", null, "HG00405",
+                    "1", 1000, 2000,
+                    null, null, null, null, null, null, null, null,
+                    null, null, null, null, null, null,
+                    null, null, null, null, null, null, null, null, null,
+                    null, null
+                )
             );
 
-            assertThat(variants).isEmpty();
+            assertThat(thrown.getMessage()).contains("parent2 must not be empty");
         }
 
         @Test
-        @DisplayName("selectDeNovo with null proband returns empty list")
+        @DisplayName("selectDeNovo with null proband throws RuntimeException")
         void testDeNovoNullProband() {
-            List<Variant> variants = client.selectDeNovo(
-                "HG00403", "HG00404", null,
-                "1", 1000, 2000,
-                null, null, null, null, null, null, null, null,
-                null, null, null, null, null, null,
-                null, null, null, null, null, null, null, null, null,
-                null, null
+            RuntimeException thrown = org.junit.jupiter.api.Assertions.assertThrows(
+                RuntimeException.class,
+                () -> client.selectDeNovo(
+                    "HG00403", "HG00404", null,
+                    "1", 1000, 2000,
+                    null, null, null, null, null, null, null, null,
+                    null, null, null, null, null, null,
+                    null, null, null, null, null, null, null, null, null,
+                    null, null
+                )
             );
 
-            assertThat(variants).isEmpty();
+            assertThat(thrown.getMessage()).contains("proband must not be empty");
         }
 
         @Test
-        @DisplayName("selectDeNovo with invalid chromosome returns empty list")
+        @DisplayName("selectDeNovo with invalid chromosome throws RuntimeException")
         void testDeNovoInvalidChromosome() {
-            List<Variant> variants = client.selectDeNovo(
-                "HG00403", "HG00404", "HG00405",
-                "99", 1000, 2000,
-                null, null, null, null, null, null, null, null,
-                null, null, null, null, null, null,
-                null, null, null, null, null, null, null, null, null,
-                null, null
+            RuntimeException thrown = org.junit.jupiter.api.Assertions.assertThrows(
+                RuntimeException.class,
+                () -> client.selectDeNovo(
+                    "HG00403", "HG00404", "HG00405",
+                    "99", 1000, 2000,
+                    null, null, null, null, null, null, null, null,
+                    null, null, null, null, null, null,
+                    null, null, null, null, null, null, null, null, null,
+                    null, null
+                )
             );
 
-            assertThat(variants).isEmpty();
+            assertThat(thrown.getMessage()).contains("Invalid Chromosome");
         }
 
         @Test
-        @DisplayName("selectHetDominant with null affected parent returns empty list")
+        @DisplayName("selectDeNovo with invalid region throws RuntimeException")
+        void testDeNovoInvalidRegion() {
+            RuntimeException thrown = org.junit.jupiter.api.Assertions.assertThrows(
+                RuntimeException.class,
+                () -> client.selectDeNovo(
+                    "HG00403", "HG00404", "HG00405",
+                    "1", 2000, 1000,  // start > end
+                    null, null, null, null, null, null, null, null,
+                    null, null, null, null, null, null,
+                    null, null, null, null, null, null, null, null, null,
+                    null, null
+                )
+            );
+
+            assertThat(thrown.getMessage()).contains("Invalid 'start' or 'end'");
+        }
+
+        @Test
+        @DisplayName("selectHetDominant with null affected parent throws RuntimeException")
         void testHetDominantNullAffectedParent() {
-            List<Variant> variants = client.selectHetDominant(
-                null, "HG00404", "HG00405",
-                "1", 1000, 2000,
-                null, null, null, null, null, null, null, null,
-                null, null, null, null, null, null,
-                null, null, null, null, null, null, null, null, null,
-                null, null
+            RuntimeException thrown = org.junit.jupiter.api.Assertions.assertThrows(
+                RuntimeException.class,
+                () -> client.selectHetDominant(
+                    null, "HG00404", "HG00405",
+                    "1", 1000, 2000,
+                    null, null, null, null, null, null, null, null,
+                    null, null, null, null, null, null,
+                    null, null, null, null, null, null, null, null, null,
+                    null, null
+                )
             );
 
-            assertThat(variants).isEmpty();
+            assertThat(thrown.getMessage()).contains("affectedParent must not be empty");
         }
 
         @Test
-        @DisplayName("selectHomRecessive with null parent returns empty list")
-        void testHomRecessiveNullParent() {
-            List<Variant> variants = client.selectHomRecessive(
-                null, "HG00404", "HG00405",
-                "1", 1000, 2000,
-                null, null, null, null, null, null, null, null,
-                null, null, null, null, null, null,
-                null, null, null, null, null, null, null, null, null,
-                null, null
+        @DisplayName("selectHetDominant with null unaffected parent throws RuntimeException")
+        void testHetDominantNullUnaffectedParent() {
+            RuntimeException thrown = org.junit.jupiter.api.Assertions.assertThrows(
+                RuntimeException.class,
+                () -> client.selectHetDominant(
+                    "HG00403", null, "HG00405",
+                    "1", 1000, 2000,
+                    null, null, null, null, null, null, null, null,
+                    null, null, null, null, null, null,
+                    null, null, null, null, null, null, null, null, null,
+                    null, null
+                )
             );
 
-            assertThat(variants).isEmpty();
+            assertThat(thrown.getMessage()).contains("unaffectedParent must not be empty");
+        }
+
+        @Test
+        @DisplayName("selectHetDominant with null proband throws RuntimeException")
+        void testHetDominantNullProband() {
+            RuntimeException thrown = org.junit.jupiter.api.Assertions.assertThrows(
+                RuntimeException.class,
+                () -> client.selectHetDominant(
+                    "HG00403", "HG00404", null,
+                    "1", 1000, 2000,
+                    null, null, null, null, null, null, null, null,
+                    null, null, null, null, null, null,
+                    null, null, null, null, null, null, null, null, null,
+                    null, null
+                )
+            );
+
+            assertThat(thrown.getMessage()).contains("proband must not be empty");
+        }
+
+        @Test
+        @DisplayName("selectHomRecessive with null parent1 throws RuntimeException")
+        void testHomRecessiveNullParent1() {
+            RuntimeException thrown = org.junit.jupiter.api.Assertions.assertThrows(
+                RuntimeException.class,
+                () -> client.selectHomRecessive(
+                    null, "HG00404", "HG00405",
+                    "1", 1000, 2000,
+                    null, null, null, null, null, null, null, null,
+                    null, null, null, null, null, null,
+                    null, null, null, null, null, null, null, null, null,
+                    null, null
+                )
+            );
+
+            assertThat(thrown.getMessage()).contains("unaffectedParent1 must not be empty");
+        }
+
+        @Test
+        @DisplayName("selectHomRecessive with null parent2 throws RuntimeException")
+        void testHomRecessiveNullParent2() {
+            RuntimeException thrown = org.junit.jupiter.api.Assertions.assertThrows(
+                RuntimeException.class,
+                () -> client.selectHomRecessive(
+                    "HG00403", null, "HG00405",
+                    "1", 1000, 2000,
+                    null, null, null, null, null, null, null, null,
+                    null, null, null, null, null, null,
+                    null, null, null, null, null, null, null, null, null,
+                    null, null
+                )
+            );
+
+            assertThat(thrown.getMessage()).contains("unaffectedParent2 must not be empty");
+        }
+
+        @Test
+        @DisplayName("selectHomRecessive with null proband throws RuntimeException")
+        void testHomRecessiveNullProband() {
+            RuntimeException thrown = org.junit.jupiter.api.Assertions.assertThrows(
+                RuntimeException.class,
+                () -> client.selectHomRecessive(
+                    "HG00403", "HG00404", null,
+                    "1", 1000, 2000,
+                    null, null, null, null, null, null, null, null,
+                    null, null, null, null, null, null,
+                    null, null, null, null, null, null, null, null, null,
+                    null, null
+                )
+            );
+
+            assertThat(thrown.getMessage()).contains("proband must not be empty");
         }
     }
 
@@ -626,38 +768,122 @@ class DnaerysClientTest {
     class KinshipInputValidationTests {
 
         @Test
-        @DisplayName("Kinship with null sample1 returns empty string")
+        @DisplayName("Kinship with non-existent sample1 throws RuntimeException")
+        void testKinshipNonExistentSample1() {
+            try (MockedStatic<GrpcChannel> mockedStatic = mockStatic(GrpcChannel.class)) {
+                mockedStatic.when(GrpcChannel::getInstance).thenReturn(mockGrpcChannel);
+                when(mockGrpcChannel.getBlockingStub()).thenReturn(mockBlockingStub);
+
+                // Mock datasetInfo to return empty cohorts (sample won't be found)
+                DatasetInfoResponse datasetResponse = DatasetInfoResponse.newBuilder().build();
+                when(mockBlockingStub.datasetInfo(any(DatasetInfoRequest.class))).thenReturn(datasetResponse);
+
+                RuntimeException thrown = org.junit.jupiter.api.Assertions.assertThrows(
+                    RuntimeException.class,
+                    () -> client.kinship("NONEXISTENT", "HG00405")
+                );
+
+                assertThat(thrown.getMessage()).contains("does not exist");
+            }
+        }
+
+        @Test
+        @DisplayName("Kinship with non-existent sample2 throws RuntimeException")
+        void testKinshipNonExistentSample2() {
+            try (MockedStatic<GrpcChannel> mockedStatic = mockStatic(GrpcChannel.class)) {
+                mockedStatic.when(GrpcChannel::getInstance).thenReturn(mockGrpcChannel);
+                when(mockGrpcChannel.getBlockingStub()).thenReturn(mockBlockingStub);
+
+                // Mock datasetInfo to return sample1 but not sample2
+                Cohort cohort = Cohort.newBuilder()
+                    .addMaleSamplesNames("HG00403")
+                    .build();
+                DatasetInfoResponse datasetResponse = DatasetInfoResponse.newBuilder()
+                    .addCohorts(cohort)
+                    .build();
+                when(mockBlockingStub.datasetInfo(any(DatasetInfoRequest.class))).thenReturn(datasetResponse);
+
+                RuntimeException thrown = org.junit.jupiter.api.Assertions.assertThrows(
+                    RuntimeException.class,
+                    () -> client.kinship("HG00403", "NONEXISTENT")
+                );
+
+                assertThat(thrown.getMessage()).contains("does not exist");
+            }
+        }
+
+        @Test
+        @DisplayName("Kinship with null sample1 throws RuntimeException")
         void testKinshipNullSample1() {
-            String result = client.kinship(null, "HG00405");
-            assertThat(result).isEmpty();
+            try (MockedStatic<GrpcChannel> mockedStatic = mockStatic(GrpcChannel.class)) {
+                mockedStatic.when(GrpcChannel::getInstance).thenReturn(mockGrpcChannel);
+                when(mockGrpcChannel.getBlockingStub()).thenReturn(mockBlockingStub);
+
+                DatasetInfoResponse datasetResponse = DatasetInfoResponse.newBuilder().build();
+                when(mockBlockingStub.datasetInfo(any(DatasetInfoRequest.class))).thenReturn(datasetResponse);
+
+                RuntimeException thrown = org.junit.jupiter.api.Assertions.assertThrows(
+                    RuntimeException.class,
+                    () -> client.kinship(null, "HG00405")
+                );
+
+                assertThat(thrown.getMessage()).contains("does not exist");
+            }
         }
 
         @Test
-        @DisplayName("Kinship with empty sample1 returns empty string")
-        void testKinshipEmptySample1() {
-            String result = client.kinship("", "HG00405");
-            assertThat(result).isEmpty();
-        }
-
-        @Test
-        @DisplayName("Kinship with null sample2 returns empty string")
+        @DisplayName("Kinship with null sample2 throws RuntimeException")
         void testKinshipNullSample2() {
-            String result = client.kinship("HG00403", null);
-            assertThat(result).isEmpty();
+            try (MockedStatic<GrpcChannel> mockedStatic = mockStatic(GrpcChannel.class)) {
+                mockedStatic.when(GrpcChannel::getInstance).thenReturn(mockGrpcChannel);
+                when(mockGrpcChannel.getBlockingStub()).thenReturn(mockBlockingStub);
+
+                Cohort cohort = Cohort.newBuilder()
+                    .addMaleSamplesNames("HG00403")
+                    .build();
+                DatasetInfoResponse datasetResponse = DatasetInfoResponse.newBuilder()
+                    .addCohorts(cohort)
+                    .build();
+                when(mockBlockingStub.datasetInfo(any(DatasetInfoRequest.class))).thenReturn(datasetResponse);
+
+                RuntimeException thrown = org.junit.jupiter.api.Assertions.assertThrows(
+                    RuntimeException.class,
+                    () -> client.kinship("HG00403", null)
+                );
+
+                assertThat(thrown.getMessage()).contains("does not exist");
+            }
         }
 
         @Test
-        @DisplayName("Kinship with empty sample2 returns empty string")
-        void testKinshipEmptySample2() {
-            String result = client.kinship("HG00403", "");
-            assertThat(result).isEmpty();
-        }
+        @DisplayName("Kinship with valid samples succeeds")
+        void testKinshipValidSamples() {
+            try (MockedStatic<GrpcChannel> mockedStatic = mockStatic(GrpcChannel.class)) {
+                mockedStatic.when(GrpcChannel::getInstance).thenReturn(mockGrpcChannel);
+                when(mockGrpcChannel.getBlockingStub()).thenReturn(mockBlockingStub);
 
-        @Test
-        @DisplayName("Kinship with both samples null returns empty string")
-        void testKinshipBothNull() {
-            String result = client.kinship(null, null);
-            assertThat(result).isEmpty();
+                // Mock datasetInfo to return both samples
+                Cohort cohort = Cohort.newBuilder()
+                    .addMaleSamplesNames("HG00403")
+                    .addFemaleSamplesNames("HG00405")
+                    .build();
+                DatasetInfoResponse datasetResponse = DatasetInfoResponse.newBuilder()
+                    .addCohorts(cohort)
+                    .build();
+                when(mockBlockingStub.datasetInfo(any(DatasetInfoRequest.class))).thenReturn(datasetResponse);
+
+                // Mock kinship response
+                Relatedness relatedness = Relatedness.newBuilder()
+                    .setDegree(KinshipDegree.FIRST_DEGREE)
+                    .build();
+                KinshipResponse kinshipResponse = KinshipResponse.newBuilder()
+                    .addRel(relatedness)
+                    .build();
+                when(mockBlockingStub.kinshipDuo(any(KinshipDuoRequest.class))).thenReturn(kinshipResponse);
+
+                String result = client.kinship("HG00403", "HG00405");
+                assertThat(result).isEqualTo("FIRST_DEGREE");
+            }
         }
     }
 
@@ -670,48 +896,62 @@ class DnaerysClientTest {
     class GrpcErrorHandlingTests {
 
         @Test
-        @DisplayName("CLI-ERR-001: gRPC connection failure returns 0 for variantsTotal")
+        @DisplayName("CLI-ERR-001: gRPC connection failure throws RuntimeException for variantsTotal")
         void testVariantsTotalGrpcFailure() {
             try (MockedStatic<GrpcChannel> mockedStatic = mockStatic(GrpcChannel.class)) {
                 mockedStatic.when(GrpcChannel::getInstance).thenThrow(new RuntimeException("Connection failed"));
 
-                long result = client.variantsTotal();
-                assertThat(result).isZero();
+                RuntimeException thrown = org.junit.jupiter.api.Assertions.assertThrows(
+                    RuntimeException.class,
+                    () -> client.variantsTotal()
+                );
+
+                assertThat(thrown.getMessage()).contains("Connection failed");
             }
         }
 
         @Test
-        @DisplayName("CLI-ERR-002: gRPC error returns default SampleCounts")
+        @DisplayName("CLI-ERR-002: gRPC error throws RuntimeException for getSampleCounts")
         void testGetSampleCountsGrpcFailure() {
             try (MockedStatic<GrpcChannel> mockedStatic = mockStatic(GrpcChannel.class)) {
                 mockedStatic.when(GrpcChannel::getInstance).thenThrow(new RuntimeException("Connection failed"));
 
-                DnaerysClient.SampleCounts result = client.getSampleCounts();
-                assertThat(result.total()).isZero();
-                assertThat(result.male()).isZero();
-                assertThat(result.female()).isZero();
+                RuntimeException thrown = org.junit.jupiter.api.Assertions.assertThrows(
+                    RuntimeException.class,
+                    () -> client.getSampleCounts()
+                );
+
+                assertThat(thrown.getMessage()).contains("Connection failed");
             }
         }
 
         @Test
-        @DisplayName("CLI-ERR-003: gRPC error returns empty list for getSampleIds")
+        @DisplayName("CLI-ERR-003: gRPC error throws RuntimeException for getSampleIds")
         void testGetSampleIdsGrpcFailure() {
             try (MockedStatic<GrpcChannel> mockedStatic = mockStatic(GrpcChannel.class)) {
                 mockedStatic.when(GrpcChannel::getInstance).thenThrow(new RuntimeException("Connection failed"));
 
-                List<String> result = client.getSampleIds(DnaerysClient.Gender.BOTH);
-                assertThat(result).isEmpty();
+                RuntimeException thrown = org.junit.jupiter.api.Assertions.assertThrows(
+                    RuntimeException.class,
+                    () -> client.getSampleIds(DnaerysClient.Gender.BOTH)
+                );
+
+                assertThat(thrown.getMessage()).contains("Connection failed");
             }
         }
 
         @Test
-        @DisplayName("CLI-ERR-004: gRPC error returns empty string for kinship")
+        @DisplayName("CLI-ERR-004: gRPC error throws RuntimeException for kinship")
         void testKinshipGrpcFailure() {
             try (MockedStatic<GrpcChannel> mockedStatic = mockStatic(GrpcChannel.class)) {
                 mockedStatic.when(GrpcChannel::getInstance).thenThrow(new RuntimeException("Connection failed"));
 
-                String result = client.kinship("HG00403", "HG00405");
-                assertThat(result).isEmpty();
+                RuntimeException thrown = org.junit.jupiter.api.Assertions.assertThrows(
+                    RuntimeException.class,
+                    () -> client.kinship("HG00403", "HG00405")
+                );
+
+                assertThat(thrown.getMessage()).contains("Connection failed");
             }
         }
     }
