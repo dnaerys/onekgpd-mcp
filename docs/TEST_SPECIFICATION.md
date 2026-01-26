@@ -1,10 +1,12 @@
 # Test Specification: Dnaerys MCP Server for 1000 Genomes Project
 
-**Document Version:** 1.2
+**Document Version:** 1.3
 **Created:** 2026-01-15
-**Last Updated:** 2026-01-15
+**Last Updated:** 2026-01-26
 **Status:** Ready for Implementation
 **Purpose:** Blueprint for implementing comprehensive test coverage
+
+> **Note v1.3:** Inheritance model tools (`deNovoInTrio`, `hetDominantInTrio`, `homRecessiveInTrio`) have been **DEPRECATED** and removed from the implementation. Related test cases are marked with `[DEPRECATED]`. New homozygous reference tools have been added. See CHANGELOG-DEV.md for details.
 
 ---
 
@@ -91,12 +93,12 @@ Implement a two-tier testing strategy for the Dnaerys MCP server, providing:
 
 | Category | Count | Methods |
 |----------|-------|---------|
-| Metadata/Sample | 8 | `countSamplesTotal`, `countFemaleSamplesTotal`, `countMaleSamplesTotal`, `sampleIds`, `femaleSamplesIds`, `maleSamplesIds`, `variantsTotal`, `nodesTotal` |
+| Metadata/Sample | 3 | `getDatasetInfo`, `countSamplesHomozygousReference`, `selectSamplesHomozygousReference` |
 | Variant Counting | 3 | `countVariantsInRegion`, `countHomozygousVariantsInRegion`, `countHeterozygousVariantsInRegion` |
 | Per-Sample Counting | 3 | `countVariantsInSample`, `countHomozygousVariantsInSample`, `countHeterozygousVariantsInSample` |
 | Variant Retrieval | 6 | `variantsInRegion`, `homozygousVariantsInRegion`, `heterozygousVariantsInRegion`, `variantsInSample`, `homozygousVariantsInSample`, `heterozygousVariantsInSample` |
 | Sample Discovery | 6 | `samplesInRegion`, `samplesHomInRegion`, `samplesHetInRegion`, `samplesListInRegion`, `samplesListHomInRegion`, `samplesListHetInRegion` |
-| Inheritance Models | 4 | `deNovoInTrio`, `hetDominantInTrio`, `homRecessiveInTrio`, `kinship` |
+| Inheritance Models | 1 | `kinship` (**[DEPRECATED]** `deNovoInTrio`, `hetDominantInTrio`, `homRecessiveInTrio` removed) |
 
 **Architectural Characteristics:**
 - No input validation (delegated to DnaerysClient)
@@ -118,23 +120,18 @@ final Integer MAX_RETURNED_ITEMS = 50;
 
 | Method | Return Type | gRPC Endpoint |
 |--------|-------------|---------------|
-| `variantsTotal()` | `long` | `datasetInfo` |
-| `countSamplesTotal()` | `long` | `datasetInfo` |
-| `countFemaleSamplesTotal()` | `long` | `datasetInfo` |
-| `countMaleSamplesTotal()` | `long` | `datasetInfo` |
-| `nodesTotal()` | `long` | `datasetInfo` |
-| `samplesIds()` | `List<String>` | `datasetInfo` |
-| `femaleSamplesIds()` | `List<String>` | `datasetInfo` |
-| `maleSamplesIds()` | `List<String>` | `datasetInfo` |
+| `getDatasetInfo()` | `DatasetInfo` | `datasetInfo` |
+| `countSamplesHomozygousReference(...)` | `long` | `countSamplesHomRef` |
+| `selectSamplesHomozygousReference(...)` | `List<String>` | `selectSamplesHomRef` |
 | `countVariantsInRegion(...)` | `long` | `countVariantsInRegion` |
 | `countVariantsInRegionInSample(...)` | `long` | `countVariantsInRegion` |
 | `selectVariantsInRegion(...)` | `List<String>` | `selectVariantsInRegion` |
 | `selectVariantsInRegionInSample(...)` | `List<String>` | `selectVariantsInRegion` |
 | `countSamplesInRegion(...)` | `long` | `countSamplesInRegion` |
 | `selectSamplesInRegion(...)` | `List<String>` | `selectSamplesInRegion` |
-| `selectDeNovo(...)` | `List<String>` | `selectDeNovo` |
-| `selectHetDominant(...)` | `List<String>` | `selectHetDominant` |
-| `selectHomRecessive(...)` | `List<String>` | `selectHomRecessive` |
+| **[DEPRECATED]** ~~`selectDeNovo(...)`~~ | ~~`List<String>`~~ | ~~`selectDeNovo`~~ |
+| **[DEPRECATED]** ~~`selectHetDominant(...)`~~ | ~~`List<String>`~~ | ~~`selectHetDominant`~~ |
+| **[DEPRECATED]** ~~`selectHomRecessive(...)`~~ | ~~`List<String>`~~ | ~~`selectHomRecessive`~~ |
 | `kinship(...)` | `String` | `kinshipDuo` |
 
 **Error Handling Pattern:**
@@ -754,31 +751,33 @@ These can be used for all phases. Sample HG00406 is used for unrelated kinship t
 
 ### 5.4 Inheritance Model Integration Tests
 
-#### 5.4.1 De Novo Tests
+> **[DEPRECATED]** The following test sections (5.4.1 - 5.4.3) reference tools that have been removed from the implementation. These test cases are no longer applicable. See Section 5.4.5 for the new Homozygous Reference tests.
+
+#### 5.4.1 De Novo Tests **[DEPRECATED]**
 
 | Test Case ID | Description | Trio | Region | Validation |
 |--------------|-------------|------|--------|------------|
-| INH-DN-001 | Basic de novo query | Valid trio | BRCA1 | Returns JSON list |
-| INH-DN-002 | De novo with filters | Valid trio | BRCA1, impact="HIGH" | Filtered results |
-| INH-DN-003 | De novo pagination | Valid trio | Dense region | Size ≤ 100 |
-| INH-DN-004 | De novo empty region | Valid trio | SPARSE | May return empty |
-| INH-DN-005 | Invalid parent ID | Invalid, Valid, Valid | BRCA1 | Error handling |
+| ~~INH-DN-001~~ | ~~Basic de novo query~~ | ~~Valid trio~~ | ~~BRCA1~~ | ~~Returns JSON list~~ |
+| ~~INH-DN-002~~ | ~~De novo with filters~~ | ~~Valid trio~~ | ~~BRCA1, impact="HIGH"~~ | ~~Filtered results~~ |
+| ~~INH-DN-003~~ | ~~De novo pagination~~ | ~~Valid trio~~ | ~~Dense region~~ | ~~Size ≤ 100~~ |
+| ~~INH-DN-004~~ | ~~De novo empty region~~ | ~~Valid trio~~ | ~~SPARSE~~ | ~~May return empty~~ |
+| ~~INH-DN-005~~ | ~~Invalid parent ID~~ | ~~Invalid, Valid, Valid~~ | ~~BRCA1~~ | ~~Error handling~~ |
 
-#### 5.4.2 Heterozygous Dominant Tests
-
-| Test Case ID | Description | Trio | Validation |
-|--------------|-------------|------|------------|
-| INH-HD-001 | Basic het dominant | Affected parent, Unaffected parent, Proband | Returns JSON list |
-| INH-HD-002 | Het dominant with high impact | Same | Only high impact variants |
-| INH-HD-003 | Het dominant rare only | Same, afLessThan=0.01 | Only rare variants |
-
-#### 5.4.3 Homozygous Recessive Tests
+#### 5.4.2 Heterozygous Dominant Tests **[DEPRECATED]**
 
 | Test Case ID | Description | Trio | Validation |
 |--------------|-------------|------|------------|
-| INH-HR-001 | Basic hom recessive | Carrier1, Carrier2, Affected | Returns JSON list |
-| INH-HR-002 | Hom recessive with consequence filter | Same | Only specified consequences |
-| INH-HR-003 | Hom recessive pathogenic | Same, clinSig="PATHOGENIC" | Only pathogenic variants |
+| ~~INH-HD-001~~ | ~~Basic het dominant~~ | ~~Affected parent, Unaffected parent, Proband~~ | ~~Returns JSON list~~ |
+| ~~INH-HD-002~~ | ~~Het dominant with high impact~~ | ~~Same~~ | ~~Only high impact variants~~ |
+| ~~INH-HD-003~~ | ~~Het dominant rare only~~ | ~~Same, afLessThan=0.01~~ | ~~Only rare variants~~ |
+
+#### 5.4.3 Homozygous Recessive Tests **[DEPRECATED]**
+
+| Test Case ID | Description | Trio | Validation |
+|--------------|-------------|------|------------|
+| ~~INH-HR-001~~ | ~~Basic hom recessive~~ | ~~Carrier1, Carrier2, Affected~~ | ~~Returns JSON list~~ |
+| ~~INH-HR-002~~ | ~~Hom recessive with consequence filter~~ | ~~Same~~ | ~~Only specified consequences~~ |
+| ~~INH-HR-003~~ | ~~Hom recessive pathogenic~~ | ~~Same, clinSig="PATHOGENIC"~~ | ~~Only pathogenic variants~~ |
 
 #### 5.4.4 Kinship Tests
 
@@ -789,25 +788,36 @@ These can be used for all phases. Sample HG00406 is used for unrelated kinship t
 | INH-KIN-003 | Same sample | Sample, Sample | Expected self-kinship |
 | INH-KIN-004 | Invalid sample | Valid, Invalid | Error handling |
 
+#### 5.4.5 Homozygous Reference Tests (NEW)
+
+| Test Case ID | Description | Parameters | Validation |
+|--------------|-------------|------------|------------|
+| HOM-REF-001 | Count samples homozygous reference | chromosome, position | Returns count ≥ -1 |
+| HOM-REF-002 | Select samples homozygous reference | chromosome, position | Returns sample ID list |
+| HOM-REF-003 | Invalid chromosome | "99", valid position | Error handling |
+| HOM-REF-004 | Invalid position | valid chromosome, -1 | Error handling |
+
 ### 5.5 OneKGPdMCPServer Tests
 
 #### 5.5.1 Unit Tests (Mocked Client)
 
 | Test Case ID | Description | Tool Method | Mock Verification |
 |--------------|-------------|-------------|-------------------|
-| MCP-001 | countSamplesTotal delegation | `countSamplesTotal()` | Calls `client.countSamplesTotal()` |
+| MCP-001 | getDatasetInfo delegation | `getDatasetInfo()` | Calls `client.getDatasetInfo()`, returns wrapped DatasetInfo |
 | MCP-002 | variantsInRegion delegation | `variantsInRegion(...)` | Calls `client.selectVariantsInRegion(...)` with correct params |
 | MCP-003 | Parameter passthrough | `variantsInRegion(chr, start, end, ...)` | All params passed to client |
 | MCP-004 | Optional params null | `variantsInRegion(chr, start, end, null, null, ...)` | Nulls passed correctly |
+| MCP-005 | Homozygous reference tools | `countSamplesHomozygousReference(...)` | Calls client method, returns wrapped map |
 
 #### 5.5.2 Integration Tests
 
 | Test Case ID | Description | Tool Method | Validation |
 |--------------|-------------|-------------|------------|
-| MCP-INT-001 | Full tool execution | `countSamplesTotal()` | Returns 3202 |
+| MCP-INT-001 | Full tool execution | `getDatasetInfo()` | Returns DatasetInfo with 3202 samples |
 | MCP-INT-002 | Region query tool | `variantsInRegion(...)` | Returns valid JSON list |
-| MCP-INT-003 | Inheritance tool | `deNovoInTrio(...)` | Returns valid JSON list |
+| ~~MCP-INT-003~~ | ~~Inheritance tool~~ **[DEPRECATED]** | ~~`deNovoInTrio(...)`~~ | ~~Returns valid JSON list~~ |
 | MCP-INT-004 | Kinship tool | `kinship(...)` | Returns degree string |
+| MCP-INT-005 | Homozygous reference (NEW) | `countSamplesHomozygousReference(...)` | Returns count map |
 
 ---
 
@@ -1127,17 +1137,19 @@ grpcurl -plaintext db.dnaerys.org:443 list
 
 **Deliverables:**
 1. OneKGPdMCPServerIT.java with key tool tests
-2. Inheritance model tests using pre-configured trio (HG00403/HG00404/HG00405)
+2. ~~Inheritance model tests using pre-configured trio (HG00403/HG00404/HG00405)~~ **[DEPRECATED]**
 3. Kinship tests using pre-configured pairs (HG00403↔HG00405, HG00406 unrelated)
 4. JSON response structure validation
+5. Homozygous reference tests (count/select samples with 0/0 genotype) **(NEW)**
 
 **Test Methods:**
-1. `testMetadataTools()` - countSamplesTotal, variantsTotal
+1. `testMetadataTools()` - getDatasetInfo
 2. `testVariantQueryTools()` - variantsInRegion
-3. `testDeNovoInTrio()` - De novo inheritance
-4. `testHetDominantInTrio()` - Het dominant inheritance
-5. `testHomRecessiveInTrio()` - Hom recessive inheritance
+3. ~~`testDeNovoInTrio()`~~ - **[DEPRECATED]** De novo inheritance (removed)
+4. ~~`testHetDominantInTrio()`~~ - **[DEPRECATED]** Het dominant inheritance (removed)
+5. ~~`testHomRecessiveInTrio()`~~ - **[DEPRECATED]** Hom recessive inheritance (removed)
 6. `testKinship()` - Kinship calculation
+7. `testHomozygousReference()` - **(NEW)** Count/select samples with 0/0 genotype
 
 **Files to Create:**
 - `src/test/java/org/dnaerys/mcp/OneKGPdMCPServerIT.java`
@@ -1158,9 +1170,10 @@ curl -v --connect-timeout 5 https://db.dnaerys.org:443
 ```
 
 **Success Criteria:**
-- [ ] All inheritance model tools tested with pre-configured trio
+- [x] ~~All inheritance model tools tested with pre-configured trio~~ **[DEPRECATED]** - Inheritance tools removed
 - [ ] JSON responses validated for structure
 - [ ] Kinship returns expected format for parent-child and unrelated pairs
+- [ ] Homozygous reference tools tested with valid/invalid inputs
 
 ### Phase 4: Unit Tests + Comprehensive Coverage
 
@@ -1215,7 +1228,8 @@ curl -v --connect-timeout 5 https://db.dnaerys.org:443
 | Phase 2 | Integration tests connect | Tests communicate with gRPC server | 🔴 Yes |
 | Phase 2 | Pagination verified | MAX_RETURNED_ITEMS enforced | 🔴 Yes |
 | Phase 2 | Baselines captured | `test-baselines.properties` created | 🔴 Yes |
-| Phase 3 | Inheritance tools tested | All 3 patterns validated | 🔴 Yes |
+| Phase 3 | ~~Inheritance tools tested~~ | ~~All 3 patterns validated~~ **[DEPRECATED]** | ~~🔴 Yes~~ |
+| Phase 3 | Homozygous reference tested | Count/select methods validated | 🔴 Yes |
 | Phase 3 | Trio IDs validated | Kinship confirms relationships | 🔴 Yes |
 | Phase 4 | Unit tests pass offline | `./mvnw test` passes without network | 🟢 No |
 | Phase 4 | Coverage targets met | Reports show required percentages | 🟢 No |
@@ -1501,7 +1515,18 @@ cat src/test/resources/test-baselines.properties
 
 ---
 
-**Document Status:** v1.2 - Ready for Implementation
+**Document Status:** v1.3 - Ready for Implementation
+
+**Key Changes in v1.3:**
+- ⚠️ **DEPRECATED**: Inheritance model tools (`deNovoInTrio`, `hetDominantInTrio`, `homRecessiveInTrio`) removed
+- ⚠️ **DEPRECATED**: Test cases INH-DN-001 to INH-DN-005, INH-HD-001 to INH-HD-003, INH-HR-001 to INH-HR-003
+- ⚠️ **DEPRECATED**: MCP-INT-003 inheritance tool integration test
+- ✅ **NEW**: `getDatasetInfo()` replaces `getSampleCounts()` and `variantsTotal()`
+- ✅ **NEW**: `countSamplesHomozygousReference()` and `selectSamplesHomozygousReference()` tools added
+- ✅ **NEW**: Test cases HOM-REF-001 to HOM-REF-004 for homozygous reference
+- ✅ **NEW**: MCP-INT-005 homozygous reference integration test
+- ✅ Updated DnaerysClient public methods table
+- ✅ Updated tool categories table
 
 **Key Changes in v1.2:**
 - ✅ Pre-filled all sample IDs with trio HG00405/HG00403/HG00404

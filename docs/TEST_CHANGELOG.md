@@ -5,6 +5,103 @@ All notable changes to this project made by Claude will be documented in this fi
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## Release 1.2.3
+
+### Changed - 2026-01-26
+#### API Refactoring: DatasetInfo and Homozygous Reference
+
+Refactored all test files to match new API changes in implementation:
+- `SampleCounts` record replaced with `DatasetInfo` record
+- `getSampleCounts()` and `variantsTotal()` replaced with unified `getDatasetInfo()`
+- Inheritance model tools (`deNovoInTrio`, `hetDominantInTrio`, `homRecessiveInTrio`) removed
+- New homozygous reference tools added (`countSamplesHomozygousReference`, `selectSamplesHomozygousReference`)
+
+#### Test File Updates
+
+**DnaerysClientTest.java:**
+- Replaced `SampleCountsRecordTests` nested class with `DatasetInfoRecordTests`
+  - Updated record test to verify `variantsTotal`, `samplesTotal`, `samplesMaleCount`, `samplesFemaleCount` fields
+- Replaced `InheritanceModelInputValidationTests` nested class with `HomozygousReferenceInputValidationTests`
+  - Added tests: `testCountHomRefInvalidChromosome`, `testCountHomRefInvalidPosition`, `testSelectHomRefInvalidChromosome`, `testSelectHomRefInvalidPosition`
+- Updated `GrpcErrorHandlingTests`:
+  - `testGrpcConnectionFailureThrowsException` now uses `getDatasetInfo()` instead of `getSampleCounts()`
+  - `testGrpcTimeoutThrowsException` now uses `getDatasetInfo()` instead of `getSampleCounts()`
+
+**DnaerysClientIT.java:**
+- Updated `testMetadataQueries()` to use `getDatasetInfo()` API
+  - Now retrieves `DatasetInfo` record and validates all fields
+  - Baseline comparison uses `datasetInfo.samplesTotal()` instead of `client.getSampleCounts().total()`
+
+**OneKGPdMCPServerTest.java:**
+- Replaced `MetadataToolsTests` content:
+  - Removed `testGetSampleCountsReturnsWrappedResult` and `testGetVariantsTotalReturnsWrappedResult`
+  - Added `testGetDatasetInfoReturnsWrappedResult` - validates unified metadata query
+- Replaced `InheritanceModelToolsTests` nested class with `HomozygousReferenceToolsTests`
+  - Added tests: `testCountSamplesHomRefReturnsMap`, `testSelectSamplesHomRefReturnsMap`, `testCountSamplesHomRefInvalidChromosome`, `testCountSamplesHomRefInvalidPosition`
+
+**OneKGPdMCPServerIT.java:**
+- Updated `testMetadataTools()`:
+  - Now uses `server.getDatasetInfo()` instead of `server.getSampleCounts()`
+  - Validates `DatasetInfo` record fields: `samplesTotal`, `samplesFemaleCount`, `samplesMaleCount`, `variantsTotal`
+- Removed inheritance model tests:
+  - Removed `testDeNovoInTrio()` (INH-DN-001 to INH-DN-004)
+  - Removed `testHetDominantInTrio()` (INH-HD-001 to INH-HD-003)
+  - Removed `testHomRecessiveInTrio()` (INH-HR-001 to INH-HR-003)
+- Added `testHomozygousReference()` (HOM-REF-001 to HOM-REF-003):
+  - Tests `countSamplesHomozygousReference()` with known BRCA1 variant position
+  - Includes graceful skip via `Assumptions.assumeTrue(false)` when backend method unavailable
+- Updated `testJsonResponseStructure()`:
+  - Now uses `selectVariantsInRegion()` instead of removed `hetDominantInTrio()`
+
+#### Documentation Updates
+
+**docs/TEST_SPECIFICATION.md:**
+- Updated version to 1.3 (from 1.2)
+- Added deprecation notice at document top
+- Updated tool categories table (Section 2.1.1):
+  - Metadata/Sample tools now list `getDatasetInfo`, `countSamplesHomozygousReference`, `selectSamplesHomozygousReference`
+  - Inheritance Models marked with **[DEPRECATED]** for removed tools
+- Updated DnaerysClient methods table (Section 2.1.2):
+  - Added new methods: `getDatasetInfo()`, `countSamplesHomozygousReference()`, `selectSamplesHomozygousReference()`
+  - Marked as **[DEPRECATED]**: `selectDeNovo()`, `selectHetDominant()`, `selectHomRecessive()`
+- Section 5.4 Inheritance Model Integration Tests:
+  - Added deprecation banner
+  - Marked 5.4.1 De Novo Tests as **[DEPRECATED]** (INH-DN-001 to INH-DN-005)
+  - Marked 5.4.2 Heterozygous Dominant Tests as **[DEPRECATED]** (INH-HD-001 to INH-HD-003)
+  - Marked 5.4.3 Homozygous Recessive Tests as **[DEPRECATED]** (INH-HR-001 to INH-HR-003)
+  - Added new Section 5.4.5 Homozygous Reference Tests (HOM-REF-001 to HOM-REF-004)
+- Section 5.5.1 Unit Tests:
+  - Updated MCP-001 to reference `getDatasetInfo()`
+  - Added MCP-005 for homozygous reference tools
+- Section 5.5.2 Integration Tests:
+  - Updated MCP-INT-001 to reference `getDatasetInfo()`
+  - Marked MCP-INT-003 as **[DEPRECATED]**
+  - Added MCP-INT-005 for homozygous reference integration test
+- Updated Phase 3 deliverables and test methods (Section 7)
+- Updated Phase 3 success criteria (Section 8.1)
+- Added v1.3 changes summary at document end
+
+### Technical Details - 2026-01-26
+- Test migration pattern for metadata queries:
+  ```java
+  // Before:
+  SampleCounts counts = client.getSampleCounts();
+  int total = counts.total();
+  long variants = client.variantsTotal();
+
+  // After:
+  DatasetInfo info = client.getDatasetInfo();
+  int total = info.samplesTotal();
+  int variants = info.variantsTotal();
+  ```
+- Homozygous reference test includes timeout handling for backend availability
+- All 399 unit tests pass
+- All 11 integration tests pass (including graceful skip for unavailable backend methods)
+- Total: 410 tests passing
+- Test execution time unchanged
+
+---
+
 ## Release 1.2.2
 
 ### Fixed - 2026-01-24

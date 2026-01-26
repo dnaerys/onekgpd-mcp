@@ -59,48 +59,29 @@ class OneKGPdMCPServerTest {
     class MetadataToolsTests {
 
         @Test
-        @DisplayName("MCP-001: getSampleCounts returns properly wrapped SampleCounts")
-        void testGetSampleCountsReturnsWrappedResult() {
+        @DisplayName("MCP-001: getDatasetInfo returns properly wrapped DatasetInfo")
+        void testGetDatasetInfoReturnsWrappedResult() {
             try (MockedStatic<GrpcChannel> mockedStatic = mockStatic(GrpcChannel.class)) {
                 mockedStatic.when(GrpcChannel::getInstance).thenReturn(mockGrpcChannel);
                 when(mockGrpcChannel.getBlockingStub()).thenReturn(mockBlockingStub);
 
                 // Mock the datasetInfo response
                 DatasetInfoResponse response = DatasetInfoResponse.newBuilder()
+                    .setVariantsTotal(138044723)
                     .setSamplesTotal(3202)
                     .setMalesTotal(1598)
                     .setFemalesTotal(1604)
                     .build();
                 when(mockBlockingStub.datasetInfo(any(DatasetInfoRequest.class))).thenReturn(response);
 
-                ToolResponse toolResponse = server.getSampleCounts();
-                DnaerysClient.SampleCounts result = (DnaerysClient.SampleCounts) toolResponse.structuredContent();
+                ToolResponse toolResponse = server.getDatasetInfo();
+                DnaerysClient.DatasetInfo result = (DnaerysClient.DatasetInfo) toolResponse.structuredContent();
 
                 assertThat(result).isNotNull();
-                assertThat(result.total()).isEqualTo(3202);
-                assertThat(result.male()).isEqualTo(1598);
-                assertThat(result.female()).isEqualTo(1604);
-            }
-        }
-
-        @Test
-        @DisplayName("getVariantsTotal returns Map with 'count' key")
-        @SuppressWarnings("unchecked")
-        void testGetVariantsTotalReturnsMap() {
-            try (MockedStatic<GrpcChannel> mockedStatic = mockStatic(GrpcChannel.class)) {
-                mockedStatic.when(GrpcChannel::getInstance).thenReturn(mockGrpcChannel);
-                when(mockGrpcChannel.getBlockingStub()).thenReturn(mockBlockingStub);
-
-                DatasetInfoResponse response = DatasetInfoResponse.newBuilder()
-                    .setVariantsTotal(138044723)
-                    .build();
-                when(mockBlockingStub.datasetInfo(any(DatasetInfoRequest.class))).thenReturn(response);
-
-                ToolResponse toolResponse = server.getVariantsTotal();
-                Map<String, Long> result = (Map<String, Long>) toolResponse.structuredContent();
-
-                assertThat(result).containsKey("count");
-                assertThat(result.get("count")).isEqualTo(138044723L);
+                assertThat(result.variantsTotal()).isEqualTo(138044723);
+                assertThat(result.samplesTotal()).isEqualTo(3202);
+                assertThat(result.samplesMaleCount()).isEqualTo(1598);
+                assertThat(result.samplesFemaleCount()).isEqualTo(1604);
             }
         }
     }
@@ -514,152 +495,78 @@ class OneKGPdMCPServerTest {
     }
 
     // ========================================
-    // INHERITANCE MODEL TOOLS TESTS
+    // HOMOZYGOUS REFERENCE TOOLS TESTS
     // ========================================
 
     @Nested
-    @DisplayName("Inheritance Model Tools Tests")
-    class InheritanceModelToolsTests {
+    @DisplayName("Homozygous Reference Tools Tests")
+    class HomozygousReferenceToolsTests {
 
         @Test
-        @DisplayName("deNovoInTrio returns Map with 'variants' key")
+        @DisplayName("countSamplesHomozygousReference returns Map with 'count' key")
         @SuppressWarnings("unchecked")
-        void testDeNovoInTrioReturnsMap() {
+        void testCountSamplesHomRefReturnsMap() {
             try (MockedStatic<GrpcChannel> mockedStatic = mockStatic(GrpcChannel.class)) {
                 mockedStatic.when(GrpcChannel::getInstance).thenReturn(mockGrpcChannel);
                 when(mockGrpcChannel.getBlockingStub()).thenReturn(mockBlockingStub);
 
-                Variant variant = Variant.newBuilder()
-                    .setChr(Chromosome.CHR_1)
-                    .setStart(1000)
+                CountSamplesResponse response = CountSamplesResponse.newBuilder()
+                    .setCount(2500)
                     .build();
-                AllelesResponse allelesResponse = AllelesResponse.newBuilder()
-                    .addVariants(variant)
-                    .build();
+                when(mockBlockingStub.countSamplesHomReference(any(SamplesHomRefRequest.class)))
+                    .thenReturn(response);
 
-                Iterator<AllelesResponse> iterator = mock(Iterator.class);
-                when(iterator.hasNext()).thenReturn(true, false);
-                when(iterator.next()).thenReturn(allelesResponse);
-                when(mockBlockingStub.selectDeNovo(any(DeNovoRequest.class)))
-                    .thenReturn(iterator);
+                ToolResponse toolResponse = server.countSamplesHomozygousReference("1", 12345);
+                Map<String, Long> result = (Map<String, Long>) toolResponse.structuredContent();
 
-                ToolResponse toolResponse = server.deNovoInTrio(
-                    "HG00403", "HG00404", "HG00405",  // trio
-                    "1", 1000, 2000,
-                    null, null, null, null, null, null, null, null,
-                    null, null, null, null, null, null, null, null, null,
-                    null, null, null, null, null, null, null, null
-                );
-                Map<String, List<VariantView>> result = (Map<String, List<VariantView>>) toolResponse.structuredContent();
-
-                assertThat(result).containsKey("variants");
-                assertThat(result.get("variants")).isNotEmpty();
+                assertThat(result).containsKey("count");
+                assertThat(result.get("count")).isEqualTo(2500L);
             }
         }
 
         @Test
-        @DisplayName("deNovoInTrio passes trio IDs correctly")
-        void testDeNovoInTrioPassesTrioIds() {
+        @DisplayName("selectSamplesHomozygousReference returns Map with 'samples' key")
+        @SuppressWarnings("unchecked")
+        void testSelectSamplesHomRefReturnsMap() {
             try (MockedStatic<GrpcChannel> mockedStatic = mockStatic(GrpcChannel.class)) {
                 mockedStatic.when(GrpcChannel::getInstance).thenReturn(mockGrpcChannel);
                 when(mockGrpcChannel.getBlockingStub()).thenReturn(mockBlockingStub);
 
-                @SuppressWarnings("unchecked")
-                Iterator<AllelesResponse> emptyIterator = mock(Iterator.class);
-                when(emptyIterator.hasNext()).thenReturn(false);
-                when(mockBlockingStub.selectDeNovo(any(DeNovoRequest.class)))
-                    .thenReturn(emptyIterator);
+                SamplesResponse response = SamplesResponse.newBuilder()
+                    .addSamples("HG00403")
+                    .addSamples("HG00405")
+                    .build();
+                when(mockBlockingStub.selectSamplesHomReference(any(SamplesHomRefRequest.class)))
+                    .thenReturn(response);
 
-                server.deNovoInTrio(
-                    "HG00403", "HG00404", "HG00405",
-                    "1", 1000, 2000,
-                    null, null, null, null, null, null, null, null,
-                    null, null, null, null, null, null, null, null, null,
-                    null, null, null, null, null, null, null, null
-                );
+                ToolResponse toolResponse = server.selectSamplesHomozygousReference("1", 12345);
+                Map<String, List<String>> result = (Map<String, List<String>>) toolResponse.structuredContent();
 
-                verify(mockBlockingStub).selectDeNovo(argThat(request ->
-                    request.getParent1().equals("HG00403") &&
-                    request.getParent2().equals("HG00404") &&
-                    request.getProband().equals("HG00405")
-                ));
+                assertThat(result).containsKey("samples");
+                assertThat(result.get("samples")).contains("HG00403", "HG00405");
             }
         }
 
         @Test
-        @DisplayName("deNovoInTrio throws ToolCallException for null parent")
-        void testDeNovoInTrioNullParent() {
-            // Null parent should throw ToolCallException
+        @DisplayName("countSamplesHomozygousReference throws ToolCallException for invalid chromosome")
+        void testCountSamplesHomRefInvalidChromosome() {
             ToolCallException thrown = org.junit.jupiter.api.Assertions.assertThrows(
                 ToolCallException.class,
-                () -> server.deNovoInTrio(
-                    null, "HG00404", "HG00405",  // null parent
-                    "1", 1000, 2000,
-                    null, null, null, null, null, null, null, null,
-                    null, null, null, null, null, null, null, null, null,
-                    null, null, null, null, null, null, null, null
-                )
+                () -> server.countSamplesHomozygousReference("99", 12345)
             );
 
-            assertThat(thrown.getMessage()).contains("parent1 must not be empty");
+            assertThat(thrown.getMessage()).contains("Invalid Chromosome");
         }
 
         @Test
-        @DisplayName("hetDominantInTrio passes affected/unaffected correctly")
-        void testHetDominantInTrioPassesCorrectly() {
-            try (MockedStatic<GrpcChannel> mockedStatic = mockStatic(GrpcChannel.class)) {
-                mockedStatic.when(GrpcChannel::getInstance).thenReturn(mockGrpcChannel);
-                when(mockGrpcChannel.getBlockingStub()).thenReturn(mockBlockingStub);
+        @DisplayName("countSamplesHomozygousReference throws ToolCallException for invalid position")
+        void testCountSamplesHomRefInvalidPosition() {
+            ToolCallException thrown = org.junit.jupiter.api.Assertions.assertThrows(
+                ToolCallException.class,
+                () -> server.countSamplesHomozygousReference("1", 0)
+            );
 
-                @SuppressWarnings("unchecked")
-                Iterator<AllelesResponse> emptyIterator = mock(Iterator.class);
-                when(emptyIterator.hasNext()).thenReturn(false);
-                when(mockBlockingStub.selectHetDominant(any(HetDominantRequest.class)))
-                    .thenReturn(emptyIterator);
-
-                server.hetDominantInTrio(
-                    "HG00403", "HG00404", "HG00405",  // affected, unaffected, proband
-                    "1", 1000, 2000,
-                    null, null, null, null, null, null, null, null,
-                    null, null, null, null, null, null, null, null, null,
-                    null, null, null, null, null, null, null, null
-                );
-
-                verify(mockBlockingStub).selectHetDominant(argThat(request ->
-                    request.getAffectedParent().equals("HG00403") &&
-                    request.getUnaffectedParent().equals("HG00404") &&
-                    request.getAffectedChild().equals("HG00405")
-                ));
-            }
-        }
-
-        @Test
-        @DisplayName("homRecessiveInTrio passes carrier parents correctly")
-        void testHomRecessiveInTrioPassesCorrectly() {
-            try (MockedStatic<GrpcChannel> mockedStatic = mockStatic(GrpcChannel.class)) {
-                mockedStatic.when(GrpcChannel::getInstance).thenReturn(mockGrpcChannel);
-                when(mockGrpcChannel.getBlockingStub()).thenReturn(mockBlockingStub);
-
-                @SuppressWarnings("unchecked")
-                Iterator<AllelesResponse> emptyIterator = mock(Iterator.class);
-                when(emptyIterator.hasNext()).thenReturn(false);
-                when(mockBlockingStub.selectHomRecessive(any(HomRecessiveRequest.class)))
-                    .thenReturn(emptyIterator);
-
-                server.homRecessiveInTrio(
-                    "HG00403", "HG00404", "HG00405",  // carrier1, carrier2, affected
-                    "1", 1000, 2000,
-                    null, null, null, null, null, null, null, null,
-                    null, null, null, null, null, null, null, null, null,
-                    null, null, null, null, null, null, null, null
-                );
-
-                verify(mockBlockingStub).selectHomRecessive(argThat(request ->
-                    request.getUnaffectedParent1().equals("HG00403") &&
-                    request.getUnaffectedParent2().equals("HG00404") &&
-                    request.getAffectedChild().equals("HG00405")
-                ));
-            }
+            assertThat(thrown.getMessage()).contains("Invalid position");
         }
     }
 

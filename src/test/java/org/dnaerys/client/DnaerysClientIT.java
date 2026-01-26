@@ -49,11 +49,11 @@ class DnaerysClientIT {
     @Order(1)
     @DisplayName("CLI-INT-001 to CLI-INT-007: Metadata queries - sample counts, variant totals")
     void testMetadataQueries() {
-        // CLI-INT-001: Total sample count
-        DnaerysClient.SampleCounts counts = client.getSampleCounts();
-        assertNotNull(counts, "Sample counts should not be null");
+        // CLI-INT-001: Total sample count using getDatasetInfo
+        DnaerysClient.DatasetInfo datasetInfo = client.getDatasetInfo();
+        assertNotNull(datasetInfo, "DatasetInfo should not be null");
 
-        long totalSamples = counts.total();
+        int totalSamples = datasetInfo.samplesTotal();
         assertEquals(EXPECTED_TOTAL_SAMPLES, totalSamples,
                 "Total samples should be " + EXPECTED_TOTAL_SAMPLES);
 
@@ -62,7 +62,7 @@ class DnaerysClientIT {
                 "Total samples baseline check failed: " + totalResult.message());
 
         // CLI-INT-002: Female sample count
-        long femaleSamples = counts.female();
+        int femaleSamples = datasetInfo.samplesFemaleCount();
         assertTrue(femaleSamples > 0, "Female samples should be > 0");
         assertTrue(femaleSamples < EXPECTED_TOTAL_SAMPLES,
                 "Female samples should be < total");
@@ -72,7 +72,7 @@ class DnaerysClientIT {
                 "Female samples baseline check failed: " + femaleResult.message());
 
         // CLI-INT-003: Male sample count
-        long maleSamples = counts.male();
+        int maleSamples = datasetInfo.samplesMaleCount();
         assertTrue(maleSamples > 0, "Male samples should be > 0");
         assertTrue(maleSamples < EXPECTED_TOTAL_SAMPLES,
                 "Male samples should be < total");
@@ -99,8 +99,8 @@ class DnaerysClientIT {
         assertTrue(allSampleIds.contains(SAMPLE_GENERAL),
                 "Sample list should contain " + SAMPLE_GENERAL);
 
-        // CLI-INT-006: Variant total
-        long variantsTotal = client.variantsTotal();
+        // CLI-INT-006: Variant total (from getDatasetInfo)
+        int variantsTotal = datasetInfo.variantsTotal();
         assertTrue(variantsTotal > MIN_EXPECTED_VARIANTS,
                 "Variants total should be > " + MIN_EXPECTED_VARIANTS + ", got " + variantsTotal);
 

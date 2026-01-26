@@ -47,6 +47,8 @@ public class OneKGPdMCPServer {
         "start position in base pairs, 1-based, GRCh38 coordinates";
     private static final String END_DESC =
         "end position in base pairs, 1-based, GRCh38 coordinates";
+    private static final String POSITION_DESC =
+        "variant position in base pairs, 1-based, GRCh38 coordinates";
 
     private static final String REF_DESC =
         "reference allele bases (REF)";
@@ -152,50 +154,27 @@ public class OneKGPdMCPServer {
     // Dataset stats & constants
 
     @Tool(
-        title = "getSampleCounts",
+        title = "getDatasetInfo",
         structuredContent = true,
         annotations = @Tool.Annotations(
-            title = "getSampleCounts",
+            title = "getDatasetInfo",
             readOnlyHint = true,
             destructiveHint = false, // required to override Quarkus' defaults
             idempotentHint = true,  // required to override Quarkus' defaults
             openWorldHint = false
         ),
-        description = "Retrieve the total, male, and female sample counts for the 1000 Genomes Project.",
+        description = "Retrieve the number of variants and samples in 1000 Genomes Project.\n\n" +
+            "RETURNS: total number of variants, total number of samples, number of male and female samples.\n" +
+            "Refer to the Output Schema for field definitions.",
         outputSchema = @Tool.OutputSchema(
-            from = DnaerysClient.SampleCounts.class,
-            generator = SampleCountsSchemaGenerator.class
+            from = DnaerysClient.DatasetInfo.class,
+            generator = DatasetInfoSchemaGenerator.class
         )
     )
-    public ToolResponse getSampleCounts() {
+    public ToolResponse getDatasetInfo() {
         try {
-            DnaerysClient.SampleCounts counts = client.getSampleCounts();
+            DnaerysClient.DatasetInfo counts = client.getDatasetInfo();
             return mcpResponse.success(counts);
-        } catch (Exception e) {
-            throw McpResponse.handle(e);
-        }
-    }
-
-    @Tool(
-        title = "getVariantsTotal",
-        structuredContent = true,
-        annotations = @Tool.Annotations(
-            title = "getVariantsTotal",
-            readOnlyHint = true,
-            destructiveHint = false,
-            idempotentHint = true,
-            openWorldHint = false
-        ),
-        description =
-            "Retrieve TOTAL number of variants in 1000 Genomes Project\n\n" +
-            "RETURNS: Refer to the Output Schema for field definitions.",
-        outputSchema = @Tool.OutputSchema(
-            generator = CountSchemaGenerator.class
-        )
-    )
-    public ToolResponse getVariantsTotal() {
-        try {
-            return mcpResponse.success(Map.of("count", client.variantsTotal()));
         } catch (Exception e) {
             throw McpResponse.handle(e);
         }
@@ -1614,249 +1593,58 @@ public class OneKGPdMCPServer {
     }
 
     @Tool(
-        title = "deNovoInTrio",
+        title = "countSamplesHomozygousReference",
         structuredContent = true,
         annotations = @Tool.Annotations(
-            title = "deNovoInTrio",
+            title = "countSamplesHomozygousReference",
             readOnlyHint = true,
             destructiveHint = false,
             idempotentHint = true,
             openWorldHint = false
         ),
         description =
-            "SELECT DE NOVO variants in proband from a trio analysis in 1000 Genomes.\n" +
-            "Returns: variants present in proband but absent in both parents (new mutations).\n" +
-            "Filters: REF/ALT, AF (KGP/gnomAD), VEP impact/biotype/consequences, variant type, AlphaMissense class/score, ClinVar significance.\n\n" +
-
-            "INHERITANCE MODEL: De novo - variants not inherited from either parent.\n\n" +
-
-            "WORKFLOW:\n" +
-            "1. Provide sample IDs for both parents and proband\n" +
-            "2. Apply filters to narrow down candidate variants\n\n" +
-
-            "PARAMETERS:\n" +
-            "- Required: parent1, parent2, proband (sample IDs), chromosome (1-22, X, Y), start, end (GRCh38 coordinates)\n" +
-            "- Filters: ALL filters are combined with AND logic\n" +
-            "- CSV parameters: OR logic. Example: impact='HIGH,MODERATE' returns variants with HIGH OR MODERATE impact\n" +
-            "- Pagination: skip, limit (max=50)\n\n" +
-
-            "RETURNS: Refer to the Output Schema for field definitions. Empty array [] if no matches.",
+            "COUNT unique samples with HOMOZYGOUS REFERENCE variants (0/0 genotypes) at genomic position.\n" +
+            "RETURNS: Number of samples or -1 if no variants exist at the position in the database. " +
+            "Refer to the Output Schema for field definitions.",
         outputSchema = @Tool.OutputSchema(
-            from = VariantView.class,
-            generator = VariantArraySchemaGenerator.class
+            generator = CountSchemaGenerator.class
         )
     )
-    public ToolResponse deNovoInTrio(
-                @ToolArg(description = "sample id for parent 1") String parent1,
-                @ToolArg(description = "sample id for parent 2") String parent2,
-                @ToolArg(description = "sample id for proband") String proband,
-                @ToolArg(description = CHROMOSOME_DESC) String chromosome,
-                @ToolArg(description = START_DESC) int start,
-                @ToolArg(description = END_DESC) int end,
-                @ToolArg(description = REF_DESC, required = false) String refAllele,
-                @ToolArg(description = ALT_DESC, required = false) String altAllele,
-                @ToolArg(description = AFLT_DESC, required = false) Float afLessThan,
-                @ToolArg(description = AFGT_DESC, required = false) Float afGreaterThan,
-                @ToolArg(description = GNE_AFLT_DESC, required = false) Float gnomadExomeAfLessThan,
-                @ToolArg(description = GNE_AFGT_DESC, required = false) Float gnomadExomeAfGreaterThan,
-                @ToolArg(description = GNG_AFLT_DESC, required = false) Float gnomadGenomeAfLessThan,
-                @ToolArg(description = GNG_AFGT_DESC, required = false) Float gnomadGenomeAfGreaterThan,
-                @ToolArg(description = CLIN_DESC, required = false) String clinSignificance,
-                @ToolArg(description = IMPACT_DESC, required = false) String vepImpact,
-                @ToolArg(description = FEATURETYPE_DESC, required = false) String vepFeature,
-                @ToolArg(description = BIOTYPE_DESC, required = false) String vepBiotype,
-                @ToolArg(description = VARIANTTYPE_DESC, required = false) String vepVariantType,
-                @ToolArg(description = CONSEQ_DESC, required = false) String vepConsequences,
-                @ToolArg(description = AM_DESC, required = false) String alphaMissenseClass,
-                @ToolArg(description = AMLT_DESC, required = false) Float alphaMissenseScoreLessThan,
-                @ToolArg(description = AMGT_DESC, required = false) Float alphaMissenseScoreGreaterThan,
-                @ToolArg(description = BIONLY_DESC, required = false) Boolean biallelicOnly,
-                @ToolArg(description = MULTONLY_DESC, required = false) Boolean multiallelicOnly,
-                @ToolArg(description = EXMALE_DESC, required = false) Boolean excludeMales,
-                @ToolArg(description = EXFEMALE_DESC, required = false) Boolean excludeFemales,
-                @ToolArg(description = MINLEN_DESC, required = false) Integer minVariantLengthBp,
-                @ToolArg(description = MAXLEN_DESC, required = false) Integer maxVariantLengthBp,
-                @ToolArg(description = SKIP_DESC, required = false) Integer skip,
-                @ToolArg(description = LIM_DESC, required = false) Integer limit) {
+    public ToolResponse countSamplesHomozygousReference(
+        @ToolArg(description = CHROMOSOME_DESC) String chromosome,
+        @ToolArg(description = POSITION_DESC) int position) {
         try {
-            List<Variant> variants = client.selectDeNovo(parent1, parent2, proband, chromosome, start, end, refAllele, altAllele, minVariantLengthBp,
-                            maxVariantLengthBp, biallelicOnly, multiallelicOnly, excludeMales, excludeFemales, afLessThan, afGreaterThan,
-                            gnomadGenomeAfLessThan, gnomadGenomeAfGreaterThan, gnomadExomeAfLessThan, gnomadExomeAfGreaterThan, vepImpact,
-                            vepBiotype, vepFeature, vepVariantType, vepConsequences, alphaMissenseClass, alphaMissenseScoreLessThan,
-                            alphaMissenseScoreGreaterThan, clinSignificance, skip, limit);
-
-            List<VariantView> vv = variants.stream()
-                .map(VariantView::fromGrpc)
-                .toList();
-
-            Map<String, Object> structured = Map.of("variants", vv);
-            return mcpResponse.success(structured, vv);
+            Long count = client.countSamplesHomozygousReference(chromosome, position);
+            return mcpResponse.success(Map.of("count", count));
         } catch (Exception e) {
             throw McpResponse.handle(e);
         }
     }
 
     @Tool(
-        title = "hetDominantInTrio",
+        title = "selectSamplesHomozygousReference",
         structuredContent = true,
         annotations = @Tool.Annotations(
-            title = "hetDominantInTrio",
+            title = "selectSamplesHomozygousReference",
             readOnlyHint = true,
             destructiveHint = false,
             idempotentHint = true,
             openWorldHint = false
         ),
         description =
-            "SELECT HETEROZYGOUS DOMINANT variants in affected child from a trio analysis in 1000 Genomes.\n" +
-            "Returns: heterozygous variants shared between affected parent and proband, absent in unaffected parent.\n" +
-            "Filters: REF/ALT, AF (KGP/gnomAD), VEP impact/biotype/consequences, variant type, AlphaMissense class/score, ClinVar significance.\n\n" +
-
-            "INHERITANCE MODEL: Autosomal dominant - variant inherited from affected parent.\n\n" +
-
-            "WORKFLOW:\n" +
-            "1. Provide sample IDs for affected parent, unaffected parent, and proband\n" +
-            "2. Apply filters to narrow down candidate variants\n\n" +
-
-            "PARAMETERS:\n" +
-            "- Required: affectedParent, unaffectedParent, proband (sample IDs), chromosome (1-22, X, Y), start, end (GRCh38 coordinates)\n" +
-            "- Filters: ALL filters are combined with AND logic\n" +
-            "- CSV parameters: OR logic. Example: impact='HIGH,MODERATE' returns variants with HIGH OR MODERATE impact\n" +
-            "- Pagination: skip, limit (max=50)\n\n" +
-
-            "RETURNS: Refer to the Output Schema for field definitions. Empty array [] if no matches.",
+            "SELECT unique samples with HOMOZYGOUS REFERENCE variants (0/0 genotypes) at genomic position.\n" +
+            "RETURNS: Refer to the Output Schema for field definitions.",
         outputSchema = @Tool.OutputSchema(
-            from = VariantView.class,
-            generator = VariantArraySchemaGenerator.class
+            generator = SampleIdArraySchemaGenerator.class
         )
     )
-    public ToolResponse hetDominantInTrio(
-                @ToolArg(description = "sample id for affected parent") String affectedParent,
-                @ToolArg(description = "sample id for unaffected parent") String unaffectedParent,
-                @ToolArg(description = "sample id for proband") String proband,
-                @ToolArg(description = CHROMOSOME_DESC) String chromosome,
-                @ToolArg(description = START_DESC) int start,
-                @ToolArg(description = END_DESC) int end,
-                @ToolArg(description = REF_DESC, required = false) String refAllele,
-                @ToolArg(description = ALT_DESC, required = false) String altAllele,
-                @ToolArg(description = AFLT_DESC, required = false) Float afLessThan,
-                @ToolArg(description = AFGT_DESC, required = false) Float afGreaterThan,
-                @ToolArg(description = GNE_AFLT_DESC, required = false) Float gnomadExomeAfLessThan,
-                @ToolArg(description = GNE_AFGT_DESC, required = false) Float gnomadExomeAfGreaterThan,
-                @ToolArg(description = GNG_AFLT_DESC, required = false) Float gnomadGenomeAfLessThan,
-                @ToolArg(description = GNG_AFGT_DESC, required = false) Float gnomadGenomeAfGreaterThan,
-                @ToolArg(description = CLIN_DESC, required = false) String clinSignificance,
-                @ToolArg(description = IMPACT_DESC, required = false) String vepImpact,
-                @ToolArg(description = FEATURETYPE_DESC, required = false) String vepFeature,
-                @ToolArg(description = BIOTYPE_DESC, required = false) String vepBiotype,
-                @ToolArg(description = VARIANTTYPE_DESC, required = false) String vepVariantType,
-                @ToolArg(description = CONSEQ_DESC, required = false) String vepConsequences,
-                @ToolArg(description = AM_DESC, required = false) String alphaMissenseClass,
-                @ToolArg(description = AMLT_DESC, required = false) Float alphaMissenseScoreLessThan,
-                @ToolArg(description = AMGT_DESC, required = false) Float alphaMissenseScoreGreaterThan,
-                @ToolArg(description = BIONLY_DESC, required = false) Boolean biallelicOnly,
-                @ToolArg(description = MULTONLY_DESC, required = false) Boolean multiallelicOnly,
-                @ToolArg(description = EXMALE_DESC, required = false) Boolean excludeMales,
-                @ToolArg(description = EXFEMALE_DESC, required = false) Boolean excludeFemales,
-                @ToolArg(description = MINLEN_DESC, required = false) Integer minVariantLengthBp,
-                @ToolArg(description = MAXLEN_DESC, required = false) Integer maxVariantLengthBp,
-                @ToolArg(description = SKIP_DESC, required = false) Integer skip,
-                @ToolArg(description = LIM_DESC, required = false) Integer limit) {
+    public ToolResponse selectSamplesHomozygousReference(
+        @ToolArg(description = CHROMOSOME_DESC) String chromosome,
+        @ToolArg(description = POSITION_DESC) int position) {
         try {
-            List<Variant> variants = client.selectHetDominant(affectedParent, unaffectedParent, proband, chromosome, start, end, refAllele, altAllele,
-                            minVariantLengthBp, maxVariantLengthBp, biallelicOnly, multiallelicOnly, excludeMales, excludeFemales, afLessThan,
-                            afGreaterThan, gnomadGenomeAfLessThan, gnomadGenomeAfGreaterThan, gnomadExomeAfLessThan, gnomadExomeAfGreaterThan,
-                            vepImpact, vepBiotype, vepFeature, vepVariantType, vepConsequences, alphaMissenseClass, alphaMissenseScoreLessThan,
-                            alphaMissenseScoreGreaterThan, clinSignificance, skip, limit);
-
-            List<VariantView> vv = variants.stream()
-                .map(VariantView::fromGrpc)
-                .toList();
-
-            Map<String, Object> structured = Map.of("variants", vv);
-            return mcpResponse.success(structured, vv);
-        } catch (Exception e) {
-            throw McpResponse.handle(e);
-        }
-    }
-
-    @Tool(
-        title = "homRecessiveInTrio",
-        structuredContent = true,
-        annotations = @Tool.Annotations(
-            title = "homRecessiveInTrio",
-            readOnlyHint = true,
-            destructiveHint = false,
-            idempotentHint = true,
-            openWorldHint = false
-        ),
-        description =
-            "SELECT HOMOZYGOUS RECESSIVE variants in affected child from a trio analysis in 1000 Genomes.\n" +
-            "Returns: homozygous variants in proband where both unaffected parents are heterozygous carriers.\n" +
-            "Filters: REF/ALT, AF (KGP/gnomAD), VEP impact/biotype/consequences, variant type, AlphaMissense class/score, ClinVar significance.\n\n" +
-
-            "INHERITANCE MODEL: Autosomal recessive - both parents are carriers (0/1), child is homozygous (1/1).\n\n" +
-
-            "WORKFLOW:\n" +
-            "1. Provide sample IDs for both unaffected parents and proband\n" +
-            "2. Apply filters to narrow down candidate variants\n\n" +
-
-            "PARAMETERS:\n" +
-            "- Required: unaffectedParent1, unaffectedParent2, proband (sample IDs), chromosome (1-22, X, Y), start, end (GRCh38 coordinates)\n" +
-            "- Filters: ALL filters are combined with AND logic\n" +
-            "- CSV parameters: OR logic. Example: impact='HIGH,MODERATE' returns variants with HIGH OR MODERATE impact\n" +
-            "- Pagination: skip, limit (max=50)\n\n" +
-
-            "RETURNS: Refer to the Output Schema for field definitions. Empty array [] if no matches.",
-        outputSchema = @Tool.OutputSchema(
-            from = VariantView.class,
-            generator = VariantArraySchemaGenerator.class
-        )
-    )
-    public ToolResponse homRecessiveInTrio(
-                @ToolArg(description = "sample id for unaffected parent 1") String unaffectedParent1,
-                @ToolArg(description = "sample id for unaffected parent 2") String unaffectedParent2,
-                @ToolArg(description = "sample id for proband") String proband,
-                @ToolArg(description = CHROMOSOME_DESC) String chromosome,
-                @ToolArg(description = START_DESC) int start,
-                @ToolArg(description = END_DESC) int end,
-                @ToolArg(description = REF_DESC, required = false) String refAllele,
-                @ToolArg(description = ALT_DESC, required = false) String altAllele,
-                @ToolArg(description = AFLT_DESC, required = false) Float afLessThan,
-                @ToolArg(description = AFGT_DESC, required = false) Float afGreaterThan,
-                @ToolArg(description = GNE_AFLT_DESC, required = false) Float gnomadExomeAfLessThan,
-                @ToolArg(description = GNE_AFGT_DESC, required = false) Float gnomadExomeAfGreaterThan,
-                @ToolArg(description = GNG_AFLT_DESC, required = false) Float gnomadGenomeAfLessThan,
-                @ToolArg(description = GNG_AFGT_DESC, required = false) Float gnomadGenomeAfGreaterThan,
-                @ToolArg(description = CLIN_DESC, required = false) String clinSignificance,
-                @ToolArg(description = IMPACT_DESC, required = false) String vepImpact,
-                @ToolArg(description = FEATURETYPE_DESC, required = false) String vepFeature,
-                @ToolArg(description = BIOTYPE_DESC, required = false) String vepBiotype,
-                @ToolArg(description = VARIANTTYPE_DESC, required = false) String vepVariantType,
-                @ToolArg(description = CONSEQ_DESC, required = false) String vepConsequences,
-                @ToolArg(description = AM_DESC, required = false) String alphaMissenseClass,
-                @ToolArg(description = AMLT_DESC, required = false) Float alphaMissenseScoreLessThan,
-                @ToolArg(description = AMGT_DESC, required = false) Float alphaMissenseScoreGreaterThan,
-                @ToolArg(description = BIONLY_DESC, required = false) Boolean biallelicOnly,
-                @ToolArg(description = MULTONLY_DESC, required = false) Boolean multiallelicOnly,
-                @ToolArg(description = EXMALE_DESC, required = false) Boolean excludeMales,
-                @ToolArg(description = EXFEMALE_DESC, required = false) Boolean excludeFemales,
-                @ToolArg(description = MINLEN_DESC, required = false) Integer minVariantLengthBp,
-                @ToolArg(description = MAXLEN_DESC, required = false) Integer maxVariantLengthBp,
-                @ToolArg(description = SKIP_DESC, required = false) Integer skip,
-                @ToolArg(description = LIM_DESC, required = false) Integer limit) {
-        try {
-            List<Variant> variants = client.selectHomRecessive(unaffectedParent1, unaffectedParent2, proband, chromosome, start, end, refAllele, altAllele,
-                            minVariantLengthBp, maxVariantLengthBp, biallelicOnly, multiallelicOnly, excludeMales, excludeFemales, afLessThan,
-                            afGreaterThan, gnomadGenomeAfLessThan, gnomadGenomeAfGreaterThan, gnomadExomeAfLessThan, gnomadExomeAfGreaterThan,
-                            vepImpact, vepBiotype, vepFeature, vepVariantType, vepConsequences, alphaMissenseClass, alphaMissenseScoreLessThan,
-                            alphaMissenseScoreGreaterThan, clinSignificance, skip, limit);
-
-            List<VariantView> vv = variants.stream()
-                .map(VariantView::fromGrpc)
-                .toList();
-
-            Map<String, Object> structured = Map.of("variants", vv);
-            return mcpResponse.success(structured, vv);
+            List<String> samples = client.selectSamplesHomozygousReference(chromosome, position);
+            Map<String, Object> structured = Map.of("samples", samples);
+            return mcpResponse.success(structured, samples);
         } catch (Exception e) {
             throw McpResponse.handle(e);
         }

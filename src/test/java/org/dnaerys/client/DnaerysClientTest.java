@@ -535,227 +535,66 @@ class DnaerysClientTest {
     }
 
     // ========================================
-    // INHERITANCE MODEL INPUT VALIDATION TESTS
+    // HOMOZYGOUS REFERENCE INPUT VALIDATION TESTS
     // ========================================
 
     @Nested
-    @DisplayName("Inheritance Model Input Validation Tests")
-    class InheritanceModelInputValidationTests {
+    @DisplayName("Homozygous Reference Input Validation Tests")
+    class HomozygousReferenceInputValidationTests {
 
         @Test
-        @DisplayName("selectDeNovo with null parent1 throws RuntimeException")
-        void testDeNovoNullParent1() {
+        @DisplayName("countSamplesHomozygousReference with invalid chromosome throws RuntimeException")
+        void testCountHomRefInvalidChromosome() {
             RuntimeException thrown = org.junit.jupiter.api.Assertions.assertThrows(
                 RuntimeException.class,
-                () -> client.selectDeNovo(
-                    null, "HG00404", "HG00405",
-                    "1", 1000, 2000,
-                    null, null, null, null, null, null, null, null,
-                    null, null, null, null, null, null,
-                    null, null, null, null, null, null, null, null, null,
-                    null, null
-                )
-            );
-
-            assertThat(thrown.getMessage()).contains("parent1 must not be empty");
-        }
-
-        @Test
-        @DisplayName("selectDeNovo with empty parent1 throws RuntimeException")
-        void testDeNovoEmptyParent1() {
-            RuntimeException thrown = org.junit.jupiter.api.Assertions.assertThrows(
-                RuntimeException.class,
-                () -> client.selectDeNovo(
-                    "", "HG00404", "HG00405",
-                    "1", 1000, 2000,
-                    null, null, null, null, null, null, null, null,
-                    null, null, null, null, null, null,
-                    null, null, null, null, null, null, null, null, null,
-                    null, null
-                )
-            );
-
-            assertThat(thrown.getMessage()).contains("parent1 must not be empty");
-        }
-
-        @Test
-        @DisplayName("selectDeNovo with null parent2 throws RuntimeException")
-        void testDeNovoNullParent2() {
-            RuntimeException thrown = org.junit.jupiter.api.Assertions.assertThrows(
-                RuntimeException.class,
-                () -> client.selectDeNovo(
-                    "HG00403", null, "HG00405",
-                    "1", 1000, 2000,
-                    null, null, null, null, null, null, null, null,
-                    null, null, null, null, null, null,
-                    null, null, null, null, null, null, null, null, null,
-                    null, null
-                )
-            );
-
-            assertThat(thrown.getMessage()).contains("parent2 must not be empty");
-        }
-
-        @Test
-        @DisplayName("selectDeNovo with null proband throws RuntimeException")
-        void testDeNovoNullProband() {
-            RuntimeException thrown = org.junit.jupiter.api.Assertions.assertThrows(
-                RuntimeException.class,
-                () -> client.selectDeNovo(
-                    "HG00403", "HG00404", null,
-                    "1", 1000, 2000,
-                    null, null, null, null, null, null, null, null,
-                    null, null, null, null, null, null,
-                    null, null, null, null, null, null, null, null, null,
-                    null, null
-                )
-            );
-
-            assertThat(thrown.getMessage()).contains("proband must not be empty");
-        }
-
-        @Test
-        @DisplayName("selectDeNovo with invalid chromosome throws RuntimeException")
-        void testDeNovoInvalidChromosome() {
-            RuntimeException thrown = org.junit.jupiter.api.Assertions.assertThrows(
-                RuntimeException.class,
-                () -> client.selectDeNovo(
-                    "HG00403", "HG00404", "HG00405",
-                    "99", 1000, 2000,
-                    null, null, null, null, null, null, null, null,
-                    null, null, null, null, null, null,
-                    null, null, null, null, null, null, null, null, null,
-                    null, null
-                )
+                () -> client.countSamplesHomozygousReference("99", 1000)
             );
 
             assertThat(thrown.getMessage()).contains("Invalid Chromosome");
         }
 
         @Test
-        @DisplayName("selectDeNovo with invalid region throws RuntimeException")
-        void testDeNovoInvalidRegion() {
+        @DisplayName("countSamplesHomozygousReference with invalid position throws RuntimeException")
+        void testCountHomRefInvalidPosition() {
             RuntimeException thrown = org.junit.jupiter.api.Assertions.assertThrows(
                 RuntimeException.class,
-                () -> client.selectDeNovo(
-                    "HG00403", "HG00404", "HG00405",
-                    "1", 2000, 1000,  // start > end
-                    null, null, null, null, null, null, null, null,
-                    null, null, null, null, null, null,
-                    null, null, null, null, null, null, null, null, null,
-                    null, null
-                )
+                () -> client.countSamplesHomozygousReference("1", 0)
             );
 
-            assertThat(thrown.getMessage()).contains("Invalid 'start' or 'end'");
+            assertThat(thrown.getMessage()).contains("Invalid position");
         }
 
         @Test
-        @DisplayName("selectHetDominant with null affected parent throws RuntimeException")
-        void testHetDominantNullAffectedParent() {
+        @DisplayName("countSamplesHomozygousReference with negative position throws RuntimeException")
+        void testCountHomRefNegativePosition() {
             RuntimeException thrown = org.junit.jupiter.api.Assertions.assertThrows(
                 RuntimeException.class,
-                () -> client.selectHetDominant(
-                    null, "HG00404", "HG00405",
-                    "1", 1000, 2000,
-                    null, null, null, null, null, null, null, null,
-                    null, null, null, null, null, null,
-                    null, null, null, null, null, null, null, null, null,
-                    null, null
-                )
+                () -> client.countSamplesHomozygousReference("1", -100)
             );
 
-            assertThat(thrown.getMessage()).contains("affectedParent must not be empty");
+            assertThat(thrown.getMessage()).contains("Invalid position");
         }
 
         @Test
-        @DisplayName("selectHetDominant with null unaffected parent throws RuntimeException")
-        void testHetDominantNullUnaffectedParent() {
+        @DisplayName("selectSamplesHomozygousReference with invalid chromosome throws RuntimeException")
+        void testSelectHomRefInvalidChromosome() {
             RuntimeException thrown = org.junit.jupiter.api.Assertions.assertThrows(
                 RuntimeException.class,
-                () -> client.selectHetDominant(
-                    "HG00403", null, "HG00405",
-                    "1", 1000, 2000,
-                    null, null, null, null, null, null, null, null,
-                    null, null, null, null, null, null,
-                    null, null, null, null, null, null, null, null, null,
-                    null, null
-                )
+                () -> client.selectSamplesHomozygousReference("99", 1000)
             );
 
-            assertThat(thrown.getMessage()).contains("unaffectedParent must not be empty");
+            assertThat(thrown.getMessage()).contains("Invalid Chromosome");
         }
 
         @Test
-        @DisplayName("selectHetDominant with null proband throws RuntimeException")
-        void testHetDominantNullProband() {
+        @DisplayName("selectSamplesHomozygousReference with invalid position throws RuntimeException")
+        void testSelectHomRefInvalidPosition() {
             RuntimeException thrown = org.junit.jupiter.api.Assertions.assertThrows(
                 RuntimeException.class,
-                () -> client.selectHetDominant(
-                    "HG00403", "HG00404", null,
-                    "1", 1000, 2000,
-                    null, null, null, null, null, null, null, null,
-                    null, null, null, null, null, null,
-                    null, null, null, null, null, null, null, null, null,
-                    null, null
-                )
+                () -> client.selectSamplesHomozygousReference("1", 0)
             );
 
-            assertThat(thrown.getMessage()).contains("proband must not be empty");
-        }
-
-        @Test
-        @DisplayName("selectHomRecessive with null parent1 throws RuntimeException")
-        void testHomRecessiveNullParent1() {
-            RuntimeException thrown = org.junit.jupiter.api.Assertions.assertThrows(
-                RuntimeException.class,
-                () -> client.selectHomRecessive(
-                    null, "HG00404", "HG00405",
-                    "1", 1000, 2000,
-                    null, null, null, null, null, null, null, null,
-                    null, null, null, null, null, null,
-                    null, null, null, null, null, null, null, null, null,
-                    null, null
-                )
-            );
-
-            assertThat(thrown.getMessage()).contains("unaffectedParent1 must not be empty");
-        }
-
-        @Test
-        @DisplayName("selectHomRecessive with null parent2 throws RuntimeException")
-        void testHomRecessiveNullParent2() {
-            RuntimeException thrown = org.junit.jupiter.api.Assertions.assertThrows(
-                RuntimeException.class,
-                () -> client.selectHomRecessive(
-                    "HG00403", null, "HG00405",
-                    "1", 1000, 2000,
-                    null, null, null, null, null, null, null, null,
-                    null, null, null, null, null, null,
-                    null, null, null, null, null, null, null, null, null,
-                    null, null
-                )
-            );
-
-            assertThat(thrown.getMessage()).contains("unaffectedParent2 must not be empty");
-        }
-
-        @Test
-        @DisplayName("selectHomRecessive with null proband throws RuntimeException")
-        void testHomRecessiveNullProband() {
-            RuntimeException thrown = org.junit.jupiter.api.Assertions.assertThrows(
-                RuntimeException.class,
-                () -> client.selectHomRecessive(
-                    "HG00403", "HG00404", null,
-                    "1", 1000, 2000,
-                    null, null, null, null, null, null, null, null,
-                    null, null, null, null, null, null,
-                    null, null, null, null, null, null, null, null, null,
-                    null, null
-                )
-            );
-
-            assertThat(thrown.getMessage()).contains("proband must not be empty");
+            assertThat(thrown.getMessage()).contains("Invalid position");
         }
     }
 
@@ -896,14 +735,14 @@ class DnaerysClientTest {
     class GrpcErrorHandlingTests {
 
         @Test
-        @DisplayName("CLI-ERR-001: gRPC connection failure throws RuntimeException for variantsTotal")
-        void testVariantsTotalGrpcFailure() {
+        @DisplayName("CLI-ERR-001: gRPC connection failure throws RuntimeException for getDatasetInfo")
+        void testGetDatasetInfoGrpcFailure() {
             try (MockedStatic<GrpcChannel> mockedStatic = mockStatic(GrpcChannel.class)) {
                 mockedStatic.when(GrpcChannel::getInstance).thenThrow(new RuntimeException("Connection failed"));
 
                 RuntimeException thrown = org.junit.jupiter.api.Assertions.assertThrows(
                     RuntimeException.class,
-                    () -> client.variantsTotal()
+                    () -> client.getDatasetInfo()
                 );
 
                 assertThat(thrown.getMessage()).contains("Connection failed");
@@ -911,14 +750,14 @@ class DnaerysClientTest {
         }
 
         @Test
-        @DisplayName("CLI-ERR-002: gRPC error throws RuntimeException for getSampleCounts")
-        void testGetSampleCountsGrpcFailure() {
+        @DisplayName("CLI-ERR-002: gRPC error throws RuntimeException for countSamplesHomozygousReference")
+        void testCountSamplesHomRefGrpcFailure() {
             try (MockedStatic<GrpcChannel> mockedStatic = mockStatic(GrpcChannel.class)) {
                 mockedStatic.when(GrpcChannel::getInstance).thenThrow(new RuntimeException("Connection failed"));
 
                 RuntimeException thrown = org.junit.jupiter.api.Assertions.assertThrows(
                     RuntimeException.class,
-                    () -> client.getSampleCounts()
+                    () -> client.countSamplesHomozygousReference("1", 1000)
                 );
 
                 assertThat(thrown.getMessage()).contains("Connection failed");
@@ -1161,30 +1000,31 @@ class DnaerysClientTest {
     }
 
     // ========================================
-    // SAMPLE COUNTS RECORD TESTS
+    // DATASET INFO RECORD TESTS
     // ========================================
 
     @Nested
-    @DisplayName("SampleCounts Record Tests")
-    class SampleCountsRecordTests {
+    @DisplayName("DatasetInfo Record Tests")
+    class DatasetInfoRecordTests {
 
         @Test
-        @DisplayName("SampleCounts record holds correct values")
-        void testSampleCountsRecord() {
-            DnaerysClient.SampleCounts counts = new DnaerysClient.SampleCounts(3202, 1598, 1604);
+        @DisplayName("DatasetInfo record holds correct values")
+        void testDatasetInfoRecord() {
+            DnaerysClient.DatasetInfo info = new DnaerysClient.DatasetInfo(138044723, 3202, 1598, 1604);
 
-            assertThat(counts.total()).isEqualTo(3202);
-            assertThat(counts.male()).isEqualTo(1598);
-            assertThat(counts.female()).isEqualTo(1604);
+            assertThat(info.variantsTotal()).isEqualTo(138044723);
+            assertThat(info.samplesTotal()).isEqualTo(3202);
+            assertThat(info.samplesMaleCount()).isEqualTo(1598);
+            assertThat(info.samplesFemaleCount()).isEqualTo(1604);
         }
 
         @Test
-        @DisplayName("SampleCounts record equality")
-        void testSampleCountsEquality() {
-            DnaerysClient.SampleCounts counts1 = new DnaerysClient.SampleCounts(100, 50, 50);
-            DnaerysClient.SampleCounts counts2 = new DnaerysClient.SampleCounts(100, 50, 50);
+        @DisplayName("DatasetInfo record equality")
+        void testDatasetInfoEquality() {
+            DnaerysClient.DatasetInfo info1 = new DnaerysClient.DatasetInfo(1000, 100, 50, 50);
+            DnaerysClient.DatasetInfo info2 = new DnaerysClient.DatasetInfo(1000, 100, 50, 50);
 
-            assertThat(counts1).isEqualTo(counts2);
+            assertThat(info1).isEqualTo(info2);
         }
     }
 

@@ -1,5 +1,5 @@
 syntax = "proto3";
-// R1.17.2
+// R1.17.4
 
 package org.dnaerys.cluster.grpc;
 
@@ -121,15 +121,22 @@ service DnaerysService {
     rpc SelectSamplesInRegion (SamplesInRegionRequest) returns (SamplesResponse) {}
 
     // counts samples with variants in a region
-    // returns  # of unique samples
+    // returns # of unique samples
     rpc CountSamplesInRegion (SamplesInRegionRequest) returns (CountSamplesResponse) {}
 
     // selects samples with variants in regions
     rpc SelectSamplesInMultiRegions (SamplesInMultiRegionsRequest) returns (SamplesResponse) {}
 
     // counts samples with variants in regions
-    // returns  # of unique samples
+    // returns # of unique samples
     rpc CountSamplesInMultiRegions (SamplesInMultiRegionsRequest) returns (CountSamplesResponse) {}
+
+    // selects samples with confirmed homozygous reference call at a position
+    rpc SelectSamplesHomReference (SamplesHomRefRequest) returns (SamplesResponse) {}
+
+    // counts samples with confirmed homozygous reference call at a position
+    // returns # of unique samples; returns -1 if no variants exist at the position in database
+    rpc CountSamplesHomReference (SamplesHomRefRequest) returns (CountSamplesResponse) {}
 
     // Variant selection by inheritance model
 
@@ -523,9 +530,18 @@ message SamplesInMultiRegionsRequest {
     int32  limit = 13; // limit result to n samples from each node, <= 0 means 2^31-1 limit; optional
 }
 
+// Samples with confirmed homozygous reference call at a position
+message SamplesHomRefRequest {
+    Chromosome chr = 1;
+    int32 position = 2;       // 1-based region position
+    RefAssembly assembly = 3; // reference assembly, optional; default = GRCh38
+    int32 skip = 4;  // skip first n samples, <= 0 means no skip; optional
+    int32 limit = 5; // limit result to n samples, <= 0 means 2^31-1 limit; optional
+}
+
 // Set of samples with variants in given region(s)
 message SamplesResponse {
-    repeated string samples = 1; // sample names as provided during ETL
+    repeated string samples = 1; // list of unique sample names matching the search criteria
     bool incomplete_cluster = 2; // indicates response from incomplete cluster with unreachable nodes
     bool affected = 3; // indicates that unreachable nodes could possibly affect completeness of response
     int64 elapsed_ms = 4; // time to execute, in ms; time from receiving request to sending response

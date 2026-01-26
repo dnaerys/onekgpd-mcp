@@ -28,7 +28,7 @@ public class DnaerysClient {
 
     public enum Gender { MALE, FEMALE, BOTH }
 
-    public record SampleCounts(int total, int male, int female) {}
+    public record DatasetInfo(int variantsTotal, int samplesTotal, int samplesMaleCount, int samplesFemaleCount) {}
 
     Annotations composeAnnotations(Float afLessThan, Float afGreaterThan,
                                    Float gnomadAfGenLessThan, Float gnomadAfGenGreaterThan,
@@ -154,19 +154,7 @@ public class DnaerysClient {
         return builder.build();
     }
 
-    public long variantsTotal() {
-        // gRPC call
-        GrpcChannel channel = GrpcChannel.getInstance();
-        final boolean withSamplesNames = false;
-        DatasetInfoRequest request =
-            DatasetInfoRequest
-                .newBuilder()
-                .setReturnSamplesNames(withSamplesNames)
-                .build();
-        return channel.getBlockingStub().datasetInfo(request).getVariantsTotal();
-    }
-
-    public SampleCounts getSampleCounts() {
+    public DatasetInfo getDatasetInfo() {
         // gRPC call
         GrpcChannel channel = GrpcChannel.getInstance();
         DatasetInfoRequest request = DatasetInfoRequest.newBuilder()
@@ -174,7 +162,8 @@ public class DnaerysClient {
             .build();
         DatasetInfoResponse response = channel.getBlockingStub().datasetInfo(request);
 
-        return new SampleCounts(
+        return new DatasetInfo(
+            response.getVariantsTotal(),
             response.getSamplesTotal(),
             response.getMalesTotal(),
             response.getFemalesTotal()
@@ -493,215 +482,43 @@ public class DnaerysClient {
             .build();
 
         GrpcChannel channel = GrpcChannel.getInstance();
-        List<String> samples = channel.getBlockingStub().selectSamplesInRegion(request).getSamplesList();
-        if (samples == null) return List.of();
-        return samples;
+        return channel.getBlockingStub().selectSamplesInRegion(request).getSamplesList();
     }
 
-    public List<Variant> selectDeNovo(
-        String parent1, String parent2, String proband, String chromosome, int start, int end,
-        String refAllele, String altAllele, Integer varMinLength, Integer varMaxLength, Boolean biallelicOnly,
-        Boolean multiallelicOnly, Boolean excludeMales, Boolean excludeFemales, Float afLessThan,
-        Float afGreaterThan, Float gnomadAfGenLessThan, Float gnomadAfGenGreaterThan, Float gnomadAfExLessThan,
-        Float gnomadAfExGreaterThan, String impact, String bioType, String featureType, String variantType,
-        String consequences, String alphaMissense, Float alphaMissenseScoreLT, Float alphaMissenseScoreGT,
-        String clinSignificance, Integer skip, Integer limit) {
-
-        if (start < 0 || end < start)
-            throw new RuntimeException("Invalid 'start' or 'end' of a region");
-
+    public long countSamplesHomozygousReference(String chromosome, int position) {
         Chromosome chr = ContigsMapping.contigName2GrpcChr(chromosome);
         if (chr.equals(Chromosome.UNRECOGNIZED))
             throw new RuntimeException("Invalid Chromosome");
 
-        if (parent1 == null || parent1.isEmpty())
-            throw new RuntimeException("Sample ID for parent1 must not be empty");
+        if (position <= 0)
+            throw new RuntimeException("Invalid position");
 
-        if (parent2 == null || parent2.isEmpty())
-            throw new RuntimeException("Sample ID for parent2 must not be empty");
-
-        if (proband == null || proband.isEmpty())
-            throw new RuntimeException("Sample ID for proband must not be empty");
-
-        int finalSkip = (skip == null || skip < 0) ? 0 : skip;
-        int finalLimit = (limit == null || limit < 0 || limit > MAX_RETURNED_ITEMS) ? MAX_RETURNED_ITEMS : limit;
-
-        int minLen = (varMinLength == null || varMinLength < 0) ? 0 : varMinLength;
-        int maxLen = (varMaxLength == null || varMaxLength < 0) ? 0 : varMaxLength;
-
-        if (maxLen < minLen) {
-            minLen = 0;
-            maxLen = Integer.MAX_VALUE;
-        }
-
-        Annotations annotations = composeAnnotations(afLessThan, afGreaterThan, gnomadAfGenLessThan, gnomadAfGenGreaterThan,
-            gnomadAfExLessThan, gnomadAfExGreaterThan, impact, bioType, featureType, variantType, consequences, clinSignificance,
-            alphaMissense, alphaMissenseScoreLT, alphaMissenseScoreGT, biallelicOnly, multiallelicOnly, excludeMales, excludeFemales);
-
-        DeNovoRequest request = DeNovoRequest.newBuilder()
-            .setParent1(parent1)
-            .setParent2(parent2)
-            .setProband(proband)
+        SamplesHomRefRequest request = SamplesHomRefRequest.newBuilder()
             .setAssembly(RefAssembly.GRCh38)
             .setChr(chr)
-            .setStart(start)
-            .setEnd(end)
-            .setAlt(altAllele == null ? "" : altAllele)
-            .setRef(refAllele == null ? "" : refAllele)
-            .setVariantMinLength(minLen)
-            .setVariantMaxLength(maxLen)
-            .setAnn(annotations)
-            .setLimit(finalLimit)
-            .setSkip(finalSkip)
+            .setPosition(position)
             .build();
 
-        List<Variant> variants = new ArrayList<>();
         GrpcChannel channel = GrpcChannel.getInstance();
-        Iterator<AllelesResponse> responseStream = channel.getBlockingStub().selectDeNovo(request);
-
-        while (responseStream.hasNext()) {
-            variants.addAll(responseStream.next().getVariantsList());
-        }
-
-        return variants;
+        return channel.getBlockingStub().countSamplesHomReference(request).getCount();
     }
 
-    public List<Variant> selectHetDominant(
-        String affectedParent, String unaffectedParent, String proband, String chromosome,
-        int start, int end, String refAllele, String altAllele, Integer varMinLength, Integer varMaxLength,
-        Boolean biallelicOnly, Boolean multiallelicOnly, Boolean excludeMales, Boolean excludeFemales,
-        Float afLessThan, Float afGreaterThan, Float gnomadAfGenLessThan, Float gnomadAfGenGreaterThan,
-        Float gnomadAfExLessThan, Float gnomadAfExGreaterThan, String impact, String bioType,
-        String featureType, String variantType, String consequences, String alphaMissense,
-        Float alphaMissenseScoreLT, Float alphaMissenseScoreGT, String clinSignificance,
-        Integer skip, Integer limit) {
-
-        if (start < 0 || end < start)
-            throw new RuntimeException("Invalid 'start' or 'end' of a region");
-
+    public List<String> selectSamplesHomozygousReference(String chromosome, int position) {
         Chromosome chr = ContigsMapping.contigName2GrpcChr(chromosome);
         if (chr.equals(Chromosome.UNRECOGNIZED))
             throw new RuntimeException("Invalid Chromosome");
 
-        if (affectedParent == null || affectedParent.isEmpty())
-            throw new RuntimeException("Sample ID for affectedParent must not be empty");
+        if (position <= 0)
+            throw new RuntimeException("Invalid position");
 
-        if (unaffectedParent == null || unaffectedParent.isEmpty())
-            throw new RuntimeException("Sample ID for unaffectedParent must not be empty");
-
-        if (proband == null || proband.isEmpty())
-            throw new RuntimeException("Sample ID for proband must not be empty");
-
-        int finalSkip = (skip == null || skip < 0) ? 0 : skip;
-        int finalLimit = (limit == null || limit < 0 || limit > MAX_RETURNED_ITEMS) ? MAX_RETURNED_ITEMS : limit;
-
-        int minLen = (varMinLength == null || varMinLength < 0) ? 0 : varMinLength;
-        int maxLen = (varMaxLength == null || varMaxLength < 0) ? 0 : varMaxLength;
-
-        if (maxLen < minLen) {
-            minLen = 0;
-            maxLen = Integer.MAX_VALUE;
-        }
-
-        Annotations annotations = composeAnnotations(afLessThan, afGreaterThan, gnomadAfGenLessThan, gnomadAfGenGreaterThan,
-            gnomadAfExLessThan, gnomadAfExGreaterThan, impact, bioType, featureType, variantType, consequences, clinSignificance,
-            alphaMissense, alphaMissenseScoreLT, alphaMissenseScoreGT, biallelicOnly, multiallelicOnly, excludeMales, excludeFemales);
-
-        HetDominantRequest request = HetDominantRequest.newBuilder()
-            .setAffectedParent(affectedParent)
-            .setUnaffectedParent(unaffectedParent)
-            .setAffectedChild(proband) // Mapping 'proband' to affected child
+        SamplesHomRefRequest request = SamplesHomRefRequest.newBuilder()
             .setAssembly(RefAssembly.GRCh38)
             .setChr(chr)
-            .setStart(start)
-            .setEnd(end)
-            .setAlt(altAllele == null ? "" : altAllele)
-            .setRef(refAllele == null ? "" : refAllele)
-            .setVariantMinLength(minLen)
-            .setVariantMaxLength(maxLen)
-            .setAnn(annotations)
-            .setLimit(finalLimit)
-            .setSkip(finalSkip)
+            .setPosition(position)
             .build();
 
-        List<Variant> variants = new ArrayList<>();
         GrpcChannel channel = GrpcChannel.getInstance();
-        Iterator<AllelesResponse> responseStream = channel.getBlockingStub().selectHetDominant(request);
-
-        while (responseStream.hasNext()) {
-            variants.addAll(responseStream.next().getVariantsList());
-        }
-
-        return variants;
-    }
-
-    public List<Variant> selectHomRecessive(
-        String unaffectedParent1, String unaffectedParent2, String proband, String chromosome,
-        int start, int end, String refAllele, String altAllele, Integer varMinLength, Integer varMaxLength,
-        Boolean biallelicOnly, Boolean multiallelicOnly, Boolean excludeMales, Boolean excludeFemales,
-        Float afLessThan, Float afGreaterThan, Float gnomadAfGenLessThan, Float gnomadAfGenGreaterThan,
-        Float gnomadAfExLessThan, Float gnomadAfExGreaterThan, String impact, String bioType,
-        String featureType, String variantType, String consequences, String alphaMissense,
-        Float alphaMissenseScoreLT, Float alphaMissenseScoreGT, String clinSignificance,
-        Integer skip, Integer limit) {
-
-        if (start < 0 || end < start)
-            throw new RuntimeException("Invalid 'start' or 'end' of a region");
-
-        Chromosome chr = ContigsMapping.contigName2GrpcChr(chromosome);
-        if (chr.equals(Chromosome.UNRECOGNIZED))
-            throw new RuntimeException("Invalid Chromosome");
-
-        if (unaffectedParent1 == null || unaffectedParent1.isEmpty())
-            throw new RuntimeException("Sample ID for unaffectedParent1 must not be empty");
-
-        if (unaffectedParent2 == null || unaffectedParent2.isEmpty())
-            throw new RuntimeException("Sample ID for unaffectedParent2 must not be empty");
-
-        if (proband == null || proband.isEmpty())
-            throw new RuntimeException("Sample ID for proband must not be empty");
-
-        int finalSkip = (skip == null || skip < 0) ? 0 : skip;
-        int finalLimit = (limit == null || limit < 0 || limit > MAX_RETURNED_ITEMS) ? MAX_RETURNED_ITEMS : limit;
-
-        int minLen = (varMinLength == null || varMinLength < 0) ? 0 : varMinLength;
-        int maxLen = (varMaxLength == null || varMaxLength < 0) ? 0 : varMaxLength;
-
-        if (maxLen < minLen) {
-            minLen = 0;
-            maxLen = Integer.MAX_VALUE;
-        }
-
-        Annotations annotations = composeAnnotations(afLessThan, afGreaterThan, gnomadAfGenLessThan, gnomadAfGenGreaterThan,
-            gnomadAfExLessThan, gnomadAfExGreaterThan, impact, bioType, featureType, variantType, consequences, clinSignificance,
-            alphaMissense, alphaMissenseScoreLT, alphaMissenseScoreGT, biallelicOnly, multiallelicOnly, excludeMales, excludeFemales);
-
-        HomRecessiveRequest request = HomRecessiveRequest.newBuilder()
-            .setUnaffectedParent1(unaffectedParent1)
-            .setUnaffectedParent2(unaffectedParent2)
-            .setAffectedChild(proband)
-            .setAssembly(RefAssembly.GRCh38)
-            .setChr(chr)
-            .setStart(start)
-            .setEnd(end)
-            .setAlt(altAllele == null ? "" : altAllele)
-            .setRef(refAllele == null ? "" : refAllele)
-            .setVariantMinLength(minLen)
-            .setVariantMaxLength(maxLen)
-            .setAnn(annotations)
-            .setLimit(finalLimit)
-            .setSkip(finalSkip)
-            .build();
-
-        List<Variant> variants = new ArrayList<>();
-        GrpcChannel channel = GrpcChannel.getInstance();
-        Iterator<AllelesResponse> responseStream = channel.getBlockingStub().selectHomRecessive(request);
-
-        while (responseStream.hasNext()) {
-            variants.addAll(responseStream.next().getVariantsList());
-        }
-
-        return variants;
+        return channel.getBlockingStub().selectSamplesHomReference(request).getSamplesList();
     }
 
     public String kinship(String sample1, String sample2) {

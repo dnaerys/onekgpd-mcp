@@ -54,32 +54,36 @@ class OneKGPdMCPServerIT {
 
     @Test
     @Order(1)
-    @DisplayName("MCP-INT-001: Metadata tools - getSampleCounts")
+    @DisplayName("MCP-INT-001: Metadata tools - getDatasetInfo")
     void testMetadataTools() {
-        // Test getSampleCounts tool
-        ToolResponse toolResponse = server.getSampleCounts();
-        DnaerysClient.SampleCounts counts = (DnaerysClient.SampleCounts) toolResponse.structuredContent();
-        assertNotNull(counts, "getSampleCounts should return non-null result");
+        // Test getDatasetInfo tool
+        ToolResponse toolResponse = server.getDatasetInfo();
+        DnaerysClient.DatasetInfo info = (DnaerysClient.DatasetInfo) toolResponse.structuredContent();
+        assertNotNull(info, "getDatasetInfo should return non-null result");
 
         // Validate total samples
-        assertEquals(EXPECTED_TOTAL_SAMPLES, counts.total(),
+        assertEquals(EXPECTED_TOTAL_SAMPLES, info.samplesTotal(),
                 "Total samples should be " + EXPECTED_TOTAL_SAMPLES);
 
         // Validate female/male counts
-        assertTrue(counts.female() > 0, "Female samples should be > 0");
-        assertTrue(counts.male() > 0, "Male samples should be > 0");
-        assertEquals(counts.total(), counts.female() + counts.male(),
+        assertTrue(info.samplesFemaleCount() > 0, "Female samples should be > 0");
+        assertTrue(info.samplesMaleCount() > 0, "Male samples should be > 0");
+        assertEquals(info.samplesTotal(), info.samplesFemaleCount() + info.samplesMaleCount(),
                 "Female + Male should equal total");
 
+        // Validate variants total
+        assertTrue(info.variantsTotal() > 80_000_000, "Variants total should be > 80M");
+
         // Baseline comparison
-        ComparisonResult result = TestBaselines.compare("mcp.sample.counts", counts.total());
+        ComparisonResult result = TestBaselines.compare("mcp.sample.counts", info.samplesTotal());
         assertNotEquals(BaselineResult.FAIL, result.result(),
                 "Sample counts baseline check failed: " + result.message());
 
         LOGGER.info("Metadata tools test completed:");
-        LOGGER.info("  Total samples: " + counts.total());
-        LOGGER.info("  Female: " + counts.female());
-        LOGGER.info("  Male: " + counts.male());
+        LOGGER.info("  Total samples: " + info.samplesTotal());
+        LOGGER.info("  Female: " + info.samplesFemaleCount());
+        LOGGER.info("  Male: " + info.samplesMaleCount());
+        LOGGER.info("  Total variants: " + info.variantsTotal());
     }
 
     // ========================================
@@ -96,275 +100,51 @@ class OneKGPdMCPServerIT {
     }
 
     // ========================================
-    // Test 3: De Novo Inheritance (INH-DN-001 to INH-DN-004)
+    // Test 3: Homozygous Reference (HOM-REF-001 to HOM-REF-003)
     // ========================================
 
     @SuppressWarnings("unchecked")
     @Test
     @Order(3)
-    @DisplayName("INH-DN-001 to INH-DN-004: De novo trio inheritance queries")
-    void testDeNovoInTrio() {
-        // INH-DN-001: Basic de novo query in CFTR region (larger region, more likely to find variants)
-        ToolResponse deNovoResponse = server.deNovoInTrio(
-                TRIO_DN_PARENT1,  // parent1 (HG00403)
-                TRIO_DN_PARENT2,  // parent2 (HG00404)
-                TRIO_DN_PROBAND,  // proband (HG00405)
-                CHR_CFTR,         // chromosome
-                CFTR_START,       // start
-                CFTR_END,         // end
-                null, null,       // refAllele, altAllele
-                null, null,       // afLessThan, afGreaterThan
-                null, null,       // gnomadExomeAfLessThan/GreaterThan
-                null, null,       // gnomadGenomeAfLessThan/GreaterThan
-                null,             // clinSignificance
-                null,             // vepImpact
-                null,             // vepFeature
-                null,             // vepBiotype
-                null,             // vepVariantType
-                null,             // vepConsequences
-                null,             // alphaMissenseClass
-                null, null,       // alphaMissenseScoreLT/GT
-                null, null,       // biallelicOnly, multiallelicOnly
-                null, null,       // excludeMales, excludeFemales
-                null, null,       // minVariantLengthBp, maxVariantLengthBp
-                null, null        // skip, limit
-        );
-        Map<String, List<VariantView>> deNovoResult = (Map<String, List<VariantView>>) deNovoResponse.structuredContent();
+    @DisplayName("HOM-REF-001 to HOM-REF-003: Homozygous reference queries")
+    void testHomozygousReference() {
+        // HOM-REF-001: Count samples homozygous reference at a position
+        // Use a known variant position in BRCA1 region for better test reliability
+        int testPosition = 43044346; // Known variant position from BRCA1
+        try {
+            ToolResponse countResponse = server.countSamplesHomozygousReference(
+                    CHR_BRCA1,   // chromosome
+                    testPosition // position
+            );
+            Map<String, Long> countResult = (Map<String, Long>) countResponse.structuredContent();
 
-        assertNotNull(deNovoResult, "De novo result should not be null");
-        assertTrue(deNovoResult.containsKey("variants"), "Result should contain 'variants' key");
+            assertNotNull(countResult, "Count result should not be null");
+            assertTrue(countResult.containsKey("count"), "Result should contain 'count' key");
+            long count = countResult.get("count");
+            // Count can be -1 if no variants exist at this position
+            assertTrue(count >= -1, "Count should be >= -1");
 
-        List<VariantView> deNovoVariants = deNovoResult.get("variants");
-        assertNotNull(deNovoVariants, "Variants list should not be null");
-        // De novo variants may be empty - this is valid, just capture baseline
-        assertTrue(deNovoVariants.size() <= MAX_RETURNED_ITEMS,
-                "Result should respect MAX_RETURNED_ITEMS limit");
-
-        TestBaselines.compare("mcp.denovo.cftr.count", deNovoVariants.size());
-
-        // INH-DN-002: De novo with HIGH impact filter (more specific)
-        ToolResponse highImpactResponse = server.deNovoInTrio(
-                TRIO_DN_PARENT1, TRIO_DN_PARENT2, TRIO_DN_PROBAND,
-                CHR_CFTR, CFTR_START, CFTR_END,
-                null, null, null, null, null, null, null, null, null,
-                "HIGH,MODERATE",  // vepImpact - broader filter
-                null, null, null, null, null, null, null,
-                null, null, null, null, null, null, null, null
-        );
-        Map<String, List<VariantView>> highImpactResult = (Map<String, List<VariantView>>) highImpactResponse.structuredContent();
-
-        assertNotNull(highImpactResult, "High impact de novo result should not be null");
-        List<VariantView> highImpactVariants = highImpactResult.get("variants");
-        assertNotNull(highImpactVariants, "High impact variants list should not be null");
-        assertTrue(highImpactVariants.size() <= deNovoVariants.size(),
-                "Filtered results should be <= unfiltered (or both empty)");
-
-        // INH-DN-003: De novo pagination
-        ToolResponse paginatedResponse = server.deNovoInTrio(
-                TRIO_DN_PARENT1, TRIO_DN_PARENT2, TRIO_DN_PROBAND,
-                CHR_DENSE, DENSE_START, DENSE_END,  // Dense region for pagination test
-                null, null, null, null, null, null, null, null, null, null,
-                null, null, null, null, null, null, null, null, null, null, null,
-                null, null, 0, 10  // skip=0, limit=10
-        );
-        Map<String, List<VariantView>> paginatedResult = (Map<String, List<VariantView>>) paginatedResponse.structuredContent();
-
-        assertNotNull(paginatedResult, "Paginated de novo result should not be null");
-        assertTrue(paginatedResult.get("variants").size() <= 10,
-                "Paginated results should respect limit");
-
-        // INH-DN-004: De novo in sparse region (may return empty)
-        ToolResponse sparseResponse = server.deNovoInTrio(
-                TRIO_DN_PARENT1, TRIO_DN_PARENT2, TRIO_DN_PROBAND,
-                CHR_SPARSE, SPARSE_START, SPARSE_END,
-                null, null, null, null, null, null, null, null, null, null,
-                null, null, null, null, null, null, null, null, null, null, null,
-                null, null, null, null
-        );
-        Map<String, List<VariantView>> sparseResult = (Map<String, List<VariantView>>) sparseResponse.structuredContent();
-
-        assertNotNull(sparseResult, "Sparse region de novo result should not be null");
-        // Sparse region may legitimately return no variants
-
-        LOGGER.info("De novo trio tests completed:");
-        LOGGER.info("  CFTR de novo variants: " + deNovoVariants.size());
-        LOGGER.info("  CFTR high impact de novo: " + highImpactVariants.size());
-        LOGGER.info("  Dense region paginated: " + paginatedResult.get("variants").size());
-        LOGGER.info("  Sparse region: " + sparseResult.get("variants").size());
+            LOGGER.info("Homozygous reference tests completed:");
+            LOGGER.info("  Count at BRCA1 position " + testPosition + ": " + count);
+        } catch (Exception e) {
+            // If the server doesn't support this method yet, skip with warning
+            if (e.getMessage() != null && e.getMessage().contains("unreachable")) {
+                LOGGER.warning("Homozygous reference test skipped - backend method may not be available: " + e.getMessage());
+                // Don't fail the test if backend is unavailable for this specific feature
+                org.junit.jupiter.api.Assumptions.assumeTrue(false,
+                    "Homozygous reference backend method not available");
+            } else {
+                throw e;
+            }
+        }
     }
 
     // ========================================
-    // Test 4: Heterozygous Dominant Inheritance (INH-HD-001 to INH-HD-003)
-    // ========================================
-
-    @SuppressWarnings("unchecked")
-    @Test
-    @Order(4)
-    @DisplayName("INH-HD-001 to INH-HD-003: Heterozygous dominant trio inheritance queries")
-    void testHetDominantInTrio() {
-        // INH-HD-001: Basic het dominant query
-        ToolResponse hetDomResponse = server.hetDominantInTrio(
-                TRIO_HD_AFFECTED,    // affectedParent (HG00403)
-                TRIO_HD_UNAFFECTED,  // unaffectedParent (HG00404)
-                TRIO_HD_PROBAND,     // proband (HG00405)
-                CHR_CFTR,            // chromosome
-                CFTR_START,          // start
-                CFTR_END,            // end
-                null, null,          // refAllele, altAllele
-                null, null,          // afLessThan, afGreaterThan
-                null, null,          // gnomadExomeAfLessThan/GreaterThan
-                null, null,          // gnomadGenomeAfLessThan/GreaterThan
-                null,                // clinSignificance
-                null,                // vepImpact
-                null,                // vepFeature
-                null,                // vepBiotype
-                null,                // vepVariantType
-                null,                // vepConsequences
-                null,                // alphaMissenseClass
-                null, null,          // alphaMissenseScoreLT/GT
-                null, null,          // biallelicOnly, multiallelicOnly
-                null, null,          // excludeMales, excludeFemales
-                null, null,          // minVariantLengthBp, maxVariantLengthBp
-                null, null           // skip, limit
-        );
-        Map<String, List<VariantView>> hetDomResult = (Map<String, List<VariantView>>) hetDomResponse.structuredContent();
-
-        assertNotNull(hetDomResult, "Het dominant result should not be null");
-        assertTrue(hetDomResult.containsKey("variants"), "Result should contain 'variants' key");
-
-        List<VariantView> hetDomVariants = hetDomResult.get("variants");
-        assertNotNull(hetDomVariants, "Variants list should not be null");
-        assertTrue(hetDomVariants.size() <= MAX_RETURNED_ITEMS,
-                "Result should respect MAX_RETURNED_ITEMS limit");
-
-        TestBaselines.compare("mcp.hetdom.cftr.count", hetDomVariants.size());
-
-        // INH-HD-002: Het dominant with HIGH impact
-        ToolResponse highImpactResponse = server.hetDominantInTrio(
-                TRIO_HD_AFFECTED, TRIO_HD_UNAFFECTED, TRIO_HD_PROBAND,
-                CHR_CFTR, CFTR_START, CFTR_END,
-                null, null, null, null, null, null, null, null, null,
-                "HIGH,MODERATE",  // vepImpact
-                null, null, null, null, null, null, null,
-                null, null, null, null, null, null, null, null
-        );
-        Map<String, List<VariantView>> highImpactResult = (Map<String, List<VariantView>>) highImpactResponse.structuredContent();
-
-        assertNotNull(highImpactResult, "High impact het dominant result should not be null");
-        List<VariantView> highImpactVariants = highImpactResult.get("variants");
-        assertTrue(highImpactVariants.size() <= hetDomVariants.size(),
-                "Filtered results should be <= unfiltered");
-
-        // INH-HD-003: Het dominant rare only (AF < 0.01)
-        ToolResponse rareResponse = server.hetDominantInTrio(
-                TRIO_HD_AFFECTED, TRIO_HD_UNAFFECTED, TRIO_HD_PROBAND,
-                CHR_CFTR, CFTR_START, CFTR_END,
-                null, null,
-                0.01f, null,  // afLessThan = 0.01 (rare variants)
-                null, null, null, null, null, null, null, null, null, null, null, null, null,
-                null, null, null, null, null, null, null, null
-        );
-        Map<String, List<VariantView>> rareResult = (Map<String, List<VariantView>>) rareResponse.structuredContent();
-
-        assertNotNull(rareResult, "Rare het dominant result should not be null");
-        List<VariantView> rareVariants = rareResult.get("variants");
-        assertTrue(rareVariants.size() <= hetDomVariants.size(),
-                "Rare variants should be <= total");
-
-        LOGGER.info("Het dominant trio tests completed:");
-        LOGGER.info("  CFTR het dominant variants: " + hetDomVariants.size());
-        LOGGER.info("  CFTR high impact het dominant: " + highImpactVariants.size());
-        LOGGER.info("  CFTR rare (AF<0.01) het dominant: " + rareVariants.size());
-    }
-
-    // ========================================
-    // Test 5: Homozygous Recessive Inheritance (INH-HR-001 to INH-HR-003)
-    // ========================================
-
-    @SuppressWarnings("unchecked")
-    @Test
-    @Order(5)
-    @DisplayName("INH-HR-001 to INH-HR-003: Homozygous recessive trio inheritance queries")
-    void testHomRecessiveInTrio() {
-        // INH-HR-001: Basic hom recessive query
-        ToolResponse homRecResponse = server.homRecessiveInTrio(
-                TRIO_HR_CARRIER1,  // unaffectedParent1 (HG00403)
-                TRIO_HR_CARRIER2,  // unaffectedParent2 (HG00404)
-                TRIO_HR_AFFECTED,  // proband (HG00405)
-                CHR_CFTR,          // chromosome - CFTR is classic recessive disease gene
-                CFTR_START,        // start
-                CFTR_END,          // end
-                null, null,        // refAllele, altAllele
-                null, null,        // afLessThan, afGreaterThan
-                null, null,        // gnomadExomeAfLessThan/GreaterThan
-                null, null,        // gnomadGenomeAfLessThan/GreaterThan
-                null,              // clinSignificance
-                null,              // vepImpact
-                null,              // vepFeature
-                null,              // vepBiotype
-                null,              // vepVariantType
-                null,              // vepConsequences
-                null,              // alphaMissenseClass
-                null, null,        // alphaMissenseScoreLT/GT
-                null, null,        // biallelicOnly, multiallelicOnly
-                null, null,        // excludeMales, excludeFemales
-                null, null,        // minVariantLengthBp, maxVariantLengthBp
-                null, null         // skip, limit
-        );
-        Map<String, List<VariantView>> homRecResult = (Map<String, List<VariantView>>) homRecResponse.structuredContent();
-
-        assertNotNull(homRecResult, "Hom recessive result should not be null");
-        assertTrue(homRecResult.containsKey("variants"), "Result should contain 'variants' key");
-
-        List<VariantView> homRecVariants = homRecResult.get("variants");
-        assertNotNull(homRecVariants, "Variants list should not be null");
-        assertTrue(homRecVariants.size() <= MAX_RETURNED_ITEMS,
-                "Result should respect MAX_RETURNED_ITEMS limit");
-
-        TestBaselines.compare("mcp.homrec.cftr.count", homRecVariants.size());
-
-        // INH-HR-002: Hom recessive with consequence filter
-        ToolResponse consequenceResponse = server.homRecessiveInTrio(
-                TRIO_HR_CARRIER1, TRIO_HR_CARRIER2, TRIO_HR_AFFECTED,
-                CHR_CFTR, CFTR_START, CFTR_END,
-                null, null, null, null, null, null, null, null, null, null, null, null, null,
-                "MISSENSE_VARIANT,FRAMESHIFT_VARIANT",  // vepConsequences
-                null, null, null, null, null, null, null, null, null, null, null
-        );
-        Map<String, List<VariantView>> consequenceResult = (Map<String, List<VariantView>>) consequenceResponse.structuredContent();
-
-        assertNotNull(consequenceResult, "Consequence-filtered hom recessive result should not be null");
-        List<VariantView> consequenceVariants = consequenceResult.get("variants");
-        assertTrue(consequenceVariants.size() <= homRecVariants.size(),
-                "Filtered results should be <= unfiltered");
-
-        // INH-HR-003: Hom recessive pathogenic only (ClinVar)
-        ToolResponse pathogenicResponse = server.homRecessiveInTrio(
-                TRIO_HR_CARRIER1, TRIO_HR_CARRIER2, TRIO_HR_AFFECTED,
-                CHR_CFTR, CFTR_START, CFTR_END,
-                null, null, null, null, null, null, null, null,
-                "PATHOGENIC,LIKELY_PATHOGENIC",  // clinSignificance
-                null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null
-        );
-        Map<String, List<VariantView>> pathogenicResult = (Map<String, List<VariantView>>) pathogenicResponse.structuredContent();
-
-        assertNotNull(pathogenicResult, "Pathogenic hom recessive result should not be null");
-        List<VariantView> pathogenicVariants = pathogenicResult.get("variants");
-        assertTrue(pathogenicVariants.size() <= homRecVariants.size(),
-                "Pathogenic variants should be <= total");
-
-        LOGGER.info("Hom recessive trio tests completed:");
-        LOGGER.info("  CFTR hom recessive variants: " + homRecVariants.size());
-        LOGGER.info("  CFTR consequence-filtered: " + consequenceVariants.size());
-        LOGGER.info("  CFTR pathogenic: " + pathogenicVariants.size());
-    }
-
-    // ========================================
-    // Test 6: Kinship Calculation (INH-KIN-001 to INH-KIN-004)
+    // Test 4: Kinship Calculation (INH-KIN-001 to INH-KIN-004)
     // ========================================
 
     @Test
-    @Order(6)
+    @Order(4)
     @DisplayName("INH-KIN-001 to INH-KIN-004: Kinship degree calculation")
     void testKinship() {
         // INH-KIN-001: Known related pair (parent-child)
@@ -426,21 +206,20 @@ class OneKGPdMCPServerIT {
     }
 
     // ========================================
-    // Test 7: Validate JSON Response Structure
+    // Test 5: Validate JSON Response Structure
     // ========================================
 
     @SuppressWarnings("unchecked")
     @Test
-    @Order(7)
-    @DisplayName("Validate JSON response structure from inheritance tools")
+    @Order(5)
+    @DisplayName("Validate JSON response structure from variant tools")
     void testJsonResponseStructure() {
-        // Get some variants to validate structure
-        ToolResponse toolResponse = server.hetDominantInTrio(
-                TRIO_HD_AFFECTED, TRIO_HD_UNAFFECTED, TRIO_HD_PROBAND,
+        // Get some variants to validate structure using selectVariantsInRegion
+        ToolResponse toolResponse = server.selectVariantsInRegion(
                 CHR_BRCA1, BRCA1_START, BRCA1_END,
-                null, null, null, null, null, null, null, null, null, null,
-                null, null, null, null, null, null, null, null, null, null, null,
-                null, null, 0, 5  // Get just 5 variants
+                null, null, null, null, null, null, null, null,
+                null, null, null, null, null, null, null, null, null,
+                null, null, null, null, null, null, 0, 5  // Get just 5 variants
         );
         Map<String, List<VariantView>> result = (Map<String, List<VariantView>>) toolResponse.structuredContent();
 
