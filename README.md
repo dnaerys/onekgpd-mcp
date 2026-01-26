@@ -25,6 +25,64 @@ Remote MCP service via _Streamable HTTP:_
 - http://db.dnaerys.org:80/mcp
 - https://db.dnaerys.org:443/mcp
 
+## Examples
+
+#### Macromolecular structural complexes
+
+> _The MCM2-7 Complex (The "DNA Helicase Motor") is a molecular masterpiece. It’s a heterohexameric ring where each subunit is
+a distinct "gear" in the DNA-unzipping motor. Unlike homomeric rings (where every subunit is the same), this complex is asymmetric.
+Each interface between subunits is unique, and they don't all burn ATP at the same rate. The MCM2/5 interface is the "gate" that
+must physically open to allow DNA to enter the ring and then snap shut. This is a high-stress mechanical point._
+>
+> _Identify individuals in the KGP cohort carrying missense variants at the MCM2/5 interface. Specifically, look for
+'charge-reversal' variants (e.g., Aspartate to Lysine). In these specific samples, analyze the 'compensatory coupling':
+do they carry a secondary, reciprocal charge-reversal variant on the opposing subunit interface that restores the
+electrostatic 'latch' ?_
+>
+> _Identify individuals in the KGP cohort who carry high-pathogenicity variants in the Walker A or Walker B motifs
+(the ATP-burning heart) of any MCM subunit in MCM2-7 Complex. For these individuals, perform a 'Systemic Flux' analysis:
+look at their variants in the leading-strand polymerase (POLE) and the sliding clamp (PCNA). Do you detect a signature of
+'Coordinated Deceleration' where the motor, the clamp, and the polymerase all carry variants that suggest a slower but
+highly-accurate replication fork ?_
+
+#### Macromolecular structural complexes
+
+> _The human RNA Exosome (Exo-9 core) is a "dead machine" that acts as a scaffold. In lower organisms the ring itself can degrade RNA.
+In humans, the 9-subunit ring has lost all its catalytic teeth and is purely a structural tunnel that guides RNA into the catalytic
+subunits (DIS3 or EXOSC10) attached at the bottom. Since RNA is a highly negatively charged polymer, the residues lining this pore
+are typically positively charged (Lysine, Arginine), but not too "sticky" or RNA will jam. So, to reach the "shredder" at the bottom
+it must slide through a narrow pore formed by the Exo-9 ring._
+>
+> _The task: analyse all missense variants in the KGP cohort that map to the internal pore-lining residues of the Exo-9 ring.
+Look for 'charge-swap' variants where a positive residue (K, R) is replaced by a negative one (D, E). If an individual is healthy
+despite having a 'negative patch' in the tunnel that should repel RNA, do they carry a compensatory variant in the cap subunits
+(EXOSC1, 2, 3) that widens the entrance? Use a 3D electrostatic surface map to determine if the 'healthy' cohort maintains a specific
+electrostatic gradient._
+
+#### Synergistic Epistasis in Redox Homeostasis
+
+> _Cellular redox homeostasis is maintained by two parallel antioxidant systems: the glutathione system
+and the thioredoxin system. Complete loss of either GSR or TXNRD1 is incompatible with mammalian development, yet population
+databases contain individuals carrying variants predicted to impair enzyme function._
+>
+> _Identify clusters of individuals in the KGP cohort who carry multiple 'Moderate' impact VEP variants across both systems.
+Reasoning through the AlphaMissense structural implications, can you detect a 'balancing act' where a loss of efficiency
+in Glutathione reductase is consistently paired with high-confidence benign or potentially activating variants in the
+Thioredoxin system ? Synthesize a model of 'Redox Robustness' based on the co-occurrence of these variants across the cohort._
+
+#### Macromolecular structural complexes
+
+> _Treat the 26S Proteasome as a 3D physical object. Map every missense variant in the KGP cohort across all 33+ subunits.
+Perform a spatial flux analysis: Are the variants in this population significantly more likely to occur at the 'distal edges'
+of the regulatory lid rather than the 'catalytic core' or the 'gating interfaces' ? Find individuals with a
+'high-burden' (3+ rare variants) across the complex. Do you detect inter-subunit compensation ? For example, if a variant in PSMD1
+is predicted to weaken a hinge, is there a correlated 'strengthening' variant in the interacting PSMD2 subunit ?
+Define the 'mechanical tolerance' of the proteasome based on the maximum cumulative ΔΔG observed in a single healthy individual._
+
+
+_[More examples](./examples/README.md)_
+
+
 ## Architecture
 
 Implemented as a Java EE service, accessing _KGP dataset_ via gRPC calls to public Dnaerys variant store service.
@@ -32,9 +90,6 @@ Implemented as a Java EE service, accessing _KGP dataset_ via gRPC calls to publ
 - provides MCP over _Streamable HTTP_, _HTTP/SSE_ and _STDIO_ transports
 - service implementation is based on [Quarkus MCP Server framework](https://docs.quarkiverse.io/quarkus-mcp-server/dev/)
 
-## Available Tools
-
-MCP tools and parameters are [here](./src/main/java/org/dnaerys/mcp/OneKGPdMCPServer.java)
 
 ## Installation
 
