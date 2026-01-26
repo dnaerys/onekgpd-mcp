@@ -217,6 +217,7 @@ class OneKGPdMCPServerIT {
         // Get some variants to validate structure using selectVariantsInRegion
         ToolResponse toolResponse = server.selectVariantsInRegion(
                 CHR_BRCA1, BRCA1_START, BRCA1_END,
+                true, true,  // selectHet, selectHom
                 null, null, null, null, null, null, null, null,
                 null, null, null, null, null, null, null, null, null,
                 null, null, null, null, null, null, 0, 5  // Get just 5 variants

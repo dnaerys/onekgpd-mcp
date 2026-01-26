@@ -182,12 +182,13 @@ _e.g._ `http://localhost:9000/mcp` or `https://db.dnaerys.org:443/mcp`
 | Component | Type | Tests | Status |
 |-----------|------|-------|--------|
 | Entity Mappers (9 classes) | Unit | 314 | ✅ Complete |
-| DnaerysClient | Unit | 61 | ✅ Complete |
+| DnaerysClient | Unit | 58 | ✅ Complete |
 | DnaerysClient | Integration | 5 | ✅ Complete |
-| OneKGPdMCPServer | Unit | 31 | ✅ Complete |
+| OneKGPdMCPServer | Unit | 27 | ✅ Complete |
 | OneKGPdMCPServer | Integration | 7 | ✅ Complete |
+| Other | Unit | 1 | ✅ Complete |
 
-**Total: 419 tests (407 unit + 12 integration)**
+**Total: 412 tests (400 unit + 12 integration)**
 
 ### Running Tests
 

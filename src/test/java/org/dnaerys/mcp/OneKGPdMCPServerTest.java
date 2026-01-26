@@ -110,6 +110,7 @@ class OneKGPdMCPServerTest {
 
                 ToolResponse toolResponse = server.countVariantsInRegion(
                     "17", 43044295, 43170245,  // BRCA1
+                    true, true,  // selectHet, selectHom
                     null, null, null, null, null, null, null, null,
                     null, null, null, null, null, null, null, null, null,
                     null, null, null, null, null, null
@@ -122,8 +123,8 @@ class OneKGPdMCPServerTest {
         }
 
         @Test
-        @DisplayName("countHomozygousVariantsInRegion passes selectHom=true, selectHet=false")
-        void testCountHomozygousVariantsPassesCorrectFlags() {
+        @DisplayName("countVariantsInRegion passes selectHom=true, selectHet=false for homozygous only")
+        void testCountVariantsInRegionHomozygousOnlyFlags() {
             try (MockedStatic<GrpcChannel> mockedStatic = mockStatic(GrpcChannel.class)) {
                 mockedStatic.when(GrpcChannel::getInstance).thenReturn(mockGrpcChannel);
                 when(mockGrpcChannel.getBlockingStub()).thenReturn(mockBlockingStub);
@@ -134,8 +135,9 @@ class OneKGPdMCPServerTest {
                 when(mockBlockingStub.countVariantsInRegion(any(CountAllelesInRegionRequest.class)))
                     .thenReturn(response);
 
-                server.countHomozygousVariantsInRegion(
+                server.countVariantsInRegion(
                     "1", 1000, 2000,
+                    false, true,  // selectHet=false, selectHom=true (homozygous only)
                     null, null, null, null, null, null, null, null,
                     null, null, null, null, null, null, null, null, null,
                     null, null, null, null, null, null
@@ -149,8 +151,8 @@ class OneKGPdMCPServerTest {
         }
 
         @Test
-        @DisplayName("countHeterozygousVariantsInRegion passes selectHom=false, selectHet=true")
-        void testCountHeterozygousVariantsPassesCorrectFlags() {
+        @DisplayName("countVariantsInRegion passes selectHom=false, selectHet=true for heterozygous only")
+        void testCountVariantsInRegionHeterozygousOnlyFlags() {
             try (MockedStatic<GrpcChannel> mockedStatic = mockStatic(GrpcChannel.class)) {
                 mockedStatic.when(GrpcChannel::getInstance).thenReturn(mockGrpcChannel);
                 when(mockGrpcChannel.getBlockingStub()).thenReturn(mockBlockingStub);
@@ -161,8 +163,9 @@ class OneKGPdMCPServerTest {
                 when(mockBlockingStub.countVariantsInRegion(any(CountAllelesInRegionRequest.class)))
                     .thenReturn(response);
 
-                server.countHeterozygousVariantsInRegion(
+                server.countVariantsInRegion(
                     "1", 1000, 2000,
+                    true, false,  // selectHet=true, selectHom=false (heterozygous only)
                     null, null, null, null, null, null, null, null,
                     null, null, null, null, null, null, null, null, null,
                     null, null, null, null, null, null
@@ -171,6 +174,34 @@ class OneKGPdMCPServerTest {
                 // Verify the request was made with hom=false, het=true
                 verify(mockBlockingStub).countVariantsInRegion(argThat(request ->
                     !request.getHom() && request.getHet()
+                ));
+            }
+        }
+
+        @Test
+        @DisplayName("countVariantsInRegion passes selectHom=true, selectHet=true for all variants")
+        void testCountVariantsInRegionAllVariantsFlags() {
+            try (MockedStatic<GrpcChannel> mockedStatic = mockStatic(GrpcChannel.class)) {
+                mockedStatic.when(GrpcChannel::getInstance).thenReturn(mockGrpcChannel);
+                when(mockGrpcChannel.getBlockingStub()).thenReturn(mockBlockingStub);
+
+                CountAllelesResponse response = CountAllelesResponse.newBuilder()
+                    .setCount(200L)
+                    .build();
+                when(mockBlockingStub.countVariantsInRegion(any(CountAllelesInRegionRequest.class)))
+                    .thenReturn(response);
+
+                server.countVariantsInRegion(
+                    "1", 1000, 2000,
+                    true, true,  // selectHet=true, selectHom=true (all variants)
+                    null, null, null, null, null, null, null, null,
+                    null, null, null, null, null, null, null, null, null,
+                    null, null, null, null, null, null
+                );
+
+                // Verify the request was made with hom=true, het=true
+                verify(mockBlockingStub).countVariantsInRegion(argThat(request ->
+                    request.getHom() && request.getHet()
                 ));
             }
         }
@@ -185,6 +216,7 @@ class OneKGPdMCPServerTest {
                 ToolCallException.class,
                 () -> server.countVariantsInRegion(
                     "99", 1000, 2000,  // Invalid chromosome
+                    true, true,  // selectHet, selectHom
                     null, null, null, null, null, null, null, null,
                     null, null, null, null, null, null, null, null, null,
                     null, null, null, null, null, null
@@ -229,6 +261,7 @@ class OneKGPdMCPServerTest {
 
                 ToolResponse toolResponse = server.selectVariantsInRegion(
                     "17", 43044295, 43170245,  // BRCA1
+                    true, true,  // selectHet, selectHom
                     null, null, null, null, null, null, null, null,
                     null, null, null, null, null, null, null, null, null,
                     null, null, null, null, null, null, null, null
@@ -248,6 +281,7 @@ class OneKGPdMCPServerTest {
                 ToolCallException.class,
                 () -> server.selectVariantsInRegion(
                     "1", 2000, 1000,  // Inverted coordinates
+                    true, true,  // selectHet, selectHom
                     null, null, null, null, null, null, null, null,
                     null, null, null, null, null, null, null, null, null,
                     null, null, null, null, null, null, null, null
@@ -282,6 +316,7 @@ class OneKGPdMCPServerTest {
 
                 ToolResponse toolResponse = server.countSamplesWithVariants(
                     "1", 1000, 2000,
+                    true, true,  // selectHet, selectHom
                     null, null, null, null, null, null, null, null,
                     null, null, null, null, null, null, null, null, null,
                     null, null, null, null, null, null
@@ -310,6 +345,7 @@ class OneKGPdMCPServerTest {
 
                 ToolResponse toolResponse = server.selectSamplesWithVariants(
                     "1", 1000, 2000,
+                    true, true,  // selectHet, selectHom
                     null, null, null, null, null, null, null, null,
                     null, null, null, null, null, null, null, null, null,
                     null, null, null, null, null, null
@@ -322,7 +358,7 @@ class OneKGPdMCPServerTest {
         }
 
         @Test
-        @DisplayName("selectSamplesWithHomVariants passes selectHom=true, selectHet=false")
+        @DisplayName("selectSamplesWithVariants passes selectHom=true, selectHet=false for homozygous only")
         void testSelectSamplesWithHomVariantsFlags() {
             try (MockedStatic<GrpcChannel> mockedStatic = mockStatic(GrpcChannel.class)) {
                 mockedStatic.when(GrpcChannel::getInstance).thenReturn(mockGrpcChannel);
@@ -332,8 +368,9 @@ class OneKGPdMCPServerTest {
                 when(mockBlockingStub.selectSamplesInRegion(any(SamplesInRegionRequest.class)))
                     .thenReturn(response);
 
-                server.selectSamplesWithHomVariants(
+                server.selectSamplesWithVariants(
                     "1", 1000, 2000,
+                    false, true,  // selectHet=false, selectHom=true (homozygous only)
                     null, null, null, null, null, null, null, null,
                     null, null, null, null, null, null, null, null, null,
                     null, null, null, null, null, null
@@ -346,7 +383,7 @@ class OneKGPdMCPServerTest {
         }
 
         @Test
-        @DisplayName("selectSamplesWithHetVariants passes selectHom=false, selectHet=true")
+        @DisplayName("selectSamplesWithVariants passes selectHom=false, selectHet=true for heterozygous only")
         void testSelectSamplesWithHetVariantsFlags() {
             try (MockedStatic<GrpcChannel> mockedStatic = mockStatic(GrpcChannel.class)) {
                 mockedStatic.when(GrpcChannel::getInstance).thenReturn(mockGrpcChannel);
@@ -356,8 +393,9 @@ class OneKGPdMCPServerTest {
                 when(mockBlockingStub.selectSamplesInRegion(any(SamplesInRegionRequest.class)))
                     .thenReturn(response);
 
-                server.selectSamplesWithHetVariants(
+                server.selectSamplesWithVariants(
                     "1", 1000, 2000,
+                    true, false,  // selectHet=true, selectHom=false (heterozygous only)
                     null, null, null, null, null, null, null, null,
                     null, null, null, null, null, null, null, null, null,
                     null, null, null, null, null, null
@@ -396,6 +434,8 @@ class OneKGPdMCPServerTest {
                     "17",                    // chromosome
                     43044295,               // start
                     43170245,               // end
+                    true,                   // selectHet
+                    true,                   // selectHom
                     "A",                    // refAllele
                     "G",                    // altAllele
                     0.01f,                  // afLessThan
@@ -426,6 +466,8 @@ class OneKGPdMCPServerTest {
                     request.getChr() == Chromosome.CHR_17 &&
                     request.getStart() == 43044295 &&
                     request.getEnd() == 43170245 &&
+                    request.getHet() &&
+                    request.getHom() &&
                     request.getRef().equals("A") &&
                     request.getAlt().equals("G") &&
                     request.getAnn().getAfLt() == 0.01f &&
@@ -447,9 +489,10 @@ class OneKGPdMCPServerTest {
                 when(mockBlockingStub.countVariantsInRegion(any(CountAllelesInRegionRequest.class)))
                     .thenReturn(response);
 
-                // Call with all optional params as null
+                // Call with all optional params as null (selectHet/selectHom are required)
                 server.countVariantsInRegion(
                     "1", 1000, 2000,
+                    true, true,  // selectHet, selectHom (required)
                     null, null, null, null, null, null, null, null,
                     null, null, null, null, null, null, null, null, null,
                     null, null, null, null, null, null
@@ -482,6 +525,7 @@ class OneKGPdMCPServerTest {
                 // Test chromosome X
                 server.countVariantsInRegion(
                     "X", 1000, 2000,
+                    true, true,  // selectHet, selectHom
                     null, null, null, null, null, null, null, null,
                     null, null, null, null, null, null, null, null, null,
                     null, null, null, null, null, null
@@ -737,6 +781,7 @@ class OneKGPdMCPServerTest {
                     ToolCallException.class,
                     () -> server.countVariantsInRegion(
                         "1", 1000, 2000,
+                        true, true,  // selectHet, selectHom
                         null, null, null, null, null, null, null, null,
                         null, null, null, null, null, null, null, null, null,
                         null, null, null, null, null, null
@@ -757,6 +802,7 @@ class OneKGPdMCPServerTest {
                     ToolCallException.class,
                     () -> server.selectVariantsInRegion(
                         "1", 1000, 2000,
+                        true, true,  // selectHet, selectHom
                         null, null, null, null, null, null, null, null,
                         null, null, null, null, null, null, null, null, null,
                         null, null, null, null, null, null, null, null
@@ -777,6 +823,7 @@ class OneKGPdMCPServerTest {
                     ToolCallException.class,
                     () -> server.selectSamplesWithVariants(
                         "1", 1000, 2000,
+                        true, true,  // selectHet, selectHom
                         null, null, null, null, null, null, null, null,
                         null, null, null, null, null, null, null, null, null,
                         null, null, null, null, null, null

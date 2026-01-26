@@ -50,6 +50,11 @@ public class OneKGPdMCPServer {
     private static final String POSITION_DESC =
         "variant position in base pairs, 1-based, GRCh38 coordinates";
 
+    private static final String HET_DESC =
+        "to include HETEROZYGOUS variants (0/1 genotypes)";
+    private static final String HOM_DESC =
+        "to include HOMOZYGOUS variants (1/1 genotypes)";
+
     private static final String REF_DESC =
         "reference allele bases (REF)";
     private static final String ALT_DESC =
@@ -180,8 +185,6 @@ public class OneKGPdMCPServer {
         }
     }
 
-    // Count/Select Variants in Region
-
     @Tool(
         title = "countVariantsInRegion",
         structuredContent = true,
@@ -193,21 +196,24 @@ public class OneKGPdMCPServer {
             openWorldHint = false
         ),
         description =
-            "COUNT ALL variants (Homozygous + Heterozygous) in genomic region in 1000 Genomes.\n" +
+            "COUNT variants in genomic region in 1000 Genomes.\n" +
             "Returns: Integer count of variants matching criteria.\n" +
             "Filters: REF/ALT, AF (KGP/gnomAD), VEP impact/biotype/consequences, variant type, AlphaMissense class/score, ClinVar significance.\n\n" +
 
-            "TOOL SELECTION:\n" +
-            "- Use this tool FIRST: to assess result size before calling selectVariantsInRegion\n" +
-            "- Use countHomozygousVariantsInRegion: to count 1/1 genotypes only\n" +
-            "- Use countHeterozygousVariantsInRegion: to count 0/1 genotypes only\n\n" +
+            "ZYGOSITY Parameters Logic::\n" +
+            "- Use selectHet=true: to include HETEROZYGOUS variants (0/1 genotypes)\n" +
+            "- Use selectHom=true: to include HOMOZYGOUS variants (1/1 genotypes)\n" +
+            "Examples:\n" +
+            "- Use selectHet=true AND selectHom=true: when need homozygous OR heterozygous variants or uncertain\n" +
+            "- Use selectHet=true AND selectHom=false: when need HETEROZYGOUS variants ONLY (0/1 genotypes)\n" +
+            "- Use selectHet=false AND selectHom=true: when need HOMOZYGOUS variants ONLY (1/1 genotypes)\n\n" +
 
             "WORKFLOW:\n" +
-            "1. Call this tool to get variant count\n" +
+            "1. Use this tool FIRST: to assess result size before calling selectVariantsInRegion\n" +
             "2. If count is manageable, call selectVariantsInRegion with same filters if variant details are required\n" +
 
             "PARAMETERS:\n" +
-            "- Required: chromosome (1-22, X, Y), start, end (GRCh38 coordinates)\n" +
+            "- Required: chromosome (1-22, X, Y), start, end (GRCh38 coordinates), selectHet, selectHom\n" +
             "- Filters: ALL filters are combined with AND logic\n" +
             "- CSV parameters: OR logic. Example: impact='HIGH,MODERATE' returns variants with HIGH OR MODERATE impact\n\n" +
 
@@ -220,6 +226,8 @@ public class OneKGPdMCPServer {
                 @ToolArg(description = CHROMOSOME_DESC) String chromosome,
                 @ToolArg(description = START_DESC) int start,
                 @ToolArg(description = END_DESC) int end,
+                @ToolArg(description = HET_DESC) Boolean selectHet,
+                @ToolArg(description = HOM_DESC) Boolean selectHom,
                 @ToolArg(description = REF_DESC, required = false) String refAllele,
                 @ToolArg(description = ALT_DESC, required = false) String altAllele,
                 @ToolArg(description = AFLT_DESC, required = false) Float afLessThan,
@@ -244,157 +252,6 @@ public class OneKGPdMCPServer {
                 @ToolArg(description = MINLEN_DESC, required = false) Integer minVariantLengthBp,
                 @ToolArg(description = MAXLEN_DESC, required = false) Integer maxVariantLengthBp) {
         try {
-            boolean selectHom = true;
-            boolean selectHet = true;
-            Long count = client.countVariantsInRegion(chromosome, start, end, selectHom, selectHet, refAllele, altAllele, minVariantLengthBp,
-                            maxVariantLengthBp, biallelicOnly, multiallelicOnly, excludeMales, excludeFemales, afLessThan, afGreaterThan,
-                            gnomadGenomeAfLessThan, gnomadGenomeAfGreaterThan, gnomadExomeAfLessThan, gnomadExomeAfGreaterThan, vepImpact,
-                            vepBiotype, vepFeature, vepVariantType, vepConsequences, alphaMissenseClass, alphaMissenseScoreLessThan,
-                            alphaMissenseScoreGreaterThan, clinSignificance);
-            return mcpResponse.success(Map.of("count", count));
-        } catch (Exception e) {
-            throw McpResponse.handle(e);
-        }
-    }
-
-    @Tool(
-        title = "countHomozygousVariantsInRegion",
-        structuredContent = true,
-        annotations = @Tool.Annotations(
-            title = "countHomozygousVariantsInRegion",
-            readOnlyHint = true,
-            destructiveHint = false,
-            idempotentHint = true,
-            openWorldHint = false
-        ),
-        description =
-            "COUNT HOMOZYGOUS variants ONLY (1/1 genotypes) in genomic region in 1000 Genomes.\n" +
-            "Returns: Integer count of homozygous variants matching criteria.\n" +
-            "Filters: REF/ALT, AF (KGP/gnomAD), VEP impact/biotype/consequences, variant type, AlphaMissense class/score, ClinVar significance.\n\n" +
-
-            "TOOL SELECTION:\n" +
-            "- Use this tool FIRST: to assess result size before calling selectHomozygousVariantsInRegion\n" +
-            "- Use countVariantsInRegion: to count both 0/1 and 1/1 genotypes\n" +
-            "- Use countHeterozygousVariantsInRegion: to count 0/1 genotypes only\n\n" +
-
-            "WORKFLOW:\n" +
-            "1. Call this tool to get homozygous variant count\n" +
-            "2. If count is manageable, call selectHomozygousVariantsInRegion with same filters if variant details are required\n" +
-
-            "PARAMETERS:\n" +
-            "- Required: chromosome (1-22, X, Y), start, end (GRCh38 coordinates)\n" +
-            "- Filters: ALL filters are combined with AND logic\n" +
-            "- CSV parameters: OR logic. Example: impact='HIGH,MODERATE' returns variants with HIGH OR MODERATE impact\n\n" +
-
-            "RETURNS: Refer to the Output Schema for field definitions.",
-        outputSchema = @Tool.OutputSchema(
-            generator = CountSchemaGenerator.class
-        )
-    )
-    public ToolResponse countHomozygousVariantsInRegion(
-                @ToolArg(description = CHROMOSOME_DESC) String chromosome,
-                @ToolArg(description = START_DESC) int start,
-                @ToolArg(description = END_DESC) int end,
-                @ToolArg(description = REF_DESC, required = false) String refAllele,
-                @ToolArg(description = ALT_DESC, required = false) String altAllele,
-                @ToolArg(description = AFLT_DESC, required = false) Float afLessThan,
-                @ToolArg(description = AFGT_DESC, required = false) Float afGreaterThan,
-                @ToolArg(description = GNE_AFLT_DESC, required = false) Float gnomadExomeAfLessThan,
-                @ToolArg(description = GNE_AFGT_DESC, required = false) Float gnomadExomeAfGreaterThan,
-                @ToolArg(description = GNG_AFLT_DESC, required = false) Float gnomadGenomeAfLessThan,
-                @ToolArg(description = GNG_AFGT_DESC, required = false) Float gnomadGenomeAfGreaterThan,
-                @ToolArg(description = CLIN_DESC, required = false) String clinSignificance,
-                @ToolArg(description = IMPACT_DESC, required = false) String vepImpact,
-                @ToolArg(description = FEATURETYPE_DESC, required = false) String vepFeature,
-                @ToolArg(description = BIOTYPE_DESC, required = false) String vepBiotype,
-                @ToolArg(description = VARIANTTYPE_DESC, required = false) String vepVariantType,
-                @ToolArg(description = CONSEQ_DESC, required = false) String vepConsequences,
-                @ToolArg(description = AM_DESC, required = false) String alphaMissenseClass,
-                @ToolArg(description = AMLT_DESC, required = false) Float alphaMissenseScoreLessThan,
-                @ToolArg(description = AMGT_DESC, required = false) Float alphaMissenseScoreGreaterThan,
-                @ToolArg(description = BIONLY_DESC, required = false) Boolean biallelicOnly,
-                @ToolArg(description = MULTONLY_DESC, required = false) Boolean multiallelicOnly,
-                @ToolArg(description = EXMALE_DESC, required = false) Boolean excludeMales,
-                @ToolArg(description = EXFEMALE_DESC, required = false) Boolean excludeFemales,
-                @ToolArg(description = MINLEN_DESC, required = false) Integer minVariantLengthBp,
-                @ToolArg(description = MAXLEN_DESC, required = false) Integer maxVariantLengthBp) {
-        try {
-            boolean selectHom = true;
-            boolean selectHet = false;
-            Long count = client.countVariantsInRegion(chromosome, start, end, selectHom, selectHet, refAllele, altAllele, minVariantLengthBp,
-                            maxVariantLengthBp, biallelicOnly, multiallelicOnly, excludeMales, excludeFemales, afLessThan, afGreaterThan,
-                            gnomadGenomeAfLessThan, gnomadGenomeAfGreaterThan, gnomadExomeAfLessThan, gnomadExomeAfGreaterThan, vepImpact,
-                            vepBiotype, vepFeature, vepVariantType, vepConsequences, alphaMissenseClass, alphaMissenseScoreLessThan, alphaMissenseScoreGreaterThan, clinSignificance);
-            return mcpResponse.success(Map.of("count", count));
-        } catch (Exception e) {
-            throw McpResponse.handle(e);
-        }
-    }
-
-    @Tool(
-        title = "countHeterozygousVariantsInRegion",
-        structuredContent = true,
-        annotations = @Tool.Annotations(
-            title = "countHeterozygousVariantsInRegion",
-            readOnlyHint = true,
-            destructiveHint = false,
-            idempotentHint = true,
-            openWorldHint = false
-        ),
-        description =
-            "COUNT HETEROZYGOUS variants ONLY (0/1 genotypes) in genomic region in 1000 Genomes.\n" +
-            "Returns: Integer count of heterozygous variants matching criteria.\n" +
-            "Filters: REF/ALT, AF (KGP/gnomAD), VEP impact/biotype/consequences, variant type, AlphaMissense class/score, ClinVar significance.\n\n" +
-
-            "TOOL SELECTION:\n" +
-            "- Use this tool FIRST: to assess result size before calling selectHeterozygousVariantsInRegion\n" +
-            "- Use countVariantsInRegion: to count both 0/1 and 1/1 genotypes\n" +
-            "- Use countHomozygousVariantsInRegion: to count 1/1 genotypes only\n" +
-
-            "WORKFLOW:\n" +
-            "1. Call this tool to get heterozygous variant count\n" +
-            "2. If count is manageable, call selectHeterozygousVariantsInRegion with same filters if variant details are required\n" +
-
-            "PARAMETERS:\n" +
-            "- Required: chromosome (1-22, X, Y), start, end (GRCh38 coordinates)\n" +
-            "- Filters: ALL filters are combined with AND logic\n" +
-            "- CSV parameters: OR logic. Example: impact='HIGH,MODERATE' returns variants with HIGH OR MODERATE impact\n\n" +
-
-            "RETURNS: Refer to the Output Schema for field definitions.",
-        outputSchema = @Tool.OutputSchema(
-            generator = CountSchemaGenerator.class
-        )
-    )
-    public ToolResponse countHeterozygousVariantsInRegion(
-                @ToolArg(description = CHROMOSOME_DESC) String chromosome,
-                @ToolArg(description = START_DESC) int start,
-                @ToolArg(description = END_DESC) int end,
-                @ToolArg(description = REF_DESC, required = false) String refAllele,
-                @ToolArg(description = ALT_DESC, required = false) String altAllele,
-                @ToolArg(description = AFLT_DESC, required = false) Float afLessThan,
-                @ToolArg(description = AFGT_DESC, required = false) Float afGreaterThan,
-                @ToolArg(description = GNE_AFLT_DESC, required = false) Float gnomadExomeAfLessThan,
-                @ToolArg(description = GNE_AFGT_DESC, required = false) Float gnomadExomeAfGreaterThan,
-                @ToolArg(description = GNG_AFLT_DESC, required = false) Float gnomadGenomeAfLessThan,
-                @ToolArg(description = GNG_AFGT_DESC, required = false) Float gnomadGenomeAfGreaterThan,
-                @ToolArg(description = CLIN_DESC, required = false) String clinSignificance,
-                @ToolArg(description = IMPACT_DESC, required = false) String vepImpact,
-                @ToolArg(description = FEATURETYPE_DESC, required = false) String vepFeature,
-                @ToolArg(description = BIOTYPE_DESC, required = false) String vepBiotype,
-                @ToolArg(description = VARIANTTYPE_DESC, required = false) String vepVariantType,
-                @ToolArg(description = CONSEQ_DESC, required = false) String vepConsequences,
-                @ToolArg(description = AM_DESC, required = false) String alphaMissenseClass,
-                @ToolArg(description = AMLT_DESC, required = false) Float alphaMissenseScoreLessThan,
-                @ToolArg(description = AMGT_DESC, required = false) Float alphaMissenseScoreGreaterThan,
-                @ToolArg(description = BIONLY_DESC, required = false) Boolean biallelicOnly,
-                @ToolArg(description = MULTONLY_DESC, required = false) Boolean multiallelicOnly,
-                @ToolArg(description = EXMALE_DESC, required = false) Boolean excludeMales,
-                @ToolArg(description = EXFEMALE_DESC, required = false) Boolean excludeFemales,
-                @ToolArg(description = MINLEN_DESC, required = false) Integer minVariantLengthBp,
-                @ToolArg(description = MAXLEN_DESC, required = false) Integer maxVariantLengthBp) {
-        try {
-            boolean selectHom = false;
-            boolean selectHet = true;
             Long count = client.countVariantsInRegion(chromosome, start, end, selectHom, selectHet, refAllele, altAllele, minVariantLengthBp,
                             maxVariantLengthBp, biallelicOnly, multiallelicOnly, excludeMales, excludeFemales, afLessThan, afGreaterThan,
                             gnomadGenomeAfLessThan, gnomadGenomeAfGreaterThan, gnomadExomeAfLessThan, gnomadExomeAfGreaterThan, vepImpact,
@@ -417,21 +274,24 @@ public class OneKGPdMCPServer {
             openWorldHint = false
         ),
         description =
-            "SELECT ALL variants (Homozygous + Heterozygous) in genomic region in 1000 Genomes.\n" +
-            "Returns: variants with gnomADe/gnomADg AF, AlphaMissense score, HGVSp, cohort-wide stats.\n" +
+            "SELECT variants in genomic region in 1000 Genomes.\n" +
+            "Returns: variants with gnomADe/gnomADg AF, AlphaMissense score, HGVSp, cohort-wide stats matching criteria.\n" +
             "Filters: REF/ALT, AF (KGP/gnomAD), VEP impact/biotype/consequences, variant type, AlphaMissense class/score, ClinVar significance.\n\n" +
 
-            "TOOL SELECTION:\n" +
-            "- Use this PRIMARY/DEFAULT tool: when need both homozygous AND heterozygous variants or uncertain\n" +
-            "- Use selectHomozygousVariantsInRegion: when need 1/1 genotypes only\n" +
-            "- Use selectHeterozygousVariantsInRegion: when need 0/1 genotypes only\n\n" +
+            "ZYGOSITY Parameters Logic::\n" +
+            "- Use selectHet=true: to include HETEROZYGOUS variants (0/1 genotypes)\n" +
+            "- Use selectHom=true: to include HOMOZYGOUS variants (1/1 genotypes)\n" +
+            "Examples:\n" +
+            "- Use selectHet=true AND selectHom=true: when need homozygous OR heterozygous variants or uncertain\n" +
+            "- Use selectHet=true AND selectHom=false: when need HETEROZYGOUS variants ONLY (0/1 genotypes)\n" +
+            "- Use selectHet=false AND selectHom=true: when need HOMOZYGOUS variants ONLY (1/1 genotypes)\n\n" +
 
             "WORKFLOW:\n" +
             "1. ALWAYS call countVariantsInRegion first to assess result size\n" +
             "2. Apply this tool with appropriate filters\n\n" +
 
             "PARAMETERS:\n" +
-            "- Required: chromosome (1-22, X, Y), start, end (GRCh38 coordinates)\n" +
+            "- Required: chromosome (1-22, X, Y), start, end (GRCh38 coordinates), selectHet, selectHom\n" +
             "- Filters: ALL filters are combined with AND logic\n" +
             "- CSV parameters: OR logic. Example: impact='HIGH,MODERATE' returns variants with HIGH OR MODERATE impact\n" +
             "- Pagination: skip, limit (max=50)\n\n" +
@@ -446,6 +306,8 @@ public class OneKGPdMCPServer {
                 @ToolArg(description = CHROMOSOME_DESC) String chromosome,
                 @ToolArg(description = START_DESC) int start,
                 @ToolArg(description = END_DESC) int end,
+                @ToolArg(description = HET_DESC) Boolean selectHet,
+                @ToolArg(description = HOM_DESC) Boolean selectHom,
                 @ToolArg(description = REF_DESC, required = false) String refAllele,
                 @ToolArg(description = ALT_DESC, required = false) String altAllele,
                 @ToolArg(description = AFLT_DESC, required = false) Float afLessThan,
@@ -472,9 +334,6 @@ public class OneKGPdMCPServer {
                 @ToolArg(description = SKIP_DESC, required = false) Integer skip,
                 @ToolArg(description = LIM_DESC, required = false) Integer limit) {
         try {
-            boolean selectHom = true;
-            boolean selectHet = true;
-
             List<Variant> variants = client.selectVariantsInRegion(chromosome, start, end, selectHom, selectHet, refAllele, altAllele,
                 minVariantLengthBp, maxVariantLengthBp, biallelicOnly, multiallelicOnly, excludeMales, excludeFemales, afLessThan, afGreaterThan,
                 gnomadGenomeAfLessThan, gnomadGenomeAfGreaterThan, gnomadExomeAfLessThan, gnomadExomeAfGreaterThan, vepImpact, vepBiotype,
@@ -491,174 +350,6 @@ public class OneKGPdMCPServer {
             throw McpResponse.handle(e);
         }
     }
-
-    @Tool(
-        title = "selectHomozygousVariantsInRegion",
-        structuredContent = true,
-        annotations = @Tool.Annotations(
-            title = "selectHomozygousVariantsInRegion",
-            readOnlyHint = true,
-            destructiveHint = false,
-            idempotentHint = true,
-            openWorldHint = false
-        ),
-        description =
-            "SELECT HOMOZYGOUS variants ONLY (1/1 genotypes) in genomic region in 1000 Genomes.\n" +
-            "Returns: variants with gnomADe/gnomADg AF, AlphaMissense score, HGVSp, cohort-wide stats.\n" +
-            "Filters: REF/ALT, AF (KGP/gnomAD), VEP impact/biotype/consequences, variant type, AlphaMissense class/score, ClinVar significance.\n\n" +
-
-            "ALTERNATIVE: Use selectVariantsInRegion if you need both 0/1 and 1/1 variants.\n\n" +
-
-            "WORKFLOW:\n" +
-            "1. ALWAYS call countHomozygousVariantsInRegion first to assess result size\n" +
-            "2. Apply this tool with appropriate filters\n\n" +
-
-            "PARAMETERS:\n" +
-            "- Required: chromosome (1-22, X, Y), start, end (GRCh38 coordinates)\n" +
-            "- Filters: ALL filters are combined with AND logic\n" +
-            "- CSV parameters: OR logic. Example: impact='HIGH,MODERATE' returns variants with HIGH OR MODERATE impact\n" +
-            "- Pagination: skip, limit (max=50)\n\n" +
-
-            "RETURNS: Refer to the Output Schema for field definitions. Empty array [] if no matches.",
-        outputSchema = @Tool.OutputSchema(
-            from = VariantView.class,
-            generator = VariantArraySchemaGenerator.class
-        )
-    )
-    public ToolResponse selectHomozygousVariantsInRegion(
-                @ToolArg(description = CHROMOSOME_DESC) String chromosome,
-                @ToolArg(description = START_DESC) int start,
-                @ToolArg(description = END_DESC) int end,
-                @ToolArg(description = REF_DESC, required = false) String refAllele,
-                @ToolArg(description = ALT_DESC, required = false) String altAllele,
-                @ToolArg(description = AFLT_DESC, required = false) Float afLessThan,
-                @ToolArg(description = AFGT_DESC, required = false) Float afGreaterThan,
-                @ToolArg(description = GNE_AFLT_DESC, required = false) Float gnomadExomeAfLessThan,
-                @ToolArg(description = GNE_AFGT_DESC, required = false) Float gnomadExomeAfGreaterThan,
-                @ToolArg(description = GNG_AFLT_DESC, required = false) Float gnomadGenomeAfLessThan,
-                @ToolArg(description = GNG_AFGT_DESC, required = false) Float gnomadGenomeAfGreaterThan,
-                @ToolArg(description = CLIN_DESC, required = false) String clinSignificance,
-                @ToolArg(description = IMPACT_DESC, required = false) String vepImpact,
-                @ToolArg(description = FEATURETYPE_DESC, required = false) String vepFeature,
-                @ToolArg(description = BIOTYPE_DESC, required = false) String vepBiotype,
-                @ToolArg(description = VARIANTTYPE_DESC, required = false) String vepVariantType,
-                @ToolArg(description = CONSEQ_DESC, required = false) String vepConsequences,
-                @ToolArg(description = AM_DESC, required = false) String alphaMissenseClass,
-                @ToolArg(description = AMLT_DESC, required = false) Float alphaMissenseScoreLessThan,
-                @ToolArg(description = AMGT_DESC, required = false) Float alphaMissenseScoreGreaterThan,
-                @ToolArg(description = BIONLY_DESC, required = false) Boolean biallelicOnly,
-                @ToolArg(description = MULTONLY_DESC, required = false) Boolean multiallelicOnly,
-                @ToolArg(description = EXMALE_DESC, required = false) Boolean excludeMales,
-                @ToolArg(description = EXFEMALE_DESC, required = false) Boolean excludeFemales,
-                @ToolArg(description = MINLEN_DESC, required = false) Integer minVariantLengthBp,
-                @ToolArg(description = MAXLEN_DESC, required = false) Integer maxVariantLengthBp,
-                @ToolArg(description = SKIP_DESC, required = false) Integer skip,
-                @ToolArg(description = LIM_DESC, required = false) Integer limit) {
-        try {
-            boolean selectHom = true;
-            boolean selectHet = false;
-
-            List<Variant> variants = client.selectVariantsInRegion(chromosome, start, end, selectHom, selectHet, refAllele, altAllele,
-                minVariantLengthBp, maxVariantLengthBp, biallelicOnly, multiallelicOnly, excludeMales, excludeFemales, afLessThan, afGreaterThan,
-                gnomadGenomeAfLessThan, gnomadGenomeAfGreaterThan, gnomadExomeAfLessThan, gnomadExomeAfGreaterThan, vepImpact, vepBiotype,
-                vepFeature, vepVariantType, vepConsequences, alphaMissenseClass, alphaMissenseScoreLessThan, alphaMissenseScoreGreaterThan,
-                clinSignificance, skip, limit);
-
-            List<VariantView> vv = variants.stream()
-                .map(VariantView::fromGrpc)
-                .toList();
-
-            Map<String, Object> structured = Map.of("variants", vv);
-            return mcpResponse.success(structured, vv);
-        } catch (Exception e) {
-            throw McpResponse.handle(e);
-        }
-    }
-
-    @Tool(
-        title = "selectHeterozygousVariantsInRegion",
-        structuredContent = true,
-        annotations = @Tool.Annotations(
-            title = "selectHeterozygousVariantsInRegion",
-            readOnlyHint = true,
-            destructiveHint = false,
-            idempotentHint = true,
-            openWorldHint = false
-        ),
-        description =
-            "SELECT HETEROZYGOUS variants ONLY (0/1 genotypes) in genomic region in 1000 Genomes.\n" +
-            "Returns: variants with gnomADe/gnomADg AF, AlphaMissense score, HGVSp, cohort-wide stats.\n" +
-            "Filters: REF/ALT, AF (KGP/gnomAD), VEP impact/biotype/consequences, variant type, AlphaMissense class/score, ClinVar significance.\n\n" +
-
-            "ALTERNATIVE: Use selectVariantsInRegion if you need both 0/1 and 1/1 variants.\n\n" +
-
-            "WORKFLOW:\n" +
-            "1. ALWAYS call countHeterozygousVariantsInRegion first to assess result size\n" +
-            "2. Apply this tool with appropriate filters\n\n" +
-
-            "PARAMETERS:\n" +
-            "- Required: chromosome (1-22, X, Y), start, end (GRCh38 coordinates)\n" +
-            "- Filters: ALL filters are combined with AND logic\n" +
-            "- CSV parameters: OR logic. Example: impact='HIGH,MODERATE' returns variants with HIGH OR MODERATE impact\n" +
-            "- Pagination: skip, limit (max=50)\n\n" +
-
-            "RETURNS: Refer to the Output Schema for field definitions. Empty array [] if no matches.",
-        outputSchema = @Tool.OutputSchema(
-            from = VariantView.class,
-            generator = VariantArraySchemaGenerator.class
-        )
-    )
-    public ToolResponse selectHeterozygousVariantsInRegion(
-                @ToolArg(description = CHROMOSOME_DESC) String chromosome,
-                @ToolArg(description = START_DESC) int start,
-                @ToolArg(description = END_DESC) int end,
-                @ToolArg(description = REF_DESC, required = false) String refAllele,
-                @ToolArg(description = ALT_DESC, required = false) String altAllele,
-                @ToolArg(description = AFLT_DESC, required = false) Float afLessThan,
-                @ToolArg(description = AFGT_DESC, required = false) Float afGreaterThan,
-                @ToolArg(description = GNE_AFLT_DESC, required = false) Float gnomadExomeAfLessThan,
-                @ToolArg(description = GNE_AFGT_DESC, required = false) Float gnomadExomeAfGreaterThan,
-                @ToolArg(description = GNG_AFLT_DESC, required = false) Float gnomadGenomeAfLessThan,
-                @ToolArg(description = GNG_AFGT_DESC, required = false) Float gnomadGenomeAfGreaterThan,
-                @ToolArg(description = CLIN_DESC, required = false) String clinSignificance,
-                @ToolArg(description = IMPACT_DESC, required = false) String vepImpact,
-                @ToolArg(description = FEATURETYPE_DESC, required = false) String vepFeature,
-                @ToolArg(description = BIOTYPE_DESC, required = false) String vepBiotype,
-                @ToolArg(description = VARIANTTYPE_DESC, required = false) String vepVariantType,
-                @ToolArg(description = CONSEQ_DESC, required = false) String vepConsequences,
-                @ToolArg(description = AM_DESC, required = false) String alphaMissenseClass,
-                @ToolArg(description = AMLT_DESC, required = false) Float alphaMissenseScoreLessThan,
-                @ToolArg(description = AMGT_DESC, required = false) Float alphaMissenseScoreGreaterThan,
-                @ToolArg(description = BIONLY_DESC, required = false) Boolean biallelicOnly,
-                @ToolArg(description = MULTONLY_DESC, required = false) Boolean multiallelicOnly,
-                @ToolArg(description = EXMALE_DESC, required = false) Boolean excludeMales,
-                @ToolArg(description = EXFEMALE_DESC, required = false) Boolean excludeFemales,
-                @ToolArg(description = MINLEN_DESC, required = false) Integer minVariantLengthBp,
-                @ToolArg(description = MAXLEN_DESC, required = false) Integer maxVariantLengthBp,
-                @ToolArg(description = SKIP_DESC, required = false) Integer skip,
-                @ToolArg(description = LIM_DESC, required = false) Integer limit) {
-        try {
-            boolean selectHom = false;
-            boolean selectHet = true;
-
-            List<Variant> variants = client.selectVariantsInRegion(chromosome, start, end, selectHom, selectHet, refAllele, altAllele,
-                minVariantLengthBp, maxVariantLengthBp, biallelicOnly, multiallelicOnly, excludeMales, excludeFemales, afLessThan, afGreaterThan,
-                gnomadGenomeAfLessThan, gnomadGenomeAfGreaterThan, gnomadExomeAfLessThan, gnomadExomeAfGreaterThan, vepImpact, vepBiotype,
-                vepFeature, vepVariantType, vepConsequences, alphaMissenseClass, alphaMissenseScoreLessThan, alphaMissenseScoreGreaterThan,
-                clinSignificance, skip, limit);
-
-            List<VariantView> vv = variants.stream()
-                .map(VariantView::fromGrpc)
-                .toList();
-
-            Map<String, Object> structured = Map.of("variants", vv);
-            return mcpResponse.success(structured, vv);
-        } catch (Exception e) {
-            throw McpResponse.handle(e);
-        }
-    }
-
-    // Count/Select Variants in Samples
 
     @Tool(
         title = "countVariantsInRegionInSample",
@@ -671,21 +362,24 @@ public class OneKGPdMCPServer {
             openWorldHint = false
         ),
         description =
-            "COUNT ALL variants (Homozygous + Heterozygous) for a specific SAMPLE in genomic region in 1000 Genomes.\n" +
+            "COUNT variants in a specific SAMPLE in genomic region in 1000 Genomes.\n" +
             "Returns: Integer count of variants matching criteria in the specified sample.\n" +
             "Filters: REF/ALT, AF (KGP/gnomAD), VEP impact/biotype/consequences, variant type, AlphaMissense class/score, ClinVar significance.\n\n" +
 
-            "TOOL SELECTION:\n" +
-            "- Use this tool FIRST: to assess result size before calling selectVariantsInRegionInSample\n" +
-            "- Use countHomozygousVariantsInRegionInSample: to count 1/1 genotypes only\n" +
-            "- Use countHeterozygousVariantsInRegionInSample: to count 0/1 genotypes only\n\n" +
+            "ZYGOSITY Parameters Logic::\n" +
+            "- Use selectHet=true: to include HETEROZYGOUS variants (0/1 genotypes)\n" +
+            "- Use selectHom=true: to include HOMOZYGOUS variants (1/1 genotypes)\n" +
+            "Examples:\n" +
+            "- Use selectHet=true AND selectHom=true: when need homozygous OR heterozygous variants or uncertain\n" +
+            "- Use selectHet=true AND selectHom=false: when need HETEROZYGOUS variants ONLY (0/1 genotypes)\n" +
+            "- Use selectHet=false AND selectHom=true: when need HOMOZYGOUS variants ONLY (1/1 genotypes)\n\n" +
 
             "WORKFLOW:\n" +
-            "1. Call this tool to get variant count for the sample\n" +
+            "1. Use this tool FIRST to get variant count for the sample\n" +
             "2. If count is manageable, call selectVariantsInRegionInSample with same filters if variant details are required\n\n" +
 
             "PARAMETERS:\n" +
-            "- Required: chromosome (1-22, X, Y), start, end (GRCh38 coordinates), sampleId\n" +
+            "- Required: chromosome (1-22, X, Y), start, end (GRCh38 coordinates), selectHet, selectHom\n" +
             "- Filters: ALL filters are combined with AND logic\n" +
             "- CSV parameters: OR logic. Example: impact='HIGH,MODERATE' returns variants with HIGH OR MODERATE impact\n\n" +
 
@@ -698,6 +392,8 @@ public class OneKGPdMCPServer {
                 @ToolArg(description = CHROMOSOME_DESC) String chromosome,
                 @ToolArg(description = START_DESC) int start,
                 @ToolArg(description = END_DESC) int end,
+                @ToolArg(description = HET_DESC) Boolean selectHet,
+                @ToolArg(description = HOM_DESC) Boolean selectHom,
                 @ToolArg(description = "sample id") String sampleId,
                 @ToolArg(description = REF_DESC, required = false) String refAllele,
                 @ToolArg(description = ALT_DESC, required = false) String altAllele,
@@ -723,160 +419,6 @@ public class OneKGPdMCPServer {
                 @ToolArg(description = MINLEN_DESC, required = false) Integer minVariantLengthBp,
                 @ToolArg(description = MAXLEN_DESC, required = false) Integer maxVariantLengthBp) {
         try {
-            boolean selectHom = true;
-            boolean selectHet = true;
-            Long count = client.countVariantsInRegionInSample(chromosome, start, end, sampleId, selectHom, selectHet, refAllele, altAllele,
-                            minVariantLengthBp, maxVariantLengthBp, biallelicOnly, multiallelicOnly, excludeMales, excludeFemales, afLessThan,
-                            afGreaterThan, gnomadGenomeAfLessThan, gnomadGenomeAfGreaterThan, gnomadExomeAfLessThan, gnomadExomeAfGreaterThan,
-                            vepImpact, vepBiotype, vepFeature, vepVariantType, vepConsequences, alphaMissenseClass, alphaMissenseScoreLessThan,
-                            alphaMissenseScoreGreaterThan, clinSignificance);
-            return mcpResponse.success(Map.of("count", count));
-        } catch (Exception e) {
-            throw McpResponse.handle(e);
-        }
-    }
-
-    @Tool(
-        title = "countHomozygousVariantsInRegionInSample",
-        structuredContent = true,
-        annotations = @Tool.Annotations(
-            title = "countHomozygousVariantsInRegionInSample",
-            readOnlyHint = true,
-            destructiveHint = false,
-            idempotentHint = true,
-            openWorldHint = false
-        ),
-        description =
-            "COUNT HOMOZYGOUS variants ONLY (1/1 genotypes) for a specific SAMPLE in genomic region in 1000 Genomes.\n" +
-            "Returns: Integer count of homozygous variants matching criteria in the specified sample.\n" +
-            "Filters: REF/ALT, AF (KGP/gnomAD), VEP impact/biotype/consequences, variant type, AlphaMissense class/score, ClinVar significance.\n\n" +
-
-            "TOOL SELECTION:\n" +
-            "- Use this tool FIRST: to assess result size before calling selectHomozygousVariantsInRegionInSample\n" +
-            "- Use countVariantsInRegionInSample: to count both 0/1 and 1/1 genotypes\n" +
-            "- Use countHeterozygousVariantsInRegionInSample: to count 0/1 genotypes only\n\n" +
-
-            "WORKFLOW:\n" +
-            "1. Call this tool to get homozygous variant count for the sample\n" +
-            "2. If count is manageable, call selectHomozygousVariantsInRegionInSample with same filters if variant details are required\n\n" +
-
-            "PARAMETERS:\n" +
-            "- Required: chromosome (1-22, X, Y), start, end (GRCh38 coordinates), sampleId\n" +
-            "- Filters: ALL filters are combined with AND logic\n" +
-            "- CSV parameters: OR logic. Example: impact='HIGH,MODERATE' returns variants with HIGH OR MODERATE impact\n\n" +
-
-            "RETURNS: Refer to the Output Schema for field definitions.",
-        outputSchema = @Tool.OutputSchema(
-            generator = CountSchemaGenerator.class
-        )
-    )
-    public ToolResponse countHomozygousVariantsInRegionInSample(
-                @ToolArg(description = CHROMOSOME_DESC) String chromosome,
-                @ToolArg(description = START_DESC) int start,
-                @ToolArg(description = END_DESC) int end,
-                @ToolArg(description = "sample id") String sampleId,
-                @ToolArg(description = REF_DESC, required = false) String refAllele,
-                @ToolArg(description = ALT_DESC, required = false) String altAllele,
-                @ToolArg(description = AFLT_DESC, required = false) Float afLessThan,
-                @ToolArg(description = AFGT_DESC, required = false) Float afGreaterThan,
-                @ToolArg(description = GNE_AFLT_DESC, required = false) Float gnomadExomeAfLessThan,
-                @ToolArg(description = GNE_AFGT_DESC, required = false) Float gnomadExomeAfGreaterThan,
-                @ToolArg(description = GNG_AFLT_DESC, required = false) Float gnomadGenomeAfLessThan,
-                @ToolArg(description = GNG_AFGT_DESC, required = false) Float gnomadGenomeAfGreaterThan,
-                @ToolArg(description = CLIN_DESC, required = false) String clinSignificance,
-                @ToolArg(description = IMPACT_DESC, required = false) String vepImpact,
-                @ToolArg(description = FEATURETYPE_DESC, required = false) String vepFeature,
-                @ToolArg(description = BIOTYPE_DESC, required = false) String vepBiotype,
-                @ToolArg(description = VARIANTTYPE_DESC, required = false) String vepVariantType,
-                @ToolArg(description = CONSEQ_DESC, required = false) String vepConsequences,
-                @ToolArg(description = AM_DESC, required = false) String alphaMissenseClass,
-                @ToolArg(description = AMLT_DESC, required = false) Float alphaMissenseScoreLessThan,
-                @ToolArg(description = AMGT_DESC, required = false) Float alphaMissenseScoreGreaterThan,
-                @ToolArg(description = BIONLY_DESC, required = false) Boolean biallelicOnly,
-                @ToolArg(description = MULTONLY_DESC, required = false) Boolean multiallelicOnly,
-                @ToolArg(description = EXMALE_DESC, required = false) Boolean excludeMales,
-                @ToolArg(description = EXFEMALE_DESC, required = false) Boolean excludeFemales,
-                @ToolArg(description = MINLEN_DESC, required = false) Integer minVariantLengthBp,
-                @ToolArg(description = MAXLEN_DESC, required = false) Integer maxVariantLengthBp) {
-        try {
-            boolean selectHom = true;
-            boolean selectHet = false;
-            Long count = client.countVariantsInRegionInSample(chromosome, start, end, sampleId, selectHom, selectHet, refAllele, altAllele,
-                            minVariantLengthBp, maxVariantLengthBp, biallelicOnly, multiallelicOnly, excludeMales, excludeFemales, afLessThan,
-                            afGreaterThan, gnomadGenomeAfLessThan, gnomadGenomeAfGreaterThan, gnomadExomeAfLessThan, gnomadExomeAfGreaterThan,
-                            vepImpact, vepBiotype, vepFeature, vepVariantType, vepConsequences, alphaMissenseClass, alphaMissenseScoreLessThan,
-                            alphaMissenseScoreGreaterThan, clinSignificance);
-            return mcpResponse.success(Map.of("count", count));
-        } catch (Exception e) {
-            throw McpResponse.handle(e);
-        }
-    }
-
-    @Tool(
-        title = "countHeterozygousVariantsInRegionInSample",
-        structuredContent = true,
-        annotations = @Tool.Annotations(
-            title = "countHeterozygousVariantsInRegionInSample",
-            readOnlyHint = true,
-            destructiveHint = false,
-            idempotentHint = true,
-            openWorldHint = false
-        ),
-        description =
-            "COUNT HETEROZYGOUS variants ONLY (0/1 genotypes) for a specific SAMPLE in genomic region in 1000 Genomes.\n" +
-            "Returns: Integer count of heterozygous variants matching criteria in the specified sample.\n" +
-            "Filters: REF/ALT, AF (KGP/gnomAD), VEP impact/biotype/consequences, variant type, AlphaMissense class/score, ClinVar significance.\n\n" +
-
-            "TOOL SELECTION:\n" +
-            "- Use this tool FIRST: to assess result size before calling selectHeterozygousVariantsInRegionInSample\n" +
-            "- Use countVariantsInRegionInSample: to count both 0/1 and 1/1 genotypes\n" +
-            "- Use countHomozygousVariantsInRegionInSample: to count 1/1 genotypes only\n\n" +
-
-            "WORKFLOW:\n" +
-            "1. Call this tool to get heterozygous variant count for the sample\n" +
-            "2. If count is manageable, call selectHeterozygousVariantsInRegionInSample with same filters if variant details are required\n\n" +
-
-            "PARAMETERS:\n" +
-            "- Required: chromosome (1-22, X, Y), start, end (GRCh38 coordinates), sampleId\n" +
-            "- Filters: ALL filters are combined with AND logic\n" +
-            "- CSV parameters: OR logic. Example: impact='HIGH,MODERATE' returns variants with HIGH OR MODERATE impact\n\n" +
-
-            "RETURNS: Refer to the Output Schema for field definitions.",
-        outputSchema = @Tool.OutputSchema(
-            generator = CountSchemaGenerator.class
-        )
-    )
-    public ToolResponse countHeterozygousVariantsInRegionInSample(
-                @ToolArg(description = CHROMOSOME_DESC) String chromosome,
-                @ToolArg(description = START_DESC) int start,
-                @ToolArg(description = END_DESC) int end,
-                @ToolArg(description = "sample id") String sampleId,
-                @ToolArg(description = REF_DESC, required = false) String refAllele,
-                @ToolArg(description = ALT_DESC, required = false) String altAllele,
-                @ToolArg(description = AFLT_DESC, required = false) Float afLessThan,
-                @ToolArg(description = AFGT_DESC, required = false) Float afGreaterThan,
-                @ToolArg(description = GNE_AFLT_DESC, required = false) Float gnomadExomeAfLessThan,
-                @ToolArg(description = GNE_AFGT_DESC, required = false) Float gnomadExomeAfGreaterThan,
-                @ToolArg(description = GNG_AFLT_DESC, required = false) Float gnomadGenomeAfLessThan,
-                @ToolArg(description = GNG_AFGT_DESC, required = false) Float gnomadGenomeAfGreaterThan,
-                @ToolArg(description = CLIN_DESC, required = false) String clinSignificance,
-                @ToolArg(description = IMPACT_DESC, required = false) String vepImpact,
-                @ToolArg(description = FEATURETYPE_DESC, required = false) String vepFeature,
-                @ToolArg(description = BIOTYPE_DESC, required = false) String vepBiotype,
-                @ToolArg(description = VARIANTTYPE_DESC, required = false) String vepVariantType,
-                @ToolArg(description = CONSEQ_DESC, required = false) String vepConsequences,
-                @ToolArg(description = AM_DESC, required = false) String alphaMissenseClass,
-                @ToolArg(description = AMLT_DESC, required = false) Float alphaMissenseScoreLessThan,
-                @ToolArg(description = AMGT_DESC, required = false) Float alphaMissenseScoreGreaterThan,
-                @ToolArg(description = BIONLY_DESC, required = false) Boolean biallelicOnly,
-                @ToolArg(description = MULTONLY_DESC, required = false) Boolean multiallelicOnly,
-                @ToolArg(description = EXMALE_DESC, required = false) Boolean excludeMales,
-                @ToolArg(description = EXFEMALE_DESC, required = false) Boolean excludeFemales,
-                @ToolArg(description = MINLEN_DESC, required = false) Integer minVariantLengthBp,
-                @ToolArg(description = MAXLEN_DESC, required = false) Integer maxVariantLengthBp) {
-        try {
-            boolean selectHom = false;
-            boolean selectHet = true;
             Long count = client.countVariantsInRegionInSample(chromosome, start, end, sampleId, selectHom, selectHet, refAllele, altAllele,
                             minVariantLengthBp, maxVariantLengthBp, biallelicOnly, multiallelicOnly, excludeMales, excludeFemales, afLessThan,
                             afGreaterThan, gnomadGenomeAfLessThan, gnomadGenomeAfGreaterThan, gnomadExomeAfLessThan, gnomadExomeAfGreaterThan,
@@ -899,21 +441,24 @@ public class OneKGPdMCPServer {
             openWorldHint = false
         ),
         description =
-            "SELECT ALL variants (Homozygous + Heterozygous) for a specific SAMPLE in genomic region in 1000 Genomes.\n" +
-            "Returns: variants with gnomADe/gnomADg AF, AlphaMissense score, HGVSp, sample genotype.\n" +
+            "SELECT variants in a specific SAMPLE in genomic region in 1000 Genomes.\n" +
+            "Returns: variants with gnomADe/gnomADg AF, AlphaMissense score, HGVSp, cohort-wide stats matching criteria.\n" +
             "Filters: REF/ALT, AF (KGP/gnomAD), VEP impact/biotype/consequences, variant type, AlphaMissense class/score, ClinVar significance.\n\n" +
 
-            "TOOL SELECTION:\n" +
-            "- Use this PRIMARY/DEFAULT tool: when need both homozygous AND heterozygous variants or uncertain\n" +
-            "- Use selectHomozygousVariantsInRegionInSample: when need 1/1 genotypes only\n" +
-            "- Use selectHeterozygousVariantsInRegionInSample: when need 0/1 genotypes only\n\n" +
+            "ZYGOSITY Parameters Logic::\n" +
+            "- Use selectHet=true: to include HETEROZYGOUS variants (0/1 genotypes)\n" +
+            "- Use selectHom=true: to include HOMOZYGOUS variants (1/1 genotypes)\n" +
+            "Examples:\n" +
+            "- Use selectHet=true AND selectHom=true: when need homozygous OR heterozygous variants or uncertain\n" +
+            "- Use selectHet=true AND selectHom=false: when need HETEROZYGOUS variants ONLY (0/1 genotypes)\n" +
+            "- Use selectHet=false AND selectHom=true: when need HOMOZYGOUS variants ONLY (1/1 genotypes)\n\n" +
 
             "WORKFLOW:\n" +
             "1. ALWAYS call countVariantsInRegionInSample first to assess result size\n" +
             "2. Apply this tool with appropriate filters\n\n" +
 
             "PARAMETERS:\n" +
-            "- Required: chromosome (1-22, X, Y), start, end (GRCh38 coordinates), sampleId\n" +
+            "- Required: chromosome (1-22, X, Y), start, end (GRCh38 coordinates), selectHet, selectHom\n" +
             "- Filters: ALL filters are combined with AND logic\n" +
             "- CSV parameters: OR logic. Example: impact='HIGH,MODERATE' returns variants with HIGH OR MODERATE impact\n" +
             "- Pagination: skip, limit (max=50)\n\n" +
@@ -928,6 +473,8 @@ public class OneKGPdMCPServer {
                 @ToolArg(description = CHROMOSOME_DESC) String chromosome,
                 @ToolArg(description = START_DESC) int start,
                 @ToolArg(description = END_DESC) int end,
+                @ToolArg(description = HET_DESC) Boolean selectHet,
+                @ToolArg(description = HOM_DESC) Boolean selectHom,
                 @ToolArg(description = "sample id") String sampleId,
                 @ToolArg(description = REF_DESC, required = false) String refAllele,
                 @ToolArg(description = ALT_DESC, required = false) String altAllele,
@@ -955,9 +502,6 @@ public class OneKGPdMCPServer {
                 @ToolArg(description = SKIP_DESC, required = false) Integer skip,
                 @ToolArg(description = LIM_DESC, required = false) Integer limit) {
         try {
-            boolean selectHom = true;
-            boolean selectHet = true;
-
             List<Variant> variants = client.selectVariantsInRegionInSample(chromosome, start, end, sampleId, selectHom, selectHet, refAllele, altAllele,
                             minVariantLengthBp, maxVariantLengthBp, biallelicOnly, multiallelicOnly, excludeMales, excludeFemales, afLessThan,
                             afGreaterThan, gnomadGenomeAfLessThan, gnomadGenomeAfGreaterThan, gnomadExomeAfLessThan, gnomadExomeAfGreaterThan,
@@ -974,176 +518,6 @@ public class OneKGPdMCPServer {
             throw McpResponse.handle(e);
         }
     }
-
-    @Tool(
-        title = "selectHomozygousVariantsInRegionInSample",
-        structuredContent = true,
-        annotations = @Tool.Annotations(
-            title = "selectHomozygousVariantsInRegionInSample",
-            readOnlyHint = true,
-            destructiveHint = false,
-            idempotentHint = true,
-            openWorldHint = false
-        ),
-        description =
-            "SELECT HOMOZYGOUS variants ONLY (1/1 genotypes) for a specific SAMPLE in genomic region in 1000 Genomes.\n" +
-            "Returns: variants with gnomADe/gnomADg AF, AlphaMissense score, HGVSp, sample genotype.\n" +
-            "Filters: REF/ALT, AF (KGP/gnomAD), VEP impact/biotype/consequences, variant type, AlphaMissense class/score, ClinVar significance.\n\n" +
-
-            "ALTERNATIVE: Use selectVariantsInRegionInSample if you need both 0/1 and 1/1 variants.\n\n" +
-
-            "WORKFLOW:\n" +
-            "1. ALWAYS call countHomozygousVariantsInRegionInSample first to assess result size\n" +
-            "2. Apply this tool with appropriate filters\n\n" +
-
-            "PARAMETERS:\n" +
-            "- Required: chromosome (1-22, X, Y), start, end (GRCh38 coordinates), sampleId\n" +
-            "- Filters: ALL filters are combined with AND logic\n" +
-            "- CSV parameters: OR logic. Example: impact='HIGH,MODERATE' returns variants with HIGH OR MODERATE impact\n" +
-            "- Pagination: skip, limit (max=50)\n\n" +
-
-            "RETURNS: Refer to the Output Schema for field definitions. Empty array [] if no matches.",
-        outputSchema = @Tool.OutputSchema(
-            from = VariantView.class,
-            generator = VariantArraySchemaGenerator.class
-        )
-    )
-    public ToolResponse selectHomozygousVariantsInRegionInSample(
-                @ToolArg(description = CHROMOSOME_DESC) String chromosome,
-                @ToolArg(description = START_DESC) int start,
-                @ToolArg(description = END_DESC) int end,
-                @ToolArg(description = "sample id") String sampleId,
-                @ToolArg(description = REF_DESC, required = false) String refAllele,
-                @ToolArg(description = ALT_DESC, required = false) String altAllele,
-                @ToolArg(description = AFLT_DESC, required = false) Float afLessThan,
-                @ToolArg(description = AFGT_DESC, required = false) Float afGreaterThan,
-                @ToolArg(description = GNE_AFLT_DESC, required = false) Float gnomadExomeAfLessThan,
-                @ToolArg(description = GNE_AFGT_DESC, required = false) Float gnomadExomeAfGreaterThan,
-                @ToolArg(description = GNG_AFLT_DESC, required = false) Float gnomadGenomeAfLessThan,
-                @ToolArg(description = GNG_AFGT_DESC, required = false) Float gnomadGenomeAfGreaterThan,
-                @ToolArg(description = CLIN_DESC, required = false) String clinSignificance,
-                @ToolArg(description = IMPACT_DESC, required = false) String vepImpact,
-                @ToolArg(description = FEATURETYPE_DESC, required = false) String vepFeature,
-                @ToolArg(description = BIOTYPE_DESC, required = false) String vepBiotype,
-                @ToolArg(description = VARIANTTYPE_DESC, required = false) String vepVariantType,
-                @ToolArg(description = CONSEQ_DESC, required = false) String vepConsequences,
-                @ToolArg(description = AM_DESC, required = false) String alphaMissenseClass,
-                @ToolArg(description = AMLT_DESC, required = false) Float alphaMissenseScoreLessThan,
-                @ToolArg(description = AMGT_DESC, required = false) Float alphaMissenseScoreGreaterThan,
-                @ToolArg(description = BIONLY_DESC, required = false) Boolean biallelicOnly,
-                @ToolArg(description = MULTONLY_DESC, required = false) Boolean multiallelicOnly,
-                @ToolArg(description = EXMALE_DESC, required = false) Boolean excludeMales,
-                @ToolArg(description = EXFEMALE_DESC, required = false) Boolean excludeFemales,
-                @ToolArg(description = MINLEN_DESC, required = false) Integer minVariantLengthBp,
-                @ToolArg(description = MAXLEN_DESC, required = false) Integer maxVariantLengthBp,
-                @ToolArg(description = SKIP_DESC, required = false) Integer skip,
-                @ToolArg(description = LIM_DESC, required = false) Integer limit) {
-        try {
-            boolean selectHom = true;
-            boolean selectHet = false;
-
-            List<Variant> variants = client.selectVariantsInRegionInSample(chromosome, start, end, sampleId, selectHom, selectHet, refAllele, altAllele,
-                            minVariantLengthBp, maxVariantLengthBp, biallelicOnly, multiallelicOnly, excludeMales, excludeFemales, afLessThan,
-                            afGreaterThan, gnomadGenomeAfLessThan, gnomadGenomeAfGreaterThan, gnomadExomeAfLessThan, gnomadExomeAfGreaterThan,
-                            vepImpact, vepBiotype, vepFeature, vepVariantType, vepConsequences, alphaMissenseClass, alphaMissenseScoreLessThan,
-                            alphaMissenseScoreGreaterThan, clinSignificance, skip, limit);
-
-            List<VariantView> vv = variants.stream()
-                .map(VariantView::fromGrpc)
-                .toList();
-
-            Map<String, Object> structured = Map.of("variants", vv);
-            return mcpResponse.success(structured, vv);
-        } catch (Exception e) {
-            throw McpResponse.handle(e);
-        }
-    }
-
-    @Tool(
-        title = "selectHeterozygousVariantsInRegionInSample",
-        structuredContent = true,
-        annotations = @Tool.Annotations(
-            title = "selectHeterozygousVariantsInRegionInSample",
-            readOnlyHint = true,
-            destructiveHint = false,
-            idempotentHint = true,
-            openWorldHint = false
-        ),
-        description =
-            "SELECT HETEROZYGOUS variants ONLY (0/1 genotypes) for a specific SAMPLE in genomic region in 1000 Genomes.\n" +
-            "Returns: variants with gnomADe/gnomADg AF, AlphaMissense score, HGVSp, sample genotype.\n" +
-            "Filters: REF/ALT, AF (KGP/gnomAD), VEP impact/biotype/consequences, variant type, AlphaMissense class/score, ClinVar significance.\n\n" +
-
-            "ALTERNATIVE: Use selectVariantsInRegionInSample if you need both 0/1 and 1/1 variants.\n\n" +
-
-            "WORKFLOW:\n" +
-            "1. ALWAYS call countHeterozygousVariantsInRegionInSample first to assess result size\n" +
-            "2. Apply this tool with appropriate filters\n\n" +
-
-            "PARAMETERS:\n" +
-            "- Required: chromosome (1-22, X, Y), start, end (GRCh38 coordinates), sampleId\n" +
-            "- Filters: ALL filters are combined with AND logic\n" +
-            "- CSV parameters: OR logic. Example: impact='HIGH,MODERATE' returns variants with HIGH OR MODERATE impact\n" +
-            "- Pagination: skip, limit (max=50)\n\n" +
-
-            "RETURNS: Refer to the Output Schema for field definitions. Empty array [] if no matches.",
-        outputSchema = @Tool.OutputSchema(
-            from = VariantView.class,
-            generator = VariantArraySchemaGenerator.class
-        )
-    )
-    public ToolResponse selectHeterozygousVariantsInRegionInSample(
-                @ToolArg(description = CHROMOSOME_DESC) String chromosome,
-                @ToolArg(description = START_DESC) int start,
-                @ToolArg(description = END_DESC) int end,
-                @ToolArg(description = "sample id") String sampleId,
-                @ToolArg(description = REF_DESC, required = false) String refAllele,
-                @ToolArg(description = ALT_DESC, required = false) String altAllele,
-                @ToolArg(description = AFLT_DESC, required = false) Float afLessThan,
-                @ToolArg(description = AFGT_DESC, required = false) Float afGreaterThan,
-                @ToolArg(description = GNE_AFLT_DESC, required = false) Float gnomadExomeAfLessThan,
-                @ToolArg(description = GNE_AFGT_DESC, required = false) Float gnomadExomeAfGreaterThan,
-                @ToolArg(description = GNG_AFLT_DESC, required = false) Float gnomadGenomeAfLessThan,
-                @ToolArg(description = GNG_AFGT_DESC, required = false) Float gnomadGenomeAfGreaterThan,
-                @ToolArg(description = CLIN_DESC, required = false) String clinSignificance,
-                @ToolArg(description = IMPACT_DESC, required = false) String vepImpact,
-                @ToolArg(description = FEATURETYPE_DESC, required = false) String vepFeature,
-                @ToolArg(description = BIOTYPE_DESC, required = false) String vepBiotype,
-                @ToolArg(description = VARIANTTYPE_DESC, required = false) String vepVariantType,
-                @ToolArg(description = CONSEQ_DESC, required = false) String vepConsequences,
-                @ToolArg(description = AM_DESC, required = false) String alphaMissenseClass,
-                @ToolArg(description = AMLT_DESC, required = false) Float alphaMissenseScoreLessThan,
-                @ToolArg(description = AMGT_DESC, required = false) Float alphaMissenseScoreGreaterThan,
-                @ToolArg(description = BIONLY_DESC, required = false) Boolean biallelicOnly,
-                @ToolArg(description = MULTONLY_DESC, required = false) Boolean multiallelicOnly,
-                @ToolArg(description = EXMALE_DESC, required = false) Boolean excludeMales,
-                @ToolArg(description = EXFEMALE_DESC, required = false) Boolean excludeFemales,
-                @ToolArg(description = MINLEN_DESC, required = false) Integer minVariantLengthBp,
-                @ToolArg(description = MAXLEN_DESC, required = false) Integer maxVariantLengthBp,
-                @ToolArg(description = SKIP_DESC, required = false) Integer skip,
-                @ToolArg(description = LIM_DESC, required = false) Integer limit) {
-        try {
-            boolean selectHom = false;
-            boolean selectHet = true;
-
-            List<Variant> variants = client.selectVariantsInRegionInSample(chromosome, start, end, sampleId, selectHom, selectHet, refAllele, altAllele,
-                            minVariantLengthBp, maxVariantLengthBp, biallelicOnly, multiallelicOnly, excludeMales, excludeFemales, afLessThan,
-                            afGreaterThan, gnomadGenomeAfLessThan, gnomadGenomeAfGreaterThan, gnomadExomeAfLessThan, gnomadExomeAfGreaterThan,
-                            vepImpact, vepBiotype, vepFeature, vepVariantType, vepConsequences, alphaMissenseClass, alphaMissenseScoreLessThan,
-                            alphaMissenseScoreGreaterThan, clinSignificance, skip, limit);
-
-            List<VariantView> vv = variants.stream()
-                .map(VariantView::fromGrpc)
-                .toList();
-
-            Map<String, Object> structured = Map.of("variants", vv);
-            return mcpResponse.success(structured, vv);
-        } catch (Exception e) {
-            throw McpResponse.handle(e);
-        }
-    }
-
-    // Count/Select Samples
 
     @Tool(
         title = "countSamplesWithVariants",
@@ -1156,21 +530,24 @@ public class OneKGPdMCPServer {
             openWorldHint = false
         ),
         description =
-            "COUNT SAMPLES with ANY variants (Homozygous + Heterozygous) in genomic region in 1000 Genomes.\n" +
+            "COUNT SAMPLES with specific variants in genomic region in 1000 Genomes.\n" +
             "Returns: Integer count of unique samples having variants matching criteria.\n" +
             "Filters: REF/ALT, AF (KGP/gnomAD), VEP impact/biotype/consequences, variant type, AlphaMissense class/score, ClinVar significance.\n\n" +
 
-            "TOOL SELECTION:\n" +
-            "- Use this tool FIRST: to assess result size before calling selectSamplesWithVariants\n" +
-            "- Use countSamplesWithHomVariants: to count samples with 1/1 genotypes only\n" +
-            "- Use countSamplesWithHetVariants: to count samples with 0/1 genotypes only\n\n" +
+            "ZYGOSITY Parameters Logic::\n" +
+            "- Use selectHet=true: to include samples with HETEROZYGOUS variants (0/1 genotypes)\n" +
+            "- Use selectHom=true: to include samples with HOMOZYGOUS variants (1/1 genotypes)\n" +
+            "Examples:\n" +
+            "- Use selectHet=true AND selectHom=true: when need samples with homozygous OR heterozygous variants or uncertain\n" +
+            "- Use selectHet=true AND selectHom=false: when need samples with HETEROZYGOUS variants ONLY (0/1 genotypes)\n" +
+            "- Use selectHet=false AND selectHom=true: when need samples with HOMOZYGOUS variants ONLY (1/1 genotypes)\n\n" +
 
             "WORKFLOW:\n" +
-            "1. Call this tool to get sample count\n" +
+            "1. Use this tool FIRST: to assess result size before calling selectSamplesWithVariants\n" +
             "2. If count is manageable, call selectSamplesWithVariants with same filters if sample IDs are required\n\n" +
 
             "PARAMETERS:\n" +
-            "- Required: chromosome (1-22, X, Y), start, end (GRCh38 coordinates)\n" +
+            "- Required: chromosome (1-22, X, Y), start, end (GRCh38 coordinates), selectHet, selectHom\n" +
             "- Filters: ALL filters are combined with AND logic\n" +
             "- CSV parameters: OR logic. Example: impact='HIGH,MODERATE' returns variants with HIGH OR MODERATE impact\n\n" +
 
@@ -1183,6 +560,8 @@ public class OneKGPdMCPServer {
                 @ToolArg(description = CHROMOSOME_DESC) String chromosome,
                 @ToolArg(description = START_DESC) int start,
                 @ToolArg(description = END_DESC) int end,
+                @ToolArg(description = HET_DESC) Boolean selectHet,
+                @ToolArg(description = HOM_DESC) Boolean selectHom,
                 @ToolArg(description = REF_DESC, required = false) String refAllele,
                 @ToolArg(description = ALT_DESC, required = false) String altAllele,
                 @ToolArg(description = AFLT_DESC, required = false) Float afLessThan,
@@ -1207,158 +586,6 @@ public class OneKGPdMCPServer {
                 @ToolArg(description = MINLEN_DESC, required = false) Integer minVariantLengthBp,
                 @ToolArg(description = MAXLEN_DESC, required = false) Integer maxVariantLengthBp) {
         try {
-            boolean selectHom = true;
-            boolean selectHet = true;
-            Long count = client.countSamplesInRegion(chromosome, start, end, selectHom, selectHet, refAllele, altAllele, minVariantLengthBp,
-                            maxVariantLengthBp, biallelicOnly, multiallelicOnly, excludeMales, excludeFemales, afLessThan, afGreaterThan,
-                            gnomadGenomeAfLessThan, gnomadGenomeAfGreaterThan, gnomadExomeAfLessThan, gnomadExomeAfGreaterThan, vepImpact, vepBiotype,
-                            vepFeature, vepVariantType, vepConsequences, alphaMissenseClass, alphaMissenseScoreLessThan, alphaMissenseScoreGreaterThan,
-                            clinSignificance);
-            return mcpResponse.success(Map.of("count", count));
-        } catch (Exception e) {
-            throw McpResponse.handle(e);
-        }
-    }
-
-    @Tool(
-        title = "countSamplesWithHomVariants",
-        structuredContent = true,
-        annotations = @Tool.Annotations(
-            title = "countSamplesWithHomVariants",
-            readOnlyHint = true,
-            destructiveHint = false,
-            idempotentHint = true,
-            openWorldHint = false
-        ),
-        description =
-            "COUNT SAMPLES with HOMOZYGOUS variants ONLY (1/1 genotypes) in genomic region in 1000 Genomes.\n" +
-            "Returns: Integer count of unique samples having homozygous variants matching criteria.\n" +
-            "Filters: REF/ALT, AF (KGP/gnomAD), VEP impact/biotype/consequences, variant type, AlphaMissense class/score, ClinVar significance.\n\n" +
-
-            "TOOL SELECTION:\n" +
-            "- Use this tool FIRST: to assess result size before calling selectSamplesWithHomVariants\n" +
-            "- Use countSamplesWithVariants: to count samples with both 0/1 and 1/1 genotypes\n" +
-            "- Use countSamplesWithHetVariants: to count samples with 0/1 genotypes only\n\n" +
-
-            "WORKFLOW:\n" +
-            "1. Call this tool to get sample count\n" +
-            "2. If count is manageable, call selectSamplesWithHomVariants with same filters if sample IDs are required\n\n" +
-
-            "PARAMETERS:\n" +
-            "- Required: chromosome (1-22, X, Y), start, end (GRCh38 coordinates)\n" +
-            "- Filters: ALL filters are combined with AND logic\n" +
-            "- CSV parameters: OR logic. Example: impact='HIGH,MODERATE' returns variants with HIGH OR MODERATE impact\n\n" +
-
-            "RETURNS: Refer to the Output Schema for field definitions.",
-        outputSchema = @Tool.OutputSchema(
-            generator = CountSchemaGenerator.class
-        )
-    )
-    public ToolResponse countSamplesWithHomVariants(
-                @ToolArg(description = CHROMOSOME_DESC) String chromosome,
-                @ToolArg(description = START_DESC) int start,
-                @ToolArg(description = END_DESC) int end,
-                @ToolArg(description = REF_DESC, required = false) String refAllele,
-                @ToolArg(description = ALT_DESC, required = false) String altAllele,
-                @ToolArg(description = AFLT_DESC, required = false) Float afLessThan,
-                @ToolArg(description = AFGT_DESC, required = false) Float afGreaterThan,
-                @ToolArg(description = GNE_AFLT_DESC, required = false) Float gnomadExomeAfLessThan,
-                @ToolArg(description = GNE_AFGT_DESC, required = false) Float gnomadExomeAfGreaterThan,
-                @ToolArg(description = GNG_AFLT_DESC, required = false) Float gnomadGenomeAfLessThan,
-                @ToolArg(description = GNG_AFGT_DESC, required = false) Float gnomadGenomeAfGreaterThan,
-                @ToolArg(description = CLIN_DESC, required = false) String clinSignificance,
-                @ToolArg(description = IMPACT_DESC, required = false) String vepImpact,
-                @ToolArg(description = FEATURETYPE_DESC, required = false) String vepFeature,
-                @ToolArg(description = BIOTYPE_DESC, required = false) String vepBiotype,
-                @ToolArg(description = VARIANTTYPE_DESC, required = false) String vepVariantType,
-                @ToolArg(description = CONSEQ_DESC, required = false) String vepConsequences,
-                @ToolArg(description = AM_DESC, required = false) String alphaMissenseClass,
-                @ToolArg(description = AMLT_DESC, required = false) Float alphaMissenseScoreLessThan,
-                @ToolArg(description = AMGT_DESC, required = false) Float alphaMissenseScoreGreaterThan,
-                @ToolArg(description = BIONLY_DESC, required = false) Boolean biallelicOnly,
-                @ToolArg(description = MULTONLY_DESC, required = false) Boolean multiallelicOnly,
-                @ToolArg(description = EXMALE_DESC, required = false) Boolean excludeMales,
-                @ToolArg(description = EXFEMALE_DESC, required = false) Boolean excludeFemales,
-                @ToolArg(description = MINLEN_DESC, required = false) Integer minVariantLengthBp,
-                @ToolArg(description = MAXLEN_DESC, required = false) Integer maxVariantLengthBp) {
-        try {
-            boolean selectHom = true;
-            boolean selectHet = false;
-            Long count = client.countSamplesInRegion(chromosome, start, end, selectHom, selectHet, refAllele, altAllele, minVariantLengthBp,
-                            maxVariantLengthBp, biallelicOnly, multiallelicOnly, excludeMales, excludeFemales, afLessThan, afGreaterThan,
-                            gnomadGenomeAfLessThan, gnomadGenomeAfGreaterThan, gnomadExomeAfLessThan, gnomadExomeAfGreaterThan, vepImpact, vepBiotype,
-                            vepFeature, vepVariantType, vepConsequences, alphaMissenseClass, alphaMissenseScoreLessThan, alphaMissenseScoreGreaterThan,
-                            clinSignificance);
-            return mcpResponse.success(Map.of("count", count));
-        } catch (Exception e) {
-            throw McpResponse.handle(e);
-        }
-    }
-
-    @Tool(
-        title = "countSamplesWithHetVariants",
-        structuredContent = true,
-        annotations = @Tool.Annotations(
-            title = "countSamplesWithHetVariants",
-            readOnlyHint = true,
-            destructiveHint = false,
-            idempotentHint = true,
-            openWorldHint = false
-        ),
-        description =
-            "COUNT SAMPLES with HETEROZYGOUS variants ONLY (0/1 genotypes) in genomic region in 1000 Genomes.\n" +
-            "Returns: Integer count of unique samples having heterozygous variants matching criteria.\n" +
-            "Filters: REF/ALT, AF (KGP/gnomAD), VEP impact/biotype/consequences, variant type, AlphaMissense class/score, ClinVar significance.\n\n" +
-
-            "TOOL SELECTION:\n" +
-            "- Use this tool FIRST: to assess result size before calling selectSamplesWithHetVariants\n" +
-            "- Use countSamplesWithVariants: to count samples with both 0/1 and 1/1 genotypes\n" +
-            "- Use countSamplesWithHomVariants: to count samples with 1/1 genotypes only\n\n" +
-
-            "WORKFLOW:\n" +
-            "1. Call this tool to get sample count\n" +
-            "2. If count is manageable, call selectSamplesWithHetVariants with same filters if sample IDs are required\n\n" +
-
-            "PARAMETERS:\n" +
-            "- Required: chromosome (1-22, X, Y), start, end (GRCh38 coordinates)\n" +
-            "- Filters: ALL filters are combined with AND logic\n" +
-            "- CSV parameters: OR logic. Example: impact='HIGH,MODERATE' returns variants with HIGH OR MODERATE impact\n\n" +
-
-            "RETURNS: Refer to the Output Schema for field definitions.",
-        outputSchema = @Tool.OutputSchema(
-            generator = CountSchemaGenerator.class
-        )
-    )
-    public ToolResponse countSamplesWithHetVariants(
-                @ToolArg(description = CHROMOSOME_DESC) String chromosome,
-                @ToolArg(description = START_DESC) int start,
-                @ToolArg(description = END_DESC) int end,
-                @ToolArg(description = REF_DESC, required = false) String refAllele,
-                @ToolArg(description = ALT_DESC, required = false) String altAllele,
-                @ToolArg(description = AFLT_DESC, required = false) Float afLessThan,
-                @ToolArg(description = AFGT_DESC, required = false) Float afGreaterThan,
-                @ToolArg(description = GNE_AFLT_DESC, required = false) Float gnomadExomeAfLessThan,
-                @ToolArg(description = GNE_AFGT_DESC, required = false) Float gnomadExomeAfGreaterThan,
-                @ToolArg(description = GNG_AFLT_DESC, required = false) Float gnomadGenomeAfLessThan,
-                @ToolArg(description = GNG_AFGT_DESC, required = false) Float gnomadGenomeAfGreaterThan,
-                @ToolArg(description = CLIN_DESC, required = false) String clinSignificance,
-                @ToolArg(description = IMPACT_DESC, required = false) String vepImpact,
-                @ToolArg(description = FEATURETYPE_DESC, required = false) String vepFeature,
-                @ToolArg(description = BIOTYPE_DESC, required = false) String vepBiotype,
-                @ToolArg(description = VARIANTTYPE_DESC, required = false) String vepVariantType,
-                @ToolArg(description = CONSEQ_DESC, required = false) String vepConsequences,
-                @ToolArg(description = AM_DESC, required = false) String alphaMissenseClass,
-                @ToolArg(description = AMLT_DESC, required = false) Float alphaMissenseScoreLessThan,
-                @ToolArg(description = AMGT_DESC, required = false) Float alphaMissenseScoreGreaterThan,
-                @ToolArg(description = BIONLY_DESC, required = false) Boolean biallelicOnly,
-                @ToolArg(description = MULTONLY_DESC, required = false) Boolean multiallelicOnly,
-                @ToolArg(description = EXMALE_DESC, required = false) Boolean excludeMales,
-                @ToolArg(description = EXFEMALE_DESC, required = false) Boolean excludeFemales,
-                @ToolArg(description = MINLEN_DESC, required = false) Integer minVariantLengthBp,
-                @ToolArg(description = MAXLEN_DESC, required = false) Integer maxVariantLengthBp) {
-        try {
-            boolean selectHom = false;
-            boolean selectHet = true;
             Long count = client.countSamplesInRegion(chromosome, start, end, selectHom, selectHet, refAllele, altAllele, minVariantLengthBp,
                             maxVariantLengthBp, biallelicOnly, multiallelicOnly, excludeMales, excludeFemales, afLessThan, afGreaterThan,
                             gnomadGenomeAfLessThan, gnomadGenomeAfGreaterThan, gnomadExomeAfLessThan, gnomadExomeAfGreaterThan, vepImpact, vepBiotype,
@@ -1381,21 +608,24 @@ public class OneKGPdMCPServer {
             openWorldHint = false
         ),
         description =
-            "SELECT SAMPLES with ANY variants (Homozygous + Heterozygous) in genomic region in 1000 Genomes.\n" +
+            "SELECT SAMPLES with specific variants in genomic region in 1000 Genomes.\n" +
             "Returns: unique sample IDs having variants matching criteria.\n" +
             "Filters: REF/ALT, AF (KGP/gnomAD), VEP impact/biotype/consequences, variant type, AlphaMissense class/score, ClinVar significance.\n\n" +
 
-            "TOOL SELECTION:\n" +
-            "- Use this PRIMARY/DEFAULT tool: when need samples with both homozygous AND heterozygous variants or uncertain\n" +
-            "- Use selectSamplesWithHomVariants: when need samples with 1/1 genotypes only\n" +
-            "- Use selectSamplesWithHetVariants: when need samples with 0/1 genotypes only\n\n" +
+            "ZYGOSITY Parameters Logic::\n" +
+            "- Use selectHet=true: to include samples with HETEROZYGOUS variants (0/1 genotypes)\n" +
+            "- Use selectHom=true: to include samples with HOMOZYGOUS variants (1/1 genotypes)\n" +
+            "Examples:\n" +
+            "- Use selectHet=true AND selectHom=true: when need samples with homozygous OR heterozygous variants or uncertain\n" +
+            "- Use selectHet=true AND selectHom=false: when need samples with HETEROZYGOUS variants ONLY (0/1 genotypes)\n" +
+            "- Use selectHet=false AND selectHom=true: when need samples with HOMOZYGOUS variants ONLY (1/1 genotypes)\n\n" +
 
             "WORKFLOW:\n" +
             "1. ALWAYS call countSamplesWithVariants first to assess result size\n" +
-            "2. Apply this tool with appropriate filters\n\n" +
+            "2. Apply this tool with the same filters\n\n" +
 
             "PARAMETERS:\n" +
-            "- Required: chromosome (1-22, X, Y), start, end (GRCh38 coordinates)\n" +
+            "- Required: chromosome (1-22, X, Y), start, end (GRCh38 coordinates), selectHet, selectHom\n" +
             "- Filters: ALL filters are combined with AND logic\n" +
             "- CSV parameters: OR logic. Example: impact='HIGH,MODERATE' returns variants with HIGH OR MODERATE impact\n\n" +
 
@@ -1408,6 +638,8 @@ public class OneKGPdMCPServer {
                 @ToolArg(description = CHROMOSOME_DESC) String chromosome,
                 @ToolArg(description = START_DESC) int start,
                 @ToolArg(description = END_DESC) int end,
+                @ToolArg(description = HET_DESC) Boolean selectHet,
+                @ToolArg(description = HOM_DESC) Boolean selectHom,
                 @ToolArg(description = REF_DESC, required = false) String refAllele,
                 @ToolArg(description = ALT_DESC, required = false) String altAllele,
                 @ToolArg(description = AFLT_DESC, required = false) Float afLessThan,
@@ -1432,159 +664,11 @@ public class OneKGPdMCPServer {
                 @ToolArg(description = MINLEN_DESC, required = false) Integer minVariantLengthBp,
                 @ToolArg(description = MAXLEN_DESC, required = false) Integer maxVariantLengthBp) {
         try {
-            boolean selectHom = true;
-            boolean selectHet = true;
             List<String> samples = client.selectSamplesInRegion(chromosome, start, end, selectHom, selectHet, refAllele, altAllele, minVariantLengthBp,
                             maxVariantLengthBp, biallelicOnly, multiallelicOnly, excludeMales, excludeFemales, afLessThan, afGreaterThan,
                             gnomadGenomeAfLessThan, gnomadGenomeAfGreaterThan, gnomadExomeAfLessThan, gnomadExomeAfGreaterThan, vepImpact, vepBiotype,
                             vepFeature, vepVariantType, vepConsequences, alphaMissenseClass, alphaMissenseScoreLessThan, alphaMissenseScoreGreaterThan,
                             clinSignificance);
-            Map<String, Object> structured = Map.of("samples", samples);
-            return mcpResponse.success(structured, samples);
-        } catch (Exception e) {
-            throw McpResponse.handle(e);
-        }
-    }
-
-    @Tool(
-        title = "selectSamplesWithHomVariants",
-        structuredContent = true,
-        annotations = @Tool.Annotations(
-            title = "selectSamplesWithHomVariants",
-            readOnlyHint = true,
-            destructiveHint = false,
-            idempotentHint = true,
-            openWorldHint = false
-        ),
-        description =
-            "SELECT SAMPLES with HOMOZYGOUS variants ONLY (1/1 genotypes) in genomic region in 1000 Genomes.\n" +
-            "Returns: unique sample IDs having homozygous variants matching criteria.\n" +
-            "Filters: REF/ALT, AF (KGP/gnomAD), VEP impact/biotype/consequences, variant type, AlphaMissense class/score, ClinVar significance.\n\n" +
-
-            "ALTERNATIVE: Use selectSamplesWithVariants if you need samples with both 0/1 and 1/1 variants.\n\n" +
-
-            "WORKFLOW:\n" +
-            "1. ALWAYS call countSamplesWithHomVariants first to assess result size\n" +
-            "2. Apply this tool with appropriate filters\n\n" +
-
-            "PARAMETERS:\n" +
-            "- Required: chromosome (1-22, X, Y), start, end (GRCh38 coordinates)\n" +
-            "- Filters: ALL filters are combined with AND logic\n" +
-            "- CSV parameters: OR logic. Example: impact='HIGH,MODERATE' returns variants with HIGH OR MODERATE impact\n\n" +
-
-            "RETURNS: Refer to the Output Schema for field definitions. Empty array [] if no matches.",
-        outputSchema = @Tool.OutputSchema(
-            generator = SampleIdArraySchemaGenerator.class
-        )
-    )
-    public ToolResponse selectSamplesWithHomVariants(
-                @ToolArg(description = CHROMOSOME_DESC) String chromosome,
-                @ToolArg(description = START_DESC) int start,
-                @ToolArg(description = END_DESC) int end,
-                @ToolArg(description = REF_DESC, required = false) String refAllele,
-                @ToolArg(description = ALT_DESC, required = false) String altAllele,
-                @ToolArg(description = AFLT_DESC, required = false) Float afLessThan,
-                @ToolArg(description = AFGT_DESC, required = false) Float afGreaterThan,
-                @ToolArg(description = GNE_AFLT_DESC, required = false) Float gnomadExomeAfLessThan,
-                @ToolArg(description = GNE_AFGT_DESC, required = false) Float gnomadExomeAfGreaterThan,
-                @ToolArg(description = GNG_AFLT_DESC, required = false) Float gnomadGenomeAfLessThan,
-                @ToolArg(description = GNG_AFGT_DESC, required = false) Float gnomadGenomeAfGreaterThan,
-                @ToolArg(description = CLIN_DESC, required = false) String clinSignificance,
-                @ToolArg(description = IMPACT_DESC, required = false) String vepImpact,
-                @ToolArg(description = FEATURETYPE_DESC, required = false) String vepFeature,
-                @ToolArg(description = BIOTYPE_DESC, required = false) String vepBiotype,
-                @ToolArg(description = VARIANTTYPE_DESC, required = false) String vepVariantType,
-                @ToolArg(description = CONSEQ_DESC, required = false) String vepConsequences,
-                @ToolArg(description = AM_DESC, required = false) String alphaMissenseClass,
-                @ToolArg(description = AMLT_DESC, required = false) Float alphaMissenseScoreLessThan,
-                @ToolArg(description = AMGT_DESC, required = false) Float alphaMissenseScoreGreaterThan,
-                @ToolArg(description = BIONLY_DESC, required = false) Boolean biallelicOnly,
-                @ToolArg(description = MULTONLY_DESC, required = false) Boolean multiallelicOnly,
-                @ToolArg(description = EXMALE_DESC, required = false) Boolean excludeMales,
-                @ToolArg(description = EXFEMALE_DESC, required = false) Boolean excludeFemales,
-                @ToolArg(description = MINLEN_DESC, required = false) Integer minVariantLengthBp,
-                @ToolArg(description = MAXLEN_DESC, required = false) Integer maxVariantLengthBp) {
-        try {
-            boolean selectHom = true;
-            boolean selectHet = false;
-            List<String> samples = client.selectSamplesInRegion(chromosome, start, end, selectHom, selectHet, refAllele, altAllele, minVariantLengthBp,
-                            maxVariantLengthBp, biallelicOnly, multiallelicOnly, excludeMales, excludeFemales, afLessThan, afGreaterThan,
-                            gnomadGenomeAfLessThan, gnomadGenomeAfGreaterThan, gnomadExomeAfLessThan, gnomadExomeAfGreaterThan, vepImpact, vepBiotype,
-                            vepFeature, vepVariantType, vepConsequences, alphaMissenseClass, alphaMissenseScoreLessThan, alphaMissenseScoreGreaterThan,
-                            clinSignificance);
-            Map<String, Object> structured = Map.of("samples", samples);
-            return mcpResponse.success(structured, samples);
-        } catch (Exception e) {
-            throw McpResponse.handle(e);
-        }
-    }
-
-    @Tool(
-        title = "selectSamplesWithHetVariants",
-        structuredContent = true,
-        annotations = @Tool.Annotations(
-            title = "selectSamplesWithHetVariants",
-            readOnlyHint = true,
-            destructiveHint = false,
-            idempotentHint = true,
-            openWorldHint = false
-        ),
-        description =
-            "SELECT SAMPLES with HETEROZYGOUS variants ONLY (0/1 genotypes) in genomic region in 1000 Genomes.\n" +
-            "Returns: unique sample IDs having heterozygous variants matching criteria.\n" +
-            "Filters: REF/ALT, AF (KGP/gnomAD), VEP impact/biotype/consequences, variant type, AlphaMissense class/score, ClinVar significance.\n\n" +
-
-            "ALTERNATIVE: Use selectSamplesWithVariants if you need samples with both 0/1 and 1/1 variants.\n\n" +
-
-            "WORKFLOW:\n" +
-            "1. ALWAYS call countSamplesWithHetVariants first to assess result size\n" +
-            "2. Apply this tool with appropriate filters\n\n" +
-
-            "PARAMETERS:\n" +
-            "- Required: chromosome (1-22, X, Y), start, end (GRCh38 coordinates)\n" +
-            "- Filters: ALL filters are combined with AND logic\n" +
-            "- CSV parameters: OR logic. Example: impact='HIGH,MODERATE' returns variants with HIGH OR MODERATE impact\n\n" +
-
-            "RETURNS: Refer to the Output Schema for field definitions. Empty array [] if no matches.",
-        outputSchema = @Tool.OutputSchema(
-            generator = SampleIdArraySchemaGenerator.class
-        )
-    )
-    public ToolResponse selectSamplesWithHetVariants(
-                @ToolArg(description = CHROMOSOME_DESC) String chromosome,
-                @ToolArg(description = START_DESC) int start,
-                @ToolArg(description = END_DESC) int end,
-                @ToolArg(description = REF_DESC, required = false) String refAllele,
-                @ToolArg(description = ALT_DESC, required = false) String altAllele,
-                @ToolArg(description = AFLT_DESC, required = false) Float afLessThan,
-                @ToolArg(description = AFGT_DESC, required = false) Float afGreaterThan,
-                @ToolArg(description = GNE_AFLT_DESC, required = false) Float gnomadExomeAfLessThan,
-                @ToolArg(description = GNE_AFGT_DESC, required = false) Float gnomadExomeAfGreaterThan,
-                @ToolArg(description = GNG_AFLT_DESC, required = false) Float gnomadGenomeAfLessThan,
-                @ToolArg(description = GNG_AFGT_DESC, required = false) Float gnomadGenomeAfGreaterThan,
-                @ToolArg(description = CLIN_DESC, required = false) String clinSignificance,
-                @ToolArg(description = IMPACT_DESC, required = false) String vepImpact,
-                @ToolArg(description = FEATURETYPE_DESC, required = false) String vepFeature,
-                @ToolArg(description = BIOTYPE_DESC, required = false) String vepBiotype,
-                @ToolArg(description = VARIANTTYPE_DESC, required = false) String vepVariantType,
-                @ToolArg(description = CONSEQ_DESC, required = false) String vepConsequences,
-                @ToolArg(description = AM_DESC, required = false) String alphaMissenseClass,
-                @ToolArg(description = AMLT_DESC, required = false) Float alphaMissenseScoreLessThan,
-                @ToolArg(description = AMGT_DESC, required = false) Float alphaMissenseScoreGreaterThan,
-                @ToolArg(description = BIONLY_DESC, required = false) Boolean biallelicOnly,
-                @ToolArg(description = MULTONLY_DESC, required = false) Boolean multiallelicOnly,
-                @ToolArg(description = EXMALE_DESC, required = false) Boolean excludeMales,
-                @ToolArg(description = EXFEMALE_DESC, required = false) Boolean excludeFemales,
-                @ToolArg(description = MINLEN_DESC, required = false) Integer minVariantLengthBp,
-                @ToolArg(description = MAXLEN_DESC, required = false) Integer maxVariantLengthBp) {
-        try {
-            boolean selectHom = false;
-            boolean selectHet = true;
-            List<String> samples = client.selectSamplesInRegion(chromosome, start, end, selectHom, selectHet, refAllele, altAllele,
-                            minVariantLengthBp, maxVariantLengthBp, biallelicOnly, multiallelicOnly, excludeMales, excludeFemales, afLessThan,
-                            afGreaterThan, gnomadGenomeAfLessThan, gnomadGenomeAfGreaterThan, gnomadExomeAfLessThan, gnomadExomeAfGreaterThan,
-                            vepImpact, vepBiotype, vepFeature, vepVariantType, vepConsequences, alphaMissenseClass, alphaMissenseScoreLessThan,
-                            alphaMissenseScoreGreaterThan, clinSignificance);
             Map<String, Object> structured = Map.of("samples", samples);
             return mcpResponse.success(structured, samples);
         } catch (Exception e) {

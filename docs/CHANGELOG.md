@@ -5,6 +5,58 @@ All notable changes to this project made by Claude will be documented in this fi
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## Release 1.2.4
+
+### Changed - 2026-01-27
+#### API Refactoring: Zygosity Parameter Consolidation
+
+Consolidated 12 homozygous/heterozygous-specific methods into 6 unified methods with `selectHet` and `selectHom` boolean parameters.
+
+**Methods Removed (12 total):**
+- `countHomozygousVariantsInRegion()`
+- `countHeterozygousVariantsInRegion()`
+- `selectHomozygousVariantsInRegion()`
+- `selectHeterozygousVariantsInRegion()`
+- `countHomozygousVariantsInRegionInSample()`
+- `countHeterozygousVariantsInRegionInSample()`
+- `selectHomozygousVariantsInRegionInSample()`
+- `selectHeterozygousVariantsInRegionInSample()`
+- `countSamplesWithHomVariants()`
+- `countSamplesWithHetVariants()`
+- `selectSamplesWithHomVariants()`
+- `selectSamplesWithHetVariants()`
+
+**Methods Updated (6 total) - added `selectHet`, `selectHom` parameters:**
+- `countVariantsInRegion(chromosome, start, end, selectHet, selectHom, ...)`
+- `selectVariantsInRegion(chromosome, start, end, selectHet, selectHom, ...)`
+- `countVariantsInRegionInSample(chromosome, start, end, selectHet, selectHom, sampleId, ...)`
+- `selectVariantsInRegionInSample(chromosome, start, end, selectHet, selectHom, sampleId, ...)`
+- `countSamplesWithVariants(chromosome, start, end, selectHet, selectHom, ...)`
+- `selectSamplesWithVariants(chromosome, start, end, selectHet, selectHom, ...)`
+
+#### Test Updates
+
+**OneKGPdMCPServerTest.java:**
+- Updated 14 test methods to include `selectHet`, `selectHom` parameters
+- Replaced 2 tests (`testCountHomozygousVariantsPassesCorrectFlags`, `testCountHeterozygousVariantsPassesCorrectFlags`) with consolidated versions
+- Added 3 new tests for zygosity parameter combinations:
+  - `testCountVariantsInRegionHomozygousOnlyFlags` - verifies `selectHet=false, selectHom=true`
+  - `testCountVariantsInRegionHeterozygousOnlyFlags` - verifies `selectHet=true, selectHom=false`
+  - `testCountVariantsInRegionAllVariantsFlags` - verifies `selectHet=true, selectHom=true`
+
+**OneKGPdMCPServerIT.java:**
+- Updated `testJsonResponseStructure()` to include `selectHet`, `selectHom` parameters
+
+### Technical Details - 2026-01-27
+- Test methods removed: 2
+- Test methods updated: 17
+- Test methods added: 3
+- Net change: +1 test method
+- All 400 unit tests pass
+- All 12 integration tests pass
+- Total: 412 tests passing
+
+
 ## Release 1.2.3
 
 ### Changed - 2026-01-26
