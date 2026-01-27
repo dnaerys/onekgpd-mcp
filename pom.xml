@@ -3,7 +3,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>org.dnaerys</groupId>
     <artifactId>onekgpd-mcp</artifactId>
-    <version>1.2.4</version>
+    <version>1.2.5</version>
 
     <properties>
         <compiler-plugin.version>3.14.0</compiler-plugin.version>

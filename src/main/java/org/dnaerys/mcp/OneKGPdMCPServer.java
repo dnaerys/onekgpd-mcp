@@ -42,13 +42,13 @@ public class OneKGPdMCPServer {
     private final DnaerysClient client = new DnaerysClient();
 
     private static final String CHROMOSOME_DESC =
-        "chromosome ID, values: 1, 2, ..., 22, X, Y (no MT/scaffolds)";
+        "chromosome, values: 1,2,...,22,X,Y";
     private static final String START_DESC =
-        "start position in base pairs, 1-based, GRCh38 coordinates";
+        "start position in base pairs, 1-based, GRCh38";
     private static final String END_DESC =
-        "end position in base pairs, 1-based, GRCh38 coordinates";
+        "end position in base pairs, 1-based, GRCh38";
     private static final String POSITION_DESC =
-        "variant position in base pairs, 1-based, GRCh38 coordinates";
+        "variant position in base pairs, 1-based, GRCh38";
 
     private static final String HET_DESC =
         "to include HETEROZYGOUS variants (0/1 genotypes)";
@@ -70,9 +70,9 @@ public class OneKGPdMCPServer {
     private static final String MULTONLY_DESC =
         "select multiallelic variants only";
 
-    private static final String EXMALE_DESC =
+    private static final String EXCLUDE_MALE_DESC =
         "exclude variants in males";
-    private static final String EXFEMALE_DESC =
+    private static final String EXCLUDE_FEMALE_DESC =
         "exclude variants in females";
 
     private static final String AFLT_DESC =
@@ -93,63 +93,59 @@ public class OneKGPdMCPServer {
     private static final String IMPACT_DESC =
         "CSV with VEP impact terms. " +
         "Relation between values in CSV is logical disjunction. Values: " +
-        "HIGH, MODERATE, LOW, MODIFIER";
+        "HIGH,MODERATE,LOW,MODIFIER";
 
     private static final String BIOTYPE_DESC =
         "CSV with VEP biotypes terms. " +
         "Relation between values in CSV is logical disjunction. Values: " +
-        "PROCESSED_TRANSCRIPT, LNCRNA, ANTISENSE, MACRO_LNCRNA, NON_CODING, RETAINED_INTRON, " +
-        "SENSE_INTRONIC, SENSE_OVERLAPPING, LINCRNA, NCRNA, MIRNA, MISCRNA, PIRNA, RRNA, SIRNA, " +
-        "SNRNA, SNORNA, TRNA, VAULTRNA, PROTEIN_CODING, PSEUDOGENE, IG_PSEUDOGENE, READTHROUGH, " +
-        "STOP_CODON_READTHROUGH, TEC, TR_GENE, IG_GENE, NONSENSE_MEDIATED_DECAY";
+        "PROCESSED_TRANSCRIPT,LNCRNA,RETAINED_INTRON,MIRNA,RRNA," +
+        "SNRNA,SNORNA,PROTEIN_CODING,IG_PSEUDOGENE,TEC";
 
     private static final String VARIANTTYPE_DESC =
         "CSV with Sequence Ontology Variant Classes terms. " +
         "Relation between values in CSV is logical disjunction. Values: " +
-        "SNV, INSERTION, DELETION, INDEL, SUBSTITUTION, INVERSION, TRANSLOCATION, DUPLICATION, SEQUENCE_ALTERATION";
+        "SNV,DELETION,INSERTION";
 
     private static final String FEATURETYPE_DESC =
         "CSV with VEP feature types terms. " +
         "Relation between values in CSV is logical disjunction. Values: " +
-        "TRANSCRIPT, REGULATORYFEATURE, MOTIFFEATURE";
+        "TRANSCRIPT,REGULATORYFEATURE,MOTIFFEATURE";
 
     private static final String CONSEQ_DESC =
         "CSV with Sequence Ontology variant consequences. " +
         "Relation between values in CSV is logical disjunction. Values: " +
-        "TRANSCRIPT_ABLATION, SPLICE_ACCEPTOR_VARIANT, SPLICE_DONOR_VARIANT, STOP_GAINED, FRAMESHIFT_VARIANT, " +
-        "STOP_LOST, START_LOST, TRANSCRIPT_AMPLIFICATION, INFRAME_INSERTION, INFRAME_DELETION, MISSENSE_VARIANT, " +
-        "PROTEIN_ALTERING_VARIANT, SPLICE_REGION_VARIANT, INCOMPLETE_TERMINAL_CODON_VARIANT, START_RETAINED_VARIANT, " +
-        "STOP_RETAINED_VARIANT, SYNONYMOUS_VARIANT, CODING_SEQUENCE_VARIANT, MATURE_MIRNA_VARIANT, FIVE_PRIME_UTR_VARIANT, " +
-        "THREE_PRIME_UTR_VARIANT, NON_CODING_TRANSCRIPT_EXON_VARIANT, INTRON_VARIANT, NMD_TRANSCRIPT_VARIANT, " +
-        "NON_CODING_TRANSCRIPT_VARIANT, UPSTREAM_GENE_VARIANT, DOWNSTREAM_GENE_VARIANT, TFBS_ABLATION, TFBS_AMPLIFICATION, " +
-        "TF_BINDING_SITE_VARIANT, REGULATORY_REGION_ABLATION, REGULATORY_REGION_AMPLIFICATION, FEATURE_ELONGATION, " +
-        "REGULATORY_REGION_VARIANT, FEATURE_TRUNCATION, INTERGENIC_VARIANT, SPLICE_POLYPYRIMIDINE_TRACT_VARIANT, " +
-        "SPLICE_DONOR_5TH_BASE_VARIANT, SPLICE_DONOR_REGION_VARIANT, CODING_TRANSCRIPT_VARIANT, SEQUENCE_VARIANT";
+        "TRANSCRIPT_ABLATION,SPLICE_ACCEPTOR_VARIANT,SPLICE_DONOR_VARIANT,STOP_GAINED,FRAMESHIFT_VARIANT," +
+        "STOP_LOST,START_LOST,INFRAME_INSERTION,INFRAME_DELETION,MISSENSE_VARIANT," +
+        "PROTEIN_ALTERING_VARIANT,SPLICE_REGION_VARIANT,INCOMPLETE_TERMINAL_CODON_VARIANT,START_RETAINED_VARIANT," +
+        "STOP_RETAINED_VARIANT,SYNONYMOUS_VARIANT,CODING_SEQUENCE_VARIANT,MATURE_MIRNA_VARIANT," +
+        "NON_CODING_TRANSCRIPT_EXON_VARIANT,INTRON_VARIANT," +
+        "NON_CODING_TRANSCRIPT_VARIANT,UPSTREAM_GENE_VARIANT,DOWNSTREAM_GENE_VARIANT," +
+        "REGULATORY_REGION_ABLATION,REGULATORY_REGION_VARIANT,INTERGENIC_VARIANT,SPLICE_POLYPYRIMIDINE_TRACT_VARIANT," +
+        "SPLICE_DONOR_5TH_BASE_VARIANT,SPLICE_DONOR_REGION_VARIANT";
 
     private static final String AM_DESC =
         "CSV with AlphaMissense classes. " +
         "Relation between values in CSV is logical disjunction. Values:" +
-        "LIKELY_BENIGN, LIKELY_PATHOGENIC, AMBIGUOUS";
+        "LIKELY_BENIGN,LIKELY_PATHOGENIC,AMBIGUOUS";
 
     private static final String AMLT_DESC =
-        "select variants with AlphaMissense Score < alphaMissenseScoreLT";
+        "variants with AlphaMissense Score < alphaMissenseScoreLT";
 
     private static final String AMGT_DESC =
-        "select variants with AlphaMissense Score > alphaMissenseScoreGT";
+        "variants with AlphaMissense Score > alphaMissenseScoreGT";
 
     private static final String CLIN_DESC =
         "CSV with ClinVar Clinical Significance annotations. " +
         "Relation between values in CSV is logical disjunction. Values: " +
-        "CLNSIG_BENIGN, LIKELY_BENIGN, UNCERTAIN_SIGNIFICANCE, LIKELY_PATHOGENIC, PATHOGENIC, " +
-        "DRUG_RESPONSE, ASSOCIATION, RISK_FACTOR, PROTECTIVE, AFFECTS, CONFERS_SENSITIVITY, " +
-        "CONFLICTING_INTERPRETATIONS, LIKELY_PATHOGENIC_LOW_PENETRANCE, PATHOGENIC_LOW_PENETRANCE, " +
-        "UNCERTAIN_RISK_ALLELE, LIKELY_RISK_ALLELE, ESTABLISHED_RISK_ALLELE";
+        "CLNSIG_BENIGN,LIKELY_BENIGN,UNCERTAIN_SIGNIFICANCE,LIKELY_PATHOGENIC,PATHOGENIC," +
+        "DRUG_RESPONSE,ASSOCIATION,RISK_FACTOR,PROTECTIVE,AFFECTS,CONFERS_SENSITIVITY," +
+        "UNCERTAIN_RISK_ALLELE,LIKELY_RISK_ALLELE,ESTABLISHED_RISK_ALLELE";
 
     private static final String SKIP_DESC =
-        "number of items to be skipped in returned result";
+        "items to skip";
 
     private static final String LIM_DESC =
-        "limit items in returned result";
+        "items limit";
 
     // Tools
 
@@ -200,7 +196,7 @@ public class OneKGPdMCPServer {
             "Returns: Integer count of variants matching criteria.\n" +
             "Filters: REF/ALT, AF (KGP/gnomAD), VEP impact/biotype/consequences, variant type, AlphaMissense class/score, ClinVar significance.\n\n" +
 
-            "ZYGOSITY Parameters Logic::\n" +
+            "ZYGOSITY Parameters Logic:\n" +
             "- Use selectHet=true: to include HETEROZYGOUS variants (0/1 genotypes)\n" +
             "- Use selectHom=true: to include HOMOZYGOUS variants (1/1 genotypes)\n" +
             "Examples:\n" +
@@ -212,10 +208,9 @@ public class OneKGPdMCPServer {
             "1. Use this tool FIRST: to assess result size before calling selectVariantsInRegion\n" +
             "2. If count is manageable, call selectVariantsInRegion with same filters if variant details are required\n" +
 
-            "PARAMETERS:\n" +
-            "- Required: chromosome (1-22, X, Y), start, end (GRCh38 coordinates), selectHet, selectHom\n" +
+            "PARAMETERS Logic:\n" +
             "- Filters: ALL filters are combined with AND logic\n" +
-            "- CSV parameters: OR logic. Example: impact='HIGH,MODERATE' returns variants with HIGH OR MODERATE impact\n\n" +
+            "- CSV parameters: OR logic. Example: impact='HIGH,MODERATE' selects variants with HIGH OR MODERATE impact\n\n" +
 
             "RETURNS: Refer to the Output Schema for field definitions.",
         outputSchema = @Tool.OutputSchema(
@@ -247,8 +242,8 @@ public class OneKGPdMCPServer {
                 @ToolArg(description = AMGT_DESC, required = false) Float alphaMissenseScoreGreaterThan,
                 @ToolArg(description = BIONLY_DESC, required = false) Boolean biallelicOnly,
                 @ToolArg(description = MULTONLY_DESC, required = false) Boolean multiallelicOnly,
-                @ToolArg(description = EXMALE_DESC, required = false) Boolean excludeMales,
-                @ToolArg(description = EXFEMALE_DESC, required = false) Boolean excludeFemales,
+                @ToolArg(description = EXCLUDE_MALE_DESC, required = false) Boolean excludeMales,
+                @ToolArg(description = EXCLUDE_FEMALE_DESC, required = false) Boolean excludeFemales,
                 @ToolArg(description = MINLEN_DESC, required = false) Integer minVariantLengthBp,
                 @ToolArg(description = MAXLEN_DESC, required = false) Integer maxVariantLengthBp) {
         try {
@@ -278,7 +273,7 @@ public class OneKGPdMCPServer {
             "Returns: variants with gnomADe/gnomADg AF, AlphaMissense score, HGVSp, cohort-wide stats matching criteria.\n" +
             "Filters: REF/ALT, AF (KGP/gnomAD), VEP impact/biotype/consequences, variant type, AlphaMissense class/score, ClinVar significance.\n\n" +
 
-            "ZYGOSITY Parameters Logic::\n" +
+            "ZYGOSITY Parameters Logic:\n" +
             "- Use selectHet=true: to include HETEROZYGOUS variants (0/1 genotypes)\n" +
             "- Use selectHom=true: to include HOMOZYGOUS variants (1/1 genotypes)\n" +
             "Examples:\n" +
@@ -290,10 +285,9 @@ public class OneKGPdMCPServer {
             "1. ALWAYS call countVariantsInRegion first to assess result size\n" +
             "2. Apply this tool with appropriate filters\n\n" +
 
-            "PARAMETERS:\n" +
-            "- Required: chromosome (1-22, X, Y), start, end (GRCh38 coordinates), selectHet, selectHom\n" +
+            "PARAMETERS Logic:\n" +
             "- Filters: ALL filters are combined with AND logic\n" +
-            "- CSV parameters: OR logic. Example: impact='HIGH,MODERATE' returns variants with HIGH OR MODERATE impact\n" +
+            "- CSV parameters: OR logic. Example: impact='HIGH,MODERATE' selects variants with HIGH OR MODERATE impact\n" +
             "- Pagination: skip, limit (max=50)\n\n" +
 
             "RETURNS: Refer to the Output Schema for field definitions. Empty array [] if no matches.",
@@ -327,8 +321,8 @@ public class OneKGPdMCPServer {
                 @ToolArg(description = AMGT_DESC, required = false) Float alphaMissenseScoreGreaterThan,
                 @ToolArg(description = BIONLY_DESC, required = false) Boolean biallelicOnly,
                 @ToolArg(description = MULTONLY_DESC, required = false) Boolean multiallelicOnly,
-                @ToolArg(description = EXMALE_DESC, required = false) Boolean excludeMales,
-                @ToolArg(description = EXFEMALE_DESC, required = false) Boolean excludeFemales,
+                @ToolArg(description = EXCLUDE_MALE_DESC, required = false) Boolean excludeMales,
+                @ToolArg(description = EXCLUDE_FEMALE_DESC, required = false) Boolean excludeFemales,
                 @ToolArg(description = MINLEN_DESC, required = false) Integer minVariantLengthBp,
                 @ToolArg(description = MAXLEN_DESC, required = false) Integer maxVariantLengthBp,
                 @ToolArg(description = SKIP_DESC, required = false) Integer skip,
@@ -366,7 +360,7 @@ public class OneKGPdMCPServer {
             "Returns: Integer count of variants matching criteria in the specified sample.\n" +
             "Filters: REF/ALT, AF (KGP/gnomAD), VEP impact/biotype/consequences, variant type, AlphaMissense class/score, ClinVar significance.\n\n" +
 
-            "ZYGOSITY Parameters Logic::\n" +
+            "ZYGOSITY Parameters Logic:\n" +
             "- Use selectHet=true: to include HETEROZYGOUS variants (0/1 genotypes)\n" +
             "- Use selectHom=true: to include HOMOZYGOUS variants (1/1 genotypes)\n" +
             "Examples:\n" +
@@ -378,10 +372,9 @@ public class OneKGPdMCPServer {
             "1. Use this tool FIRST to get variant count for the sample\n" +
             "2. If count is manageable, call selectVariantsInRegionInSample with same filters if variant details are required\n\n" +
 
-            "PARAMETERS:\n" +
-            "- Required: chromosome (1-22, X, Y), start, end (GRCh38 coordinates), selectHet, selectHom\n" +
+            "PARAMETERS Logic:\n" +
             "- Filters: ALL filters are combined with AND logic\n" +
-            "- CSV parameters: OR logic. Example: impact='HIGH,MODERATE' returns variants with HIGH OR MODERATE impact\n\n" +
+            "- CSV parameters: OR logic. Example: impact='HIGH,MODERATE' selects variants with HIGH OR MODERATE impact\n\n" +
 
             "RETURNS: Refer to the Output Schema for field definitions.",
         outputSchema = @Tool.OutputSchema(
@@ -414,8 +407,8 @@ public class OneKGPdMCPServer {
                 @ToolArg(description = AMGT_DESC, required = false) Float alphaMissenseScoreGreaterThan,
                 @ToolArg(description = BIONLY_DESC, required = false) Boolean biallelicOnly,
                 @ToolArg(description = MULTONLY_DESC, required = false) Boolean multiallelicOnly,
-                @ToolArg(description = EXMALE_DESC, required = false) Boolean excludeMales,
-                @ToolArg(description = EXFEMALE_DESC, required = false) Boolean excludeFemales,
+                @ToolArg(description = EXCLUDE_MALE_DESC, required = false) Boolean excludeMales,
+                @ToolArg(description = EXCLUDE_FEMALE_DESC, required = false) Boolean excludeFemales,
                 @ToolArg(description = MINLEN_DESC, required = false) Integer minVariantLengthBp,
                 @ToolArg(description = MAXLEN_DESC, required = false) Integer maxVariantLengthBp) {
         try {
@@ -445,7 +438,7 @@ public class OneKGPdMCPServer {
             "Returns: variants with gnomADe/gnomADg AF, AlphaMissense score, HGVSp, cohort-wide stats matching criteria.\n" +
             "Filters: REF/ALT, AF (KGP/gnomAD), VEP impact/biotype/consequences, variant type, AlphaMissense class/score, ClinVar significance.\n\n" +
 
-            "ZYGOSITY Parameters Logic::\n" +
+            "ZYGOSITY Parameters Logic:\n" +
             "- Use selectHet=true: to include HETEROZYGOUS variants (0/1 genotypes)\n" +
             "- Use selectHom=true: to include HOMOZYGOUS variants (1/1 genotypes)\n" +
             "Examples:\n" +
@@ -457,10 +450,9 @@ public class OneKGPdMCPServer {
             "1. ALWAYS call countVariantsInRegionInSample first to assess result size\n" +
             "2. Apply this tool with appropriate filters\n\n" +
 
-            "PARAMETERS:\n" +
-            "- Required: chromosome (1-22, X, Y), start, end (GRCh38 coordinates), selectHet, selectHom\n" +
+            "PARAMETERS Logic:\n" +
             "- Filters: ALL filters are combined with AND logic\n" +
-            "- CSV parameters: OR logic. Example: impact='HIGH,MODERATE' returns variants with HIGH OR MODERATE impact\n" +
+            "- CSV parameters: OR logic. Example: impact='HIGH,MODERATE' selects variants with HIGH OR MODERATE impact\n" +
             "- Pagination: skip, limit (max=50)\n\n" +
 
             "RETURNS: Refer to the Output Schema for field definitions. Empty array [] if no matches.",
@@ -495,8 +487,8 @@ public class OneKGPdMCPServer {
                 @ToolArg(description = AMGT_DESC, required = false) Float alphaMissenseScoreGreaterThan,
                 @ToolArg(description = BIONLY_DESC, required = false) Boolean biallelicOnly,
                 @ToolArg(description = MULTONLY_DESC, required = false) Boolean multiallelicOnly,
-                @ToolArg(description = EXMALE_DESC, required = false) Boolean excludeMales,
-                @ToolArg(description = EXFEMALE_DESC, required = false) Boolean excludeFemales,
+                @ToolArg(description = EXCLUDE_MALE_DESC, required = false) Boolean excludeMales,
+                @ToolArg(description = EXCLUDE_FEMALE_DESC, required = false) Boolean excludeFemales,
                 @ToolArg(description = MINLEN_DESC, required = false) Integer minVariantLengthBp,
                 @ToolArg(description = MAXLEN_DESC, required = false) Integer maxVariantLengthBp,
                 @ToolArg(description = SKIP_DESC, required = false) Integer skip,
@@ -534,7 +526,7 @@ public class OneKGPdMCPServer {
             "Returns: Integer count of unique samples having variants matching criteria.\n" +
             "Filters: REF/ALT, AF (KGP/gnomAD), VEP impact/biotype/consequences, variant type, AlphaMissense class/score, ClinVar significance.\n\n" +
 
-            "ZYGOSITY Parameters Logic::\n" +
+            "ZYGOSITY Parameters Logic:\n" +
             "- Use selectHet=true: to include samples with HETEROZYGOUS variants (0/1 genotypes)\n" +
             "- Use selectHom=true: to include samples with HOMOZYGOUS variants (1/1 genotypes)\n" +
             "Examples:\n" +
@@ -546,10 +538,9 @@ public class OneKGPdMCPServer {
             "1. Use this tool FIRST: to assess result size before calling selectSamplesWithVariants\n" +
             "2. If count is manageable, call selectSamplesWithVariants with same filters if sample IDs are required\n\n" +
 
-            "PARAMETERS:\n" +
-            "- Required: chromosome (1-22, X, Y), start, end (GRCh38 coordinates), selectHet, selectHom\n" +
+            "PARAMETERS Logic:\n" +
             "- Filters: ALL filters are combined with AND logic\n" +
-            "- CSV parameters: OR logic. Example: impact='HIGH,MODERATE' returns variants with HIGH OR MODERATE impact\n\n" +
+            "- CSV parameters: OR logic. Example: impact='HIGH,MODERATE' selects variants with HIGH OR MODERATE impact\n\n" +
 
             "RETURNS: Refer to the Output Schema for field definitions.",
         outputSchema = @Tool.OutputSchema(
@@ -581,8 +572,8 @@ public class OneKGPdMCPServer {
                 @ToolArg(description = AMGT_DESC, required = false) Float alphaMissenseScoreGreaterThan,
                 @ToolArg(description = BIONLY_DESC, required = false) Boolean biallelicOnly,
                 @ToolArg(description = MULTONLY_DESC, required = false) Boolean multiallelicOnly,
-                @ToolArg(description = EXMALE_DESC, required = false) Boolean excludeMales,
-                @ToolArg(description = EXFEMALE_DESC, required = false) Boolean excludeFemales,
+                @ToolArg(description = EXCLUDE_MALE_DESC, required = false) Boolean excludeMales,
+                @ToolArg(description = EXCLUDE_FEMALE_DESC, required = false) Boolean excludeFemales,
                 @ToolArg(description = MINLEN_DESC, required = false) Integer minVariantLengthBp,
                 @ToolArg(description = MAXLEN_DESC, required = false) Integer maxVariantLengthBp) {
         try {
@@ -612,7 +603,7 @@ public class OneKGPdMCPServer {
             "Returns: unique sample IDs having variants matching criteria.\n" +
             "Filters: REF/ALT, AF (KGP/gnomAD), VEP impact/biotype/consequences, variant type, AlphaMissense class/score, ClinVar significance.\n\n" +
 
-            "ZYGOSITY Parameters Logic::\n" +
+            "ZYGOSITY Parameters Logic:\n" +
             "- Use selectHet=true: to include samples with HETEROZYGOUS variants (0/1 genotypes)\n" +
             "- Use selectHom=true: to include samples with HOMOZYGOUS variants (1/1 genotypes)\n" +
             "Examples:\n" +
@@ -624,10 +615,9 @@ public class OneKGPdMCPServer {
             "1. ALWAYS call countSamplesWithVariants first to assess result size\n" +
             "2. Apply this tool with the same filters\n\n" +
 
-            "PARAMETERS:\n" +
-            "- Required: chromosome (1-22, X, Y), start, end (GRCh38 coordinates), selectHet, selectHom\n" +
+            "PARAMETERS Logic:\n" +
             "- Filters: ALL filters are combined with AND logic\n" +
-            "- CSV parameters: OR logic. Example: impact='HIGH,MODERATE' returns variants with HIGH OR MODERATE impact\n\n" +
+            "- CSV parameters: OR logic. Example: impact='HIGH,MODERATE' selects variants with HIGH OR MODERATE impact\n\n" +
 
             "RETURNS: Refer to the Output Schema for field definitions. Empty array [] if no matches.",
         outputSchema = @Tool.OutputSchema(
@@ -659,8 +649,8 @@ public class OneKGPdMCPServer {
                 @ToolArg(description = AMGT_DESC, required = false) Float alphaMissenseScoreGreaterThan,
                 @ToolArg(description = BIONLY_DESC, required = false) Boolean biallelicOnly,
                 @ToolArg(description = MULTONLY_DESC, required = false) Boolean multiallelicOnly,
-                @ToolArg(description = EXMALE_DESC, required = false) Boolean excludeMales,
-                @ToolArg(description = EXFEMALE_DESC, required = false) Boolean excludeFemales,
+                @ToolArg(description = EXCLUDE_MALE_DESC, required = false) Boolean excludeMales,
+                @ToolArg(description = EXCLUDE_FEMALE_DESC, required = false) Boolean excludeFemales,
                 @ToolArg(description = MINLEN_DESC, required = false) Integer minVariantLengthBp,
                 @ToolArg(description = MAXLEN_DESC, required = false) Integer maxVariantLengthBp) {
         try {

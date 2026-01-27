@@ -3,7 +3,7 @@
 Natural language access to _**1000 Genomes Project dataset**_, hosted online in _[Dnaerys variant store](https://dnaerys.org/)_
 
 Sequenced & aligned by _New York Genome Center_ (_GRCh38_). _3202 samples_: 2504 unrelated samples from phase
-three panel + 698 samples from 602 family trios ([dataset details](https://www.internationalgenome.org/data-portal/data-collection/30x-grch38))
+three panel + 698 samples from 602 family trios - [dataset details](https://www.internationalgenome.org/data-portal/data-collection/30x-grch38)
 
 ### Key Features
 
@@ -13,8 +13,8 @@ three panel + 698 samples from 602 family trios ([dataset details](https://www.i
 
 - filtering by VEP (impact, biotype, feature type, variant class, consequences), ClinVar Clinical Significance (202502),
 gnomADe + gnomADg 4.1, AlphaMissense Score & AlphaMissense Class annotations
-  
-- filtering by inheritance model (de novo, heterozygous dominant, homozygous recessive)
+
+  - [full annotation composition](./docs/annotations.md)
 
 - returned variants annotated with _HGVSp_, _gnomADe + gnomADg_, _AlphaMissense score_ + cohort-wide statistics
 
