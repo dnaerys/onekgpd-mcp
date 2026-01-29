@@ -72,13 +72,13 @@ Thioredoxin system ? Synthesize a model of 'Redox Robustness' based on the co-oc
 
 #### Macromolecular structural complexes
 
-> _Treat the 26S Proteasome as a 3D physical object. Map every missense variant in the KGP cohort across all 33+ subunits.
-Perform a spatial flux analysis: Are the variants in this population significantly more likely to occur at the 'distal edges'
-of the regulatory lid rather than the 'catalytic core' or the 'gating interfaces' ? Find individuals with a
-'high-burden' (3+ rare variants) across the complex. Do you detect inter-subunit compensation ? For example, if a variant in PSMD1
-is predicted to weaken a hinge, is there a correlated 'strengthening' variant in the interacting PSMD2 subunit ?
-Define the 'mechanical tolerance' of the proteasome based on the maximum cumulative ΔΔG observed in a single healthy individual._
-
+> _Treat the 26S Proteasome as a 3D physical object and map every exhaustive missense variant from the KGP individuals
+across all 33 subunits. Perform a spatial flux analysis to determine if pathogenic variation is statistically partitioned
+toward the distal 'Lid' (Zone C) rather than the evolutionary constrained 'Core' (Zone A) or 'Gating' (Zone B) interfaces.
+Identify individuals with a high cumulative burden (3+ 'Likely Pathogenic' variants) to investigate inter-subunit
+compensation—searching for paired 'weakening' and 'stabilizing' mutations at protein-protein hinges. Finally, define the
+'mechanical tolerance' of the proteasome by establishing the maximum cumulative structural disruption observed in a single
+healthy individual based on AlphaMissense scores and calculated ΔΔG values._
 
 _[More examples](./examples/README.md)_
 
@@ -177,18 +177,26 @@ _e.g._ `http://localhost:9000/mcp` or `https://db.dnaerys.org:443/mcp`
 
 > How many variants exist in 1000 Genome Project ?
 
-## Test Coverage
+### Test Coverage Status
 
 | Component | Type | Tests | Status |
 |-----------|------|-------|--------|
 | Entity Mappers (9 classes) | Unit | 314 | ✅ Complete |
-| DnaerysClient | Unit | 58 | ✅ Complete |
-| DnaerysClient | Integration | 5 | ✅ Complete |
-| OneKGPdMCPServer | Unit | 27 | ✅ Complete |
-| OneKGPdMCPServer | Integration | 7 | ✅ Complete |
+| DnaerysClient | Unit | 58 (7 disabled) | ✅ Complete |
+| DnaerysClient | Integration | 5 (1 disabled) | ✅ Complete |
+| OneKGPdMCPServer | Unit | 26 | ✅ Complete |
+| OneKGPdMCPServer | Integration | 5 | ✅ Complete |
 | Other | Unit | 1 | ✅ Complete |
+| Other | Integration | 1 | ✅ Complete |
+| **Total** | | **410 tests** | **402 passing, 8 disabled** |
 
-**Total: 412 tests (400 unit + 12 integration)**
+**Test Breakdown:**
+- Unit tests: 399 (7 disabled, 392 passing)
+- Integration tests: 11 (1 disabled, 10 passing)
+
+**Disabled Tests:**
+- 7 DnaerysClient unit tests (PaginationTests, streaming gRPC limitation - `wiremock-grpc-extension:0.11.0` cannot mock streaming RPCs yet)
+- 1 DnaerysClient integration test (PaginationLogicTests, streaming gRPC limitation - `wiremock-grpc-extension:0.11.0` cannot mock streaming RPCs yet)
 
 ### Running Tests
 

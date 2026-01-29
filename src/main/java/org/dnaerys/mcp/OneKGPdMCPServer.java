@@ -39,7 +39,8 @@ public class OneKGPdMCPServer {
     @Inject
     McpResponse mcpResponse;
 
-    private final DnaerysClient client = new DnaerysClient();
+    @Inject
+    DnaerysClient client;
 
     private static final String CHROMOSOME_DESC =
         "chromosome, values: 1,2,...,22,X,Y";

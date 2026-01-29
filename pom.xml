@@ -3,7 +3,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>org.dnaerys</groupId>
     <artifactId>onekgpd-mcp</artifactId>
-    <version>1.2.5</version>
+    <version>1.2.6</version>
 
     <properties>
         <compiler-plugin.version>3.14.0</compiler-plugin.version>
@@ -18,10 +18,10 @@
         <!-- Enable with: -DskipIntegrationTests=false -->
         <skipIntegrationTests>true</skipIntegrationTests>
         <surefire-plugin.version>3.5.4</surefire-plugin.version>
-        <!--GRPC-->
-        <grpc.version>1.67.1</grpc.version>
-        <protobuf.version>3.25.3</protobuf.version>
-        <protoc.version>3.25.3</protoc.version>
+        <!-- WireMock gRPC for testing -->
+        <wiremock.version>3.13.2</wiremock.version>
+        <wiremock-grpc.version>0.11.0</wiremock-grpc.version>
+        <protobuf-maven-plugin.version>0.6.1</protobuf-maven-plugin.version>
     </properties>
 
     <dependencyManagement>
@@ -66,6 +66,21 @@
             <scope>test</scope>
         </dependency>
         <dependency>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-grpc</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.netty</groupId>
+            <artifactId>netty-tcnative-boringssl-static</artifactId>
+            <version>2.0.74.Final</version>
+            <scope>runtime</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.bouncycastle</groupId>
+            <artifactId>bcprov-jdk18on</artifactId>
+            <version>1.83</version>
+        </dependency>
+        <dependency>
             <groupId>io.rest-assured</groupId>
             <artifactId>rest-assured</artifactId>
             <scope>test</scope>
@@ -83,27 +98,18 @@
             <version>3.24.2</version>
             <scope>test</scope>
         </dependency>
-        <!--GRPC-->
+        <!-- WireMock for gRPC mocking in tests -->
         <dependency>
-            <groupId>io.grpc</groupId>
-            <artifactId>grpc-netty-shaded</artifactId>
-            <version>${grpc.version}</version>
-            <scope>runtime</scope>
+            <groupId>org.wiremock</groupId>
+            <artifactId>wiremock</artifactId>
+            <version>${wiremock.version}</version>
+            <scope>test</scope>
         </dependency>
         <dependency>
-            <groupId>io.grpc</groupId>
-            <artifactId>grpc-protobuf</artifactId>
-            <version>${grpc.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>io.grpc</groupId>
-            <artifactId>grpc-stub</artifactId>
-            <version>${grpc.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>com.google.protobuf</groupId>
-            <artifactId>protobuf-java-util</artifactId>
-            <version>${protobuf.version}</version>
+            <groupId>org.wiremock</groupId>
+            <artifactId>wiremock-grpc-extension</artifactId>
+            <version>${wiremock-grpc.version}</version>
+            <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>kr.motd.maven</groupId>
@@ -186,6 +192,10 @@
                         <native.image.path>${project.build.directory}/${project.build.finalName}-runner</native.image.path>
                         <java.util.logging.manager>org.jboss.logmanager.LogManager</java.util.logging.manager>
                         <maven.home>${maven.home}</maven.home>
+                        <!-- WireMock gRPC server configuration for IT tests -->
+                        <quarkus.grpc.clients.dnaerys.host>localhost</quarkus.grpc.clients.dnaerys.host>
+                        <quarkus.grpc.clients.dnaerys.port>8089</quarkus.grpc.clients.dnaerys.port>
+                        <quarkus.grpc.clients.dnaerys.test-port>8089</quarkus.grpc.clients.dnaerys.test-port>
                     </systemPropertyVariables>
                 </configuration>
                 <executions>
@@ -197,21 +207,25 @@
                     </execution>
                 </executions>
             </plugin>
-            <!--GRPC-->
+            <!-- Generate proto descriptor for WireMock gRPC testing -->
             <plugin>
                 <groupId>org.xolstice.maven.plugins</groupId>
                 <artifactId>protobuf-maven-plugin</artifactId>
-                <version>0.6.1</version>
+                <version>${protobuf-maven-plugin.version}</version>
                 <configuration>
-                    <protocArtifact>com.google.protobuf:protoc:${protoc.version}:exe:${os.detected.classifier}</protocArtifact>
-                    <pluginId>grpc-java</pluginId>
-                    <pluginArtifact>io.grpc:protoc-gen-grpc-java:${grpc.version}:exe:${os.detected.classifier}</pluginArtifact>
+                    <protocArtifact>com.google.protobuf:protoc:3.25.1:exe:${os.detected.classifier}</protocArtifact>
+                    <protoSourceRoot>${project.basedir}/src/main/proto</protoSourceRoot>
+                    <writeDescriptorSet>true</writeDescriptorSet>
+                    <descriptorSetFileName>dnaerys-service.dsc</descriptorSetFileName>
+                    <descriptorSetOutputDirectory>${project.basedir}/src/test/resources/wiremock/grpc</descriptorSetOutputDirectory>
+                    <includeDependenciesInDescriptorSet>true</includeDependenciesInDescriptorSet>
                 </configuration>
                 <executions>
                     <execution>
+                        <id>generate-wiremock-descriptor</id>
+                        <phase>generate-test-resources</phase>
                         <goals>
                             <goal>compile</goal>
-                            <goal>compile-custom</goal>
                         </goals>
                     </execution>
                 </executions>

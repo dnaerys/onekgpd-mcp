@@ -19,10 +19,34 @@ package org.dnaerys.client;
 import java.util.*;
 import java.util.stream.Stream;
 
-import org.dnaerys.cluster.grpc.*;
 import org.dnaerys.client.entity.*;
+import org.dnaerys.cluster.grpc.DnaerysServiceGrpc;
+import org.dnaerys.cluster.grpc.*;
 
+import jakarta.annotation.PostConstruct;
+import jakarta.enterprise.context.ApplicationScoped;
+import io.quarkus.grpc.GrpcClient;
+import org.eclipse.microprofile.config.inject.ConfigProperty;
+import org.jboss.logging.Logger;
+
+@ApplicationScoped
 public class DnaerysClient {
+
+    private static final Logger LOG = Logger.getLogger(DnaerysClient.class);
+
+    @GrpcClient("dnaerys")
+    DnaerysServiceGrpc.DnaerysServiceBlockingStub blockingStub;
+
+    @ConfigProperty(name = "quarkus.grpc.clients.dnaerys.host")
+    String host;
+
+    @ConfigProperty(name = "quarkus.grpc.clients.dnaerys.port")
+    int port;
+
+    @PostConstruct
+    void init() {
+        LOG.infof("gRPC client initialized. Connecting to: %s:%d", host, port);
+    }
 
     private static final Integer MAX_RETURNED_ITEMS = 50;
 
@@ -155,13 +179,10 @@ public class DnaerysClient {
     }
 
     public DatasetInfo getDatasetInfo() {
-        // gRPC call
-        GrpcChannel channel = GrpcChannel.getInstance();
         DatasetInfoRequest request = DatasetInfoRequest.newBuilder()
             .setReturnSamplesNames(false)
             .build();
-        DatasetInfoResponse response = channel.getBlockingStub().datasetInfo(request);
-
+        DatasetInfoResponse response = blockingStub.datasetInfo(request);
         return new DatasetInfo(
             response.getVariantsTotal(),
             response.getSamplesTotal(),
@@ -171,13 +192,11 @@ public class DnaerysClient {
     }
 
     public List<String> getSampleIds(Gender gender) {
-        // gRPC call
-        GrpcChannel channel = GrpcChannel.getInstance();
         DatasetInfoRequest request = DatasetInfoRequest.newBuilder()
             .setReturnSamplesNames(true)
             .build();
 
-        DatasetInfoResponse response = channel.getBlockingStub().datasetInfo(request);
+        DatasetInfoResponse response = blockingStub.datasetInfo(request);
         List<org.dnaerys.cluster.grpc.Cohort> cohorts = response.getCohortsList();
 
         return cohorts.stream()
@@ -233,8 +252,7 @@ public class DnaerysClient {
             .setAnn(annotations)
             .build();
 
-        GrpcChannel channel = GrpcChannel.getInstance();
-        return channel.getBlockingStub().countVariantsInRegion(request).getCount();
+        return blockingStub.countVariantsInRegion(request).getCount();
     }
 
     public long countVariantsInRegionInSample(
@@ -283,8 +301,7 @@ public class DnaerysClient {
             .setAnn(annotations)
             .build();
 
-        GrpcChannel channel = GrpcChannel.getInstance();
-        return channel.getBlockingStub().countVariantsInRegionInSamples(request).getCount();
+        return blockingStub.countVariantsInRegionInSamples(request).getCount();
     }
 
     public List<Variant> selectVariantsInRegion(
@@ -328,8 +345,7 @@ public class DnaerysClient {
             .build();
 
         List<Variant> results = new ArrayList<>();
-        GrpcChannel channel = GrpcChannel.getInstance();
-        Iterator<AllelesResponse> responseStream = channel.getBlockingStub().selectVariantsInRegion(request);
+        Iterator<AllelesResponse> responseStream = blockingStub.selectVariantsInRegion(request);
 
         while (responseStream.hasNext()) {
             results.addAll(responseStream.next().getVariantsList());
@@ -383,8 +399,7 @@ public class DnaerysClient {
             .build();
 
         List<Variant> results = new ArrayList<>();
-        GrpcChannel channel = GrpcChannel.getInstance();
-        Iterator<AllelesResponse> responseStream = channel.getBlockingStub().selectVariantsInRegionInSamples(request);
+        Iterator<AllelesResponse> responseStream = blockingStub.selectVariantsInRegionInSamples(request);
 
         while (responseStream.hasNext()) {
             results.addAll(responseStream.next().getVariantsList());
@@ -435,8 +450,7 @@ public class DnaerysClient {
             .setAnn(annotations)
             .build();
 
-        GrpcChannel channel = GrpcChannel.getInstance();
-        return channel.getBlockingStub().countSamplesInRegion(request).getCount();
+        return blockingStub.countSamplesInRegion(request).getCount();
     }
 
     public List<String> selectSamplesInRegion(
@@ -481,8 +495,7 @@ public class DnaerysClient {
             .setAnn(annotations)
             .build();
 
-        GrpcChannel channel = GrpcChannel.getInstance();
-        return channel.getBlockingStub().selectSamplesInRegion(request).getSamplesList();
+        return blockingStub.selectSamplesInRegion(request).getSamplesList();
     }
 
     public long countSamplesHomozygousReference(String chromosome, int position) {
@@ -499,8 +512,7 @@ public class DnaerysClient {
             .setPosition(position)
             .build();
 
-        GrpcChannel channel = GrpcChannel.getInstance();
-        return channel.getBlockingStub().countSamplesHomReference(request).getCount();
+        return blockingStub.countSamplesHomReference(request).getCount();
     }
 
     public List<String> selectSamplesHomozygousReference(String chromosome, int position) {
@@ -517,8 +529,7 @@ public class DnaerysClient {
             .setPosition(position)
             .build();
 
-        GrpcChannel channel = GrpcChannel.getInstance();
-        return channel.getBlockingStub().selectSamplesHomReference(request).getSamplesList();
+        return blockingStub.selectSamplesHomReference(request).getSamplesList();
     }
 
     public String kinship(String sample1, String sample2) {
@@ -530,8 +541,7 @@ public class DnaerysClient {
         if (!allSamples.contains(sample2)) {
             throw new RuntimeException("Sample '" + sample2 + "' does not exist");
         }
-        // gRPC call
-        GrpcChannel channel = GrpcChannel.getInstance();
+
         KinshipDuoRequest request =
             KinshipDuoRequest
                 .newBuilder()
@@ -539,7 +549,7 @@ public class DnaerysClient {
                 .setSample2(sample2)
                 .setSeq(true)
                 .build();
-        List<Relatedness> response = channel.getBlockingStub().kinshipDuo(request).getRelList();
+        List<Relatedness> response = blockingStub.kinshipDuo(request).getRelList();
         return response.getFirst().getDegree().toString();
     }
 }

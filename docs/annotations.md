@@ -1,8 +1,10 @@
 # Annotation composition
 
-Below is an aggregated stats across all variants in 1000 Genomes Project dataset.
+Annotation stats across all unique variants in 1000 Genomes Project dataset.
 
 ### gnomADe / gnomADg
+
+Variants in the dataset annotated with gnomADe/gnomADg AF, % of total number of variants in chromosome
 
 | Chromosome | Total Variants | gnomADe | % of Total (e) | gnomADg | % of Total (g) |
 | ---: | ---: | ---: | ---: | ---: | ---: |
@@ -34,8 +36,8 @@ Below is an aggregated stats across all variants in 1000 Genomes Project dataset
 
 ---
 
-Annotations for all transcripts are preserved, hence the aggregated number exceeds the number of variants in dataset.
-Percentage of Total (138,044,723).
+Categorical annotations are preserved for all transcripts (for each variant), hence a single variant typically
+carries several annotations in each category. Percentage of total variants in the dataset (138,044,723).
 
 ### [Clinical Significance (ClinVar="202502")](https://www.ncbi.nlm.nih.gov/clinvar/docs/clinsig/)
 
