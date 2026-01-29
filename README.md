@@ -158,9 +158,11 @@ docker run -p 9000:9000 --name onekgpd-mcp --rm onekgpd-mcp
 
 - to connect via _http_ transport, _remote or local_, simply direct the client to a destination,
 _e.g._ `http://localhost:9000/mcp` or `https://db.dnaerys.org:443/mcp`
+    - NB: _Claude Desktop_ won't work with `http://localhost:9000/mcp` option (e.g. when running MCP server in a docker container).
+    This option is for clients like _Goose_.
 
 - to connect via _stdio_ transport, MCP client should start application with _dev profile_ and with a full path to the jar file 
-    - e.g. add to _Claude_ config files (e.g. `claude_desktop_config.json`):
+    - e.g. for _Claude Desktop_ add to config files (e.g. `claude_desktop_config.json`):
 
 ```json
 {
