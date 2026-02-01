@@ -7,6 +7,7 @@
 - [Reclassification & AlphaMissense Integration](#reclassification--alphamissense-integration)
 - [Protein-Protein Interactions](#protein-protein-interactions)
 - [Macromolecular structural complexes](#macromolecular-structural-complexes)
+- [Structural Proteogenomics](#structural-proteogenomics)
 - [Structural Intolerance](#structural-intolerance)
 - [Oligogenic Burden](#oligogenic-burden)
 
@@ -124,15 +125,6 @@ electrostatic gradient._
 
 - .
 
-> _Treat the 26S Proteasome as a 3D physical object. Map every missense variant in the KGP cohort across all 33+ subunits.
-Perform a spatial flux analysis: Are the variants in this population significantly more likely to occur at the 'distal edges'
-of the regulatory lid rather than the 'catalytic core' or the 'gating interfaces' ? Find individuals with a
-'high-burden' (3+ rare variants) across the complex. Do you detect inter-subunit compensation ? For example, if a variant in PSMD1
-is predicted to weaken a hinge, is there a correlated 'strengthening' variant in the interacting PSMD2 subunit ?
-Define the 'mechanical tolerance' of the proteasome based on the maximum cumulative ΔΔG observed in a single healthy individual._
-
-- .
-
 > _The MCM2-7 Complex (The "DNA Helicase Motor") is a molecular masterpiece. It’s a heterohexameric ring where each subunit is
 a distinct "gear" in the DNA-unzipping motor. Unlike homomeric rings (where every subunit is the same), this complex is asymmetric.
 Each interface between subunits is unique, and they don't all burn ATP at the same rate. The MCM2/5 interface is the "gate" that
@@ -155,6 +147,18 @@ highly-accurate replication fork ?_
 variant in one key component (e.g., DSP), are they depleted of rare missense variants in the interacting components (e.g., PKP1)
 compared to the general population ? This would suggest that even a single hit requires the rest of the complex to be "pristine"
 when one component is already compromised to maintain mechanical integrity._
+
+---
+
+#### Structural Proteogenomics
+
+> _Treat the 26S Proteasome as a mechanically redundant 3D machine and map every missense variant from the KGP individuals
+across all 33 subunits. Perform a spatial analysis to determine if pathogenic variation is statistically partitioned toward
+the distal 'Lid' (Zone C) rather than the evolutionary constrained 'Core' (Zone A) or 'Gating' (Zone B) interfaces. Identify
+individuals with a high cumulative burden (3+ 'Likely Pathogenic' variants) to investigate inter-subunit compensation,
+searching for paired 'weakening' and 'stabilizing' mutations at protein-protein hinges. Finally, define the 'mechanical
+tolerance' of the proteasome by establishing the maximum cumulative structural disruption observed in a single healthy
+individual based on AlphaMissense scores and calculated ΔΔG values._
 
 ---
 

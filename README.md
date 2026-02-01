@@ -70,18 +70,19 @@ Reasoning through the AlphaMissense structural implications, can you detect a 'b
 in Glutathione reductase is consistently paired with high-confidence benign or potentially activating variants in the
 Thioredoxin system ? Synthesize a model of 'Redox Robustness' based on the co-occurrence of these variants across the cohort._
 
-#### Macromolecular structural complexes
+#### Structural Proteogenomics
 
-> _Treat the 26S Proteasome as a 3D physical object and map every exhaustive missense variant from the KGP individuals
-across all 33 subunits. Perform a spatial flux analysis to determine if pathogenic variation is statistically partitioned
-toward the distal 'Lid' (Zone C) rather than the evolutionary constrained 'Core' (Zone A) or 'Gating' (Zone B) interfaces.
-Identify individuals with a high cumulative burden (3+ 'Likely Pathogenic' variants) to investigate inter-subunit
-compensation—searching for paired 'weakening' and 'stabilizing' mutations at protein-protein hinges. Finally, define the
-'mechanical tolerance' of the proteasome by establishing the maximum cumulative structural disruption observed in a single
-healthy individual based on AlphaMissense scores and calculated ΔΔG values._
+> _Treat the 26S Proteasome as a mechanically redundant 3D machine and map every missense variant from the KGP individuals
+across all 33 subunits. Perform a spatial analysis to determine if pathogenic variation is statistically partitioned toward
+the distal 'Lid' (Zone C) rather than the evolutionary constrained 'Core' (Zone A) or 'Gating' (Zone B) interfaces. Identify
+individuals with a high cumulative burden (3+ 'Likely Pathogenic' variants) to investigate inter-subunit compensation,
+searching for paired 'weakening' and 'stabilizing' mutations at protein-protein hinges. Finally, define the 'mechanical
+tolerance' of the proteasome by establishing the maximum cumulative structural disruption observed in a single healthy
+individual based on AlphaMissense scores and calculated ΔΔG values._
 
 _[More examples](./examples/README.md)_
 
+---
 
 ## Architecture
 
@@ -158,7 +159,7 @@ docker run -p 9000:9000 --name onekgpd-mcp --rm onekgpd-mcp
 
 - to connect via _http_ transport, _remote or local_, simply direct the client to a destination,
 _e.g._ `http://localhost:9000/mcp` or `https://db.dnaerys.org:443/mcp`
-    - NB: _Claude Desktop_ won't work with `http://localhost:9000/mcp` option (e.g. when running MCP server in a docker container).
+    - _NB:_ _Claude Desktop_ won't work with `http://localhost:9000/mcp` option (e.g. when running MCP server in a docker container).
     This option is for clients like _Goose_.
 
 - to connect via _stdio_ transport, MCP client should start application with _dev profile_ and with a full path to the jar file 
