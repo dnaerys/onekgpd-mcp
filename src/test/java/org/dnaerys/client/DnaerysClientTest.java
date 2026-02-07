@@ -16,7 +16,11 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.wiremock.grpc.dsl.WireMockGrpcService;
 
+import org.dnaerys.mcp.OneKGPdMCPServer.GenomicRegion;
+import org.dnaerys.mcp.OneKGPdMCPServer.SelectByAnnotations;
+
 import java.util.Iterator;
+import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
@@ -54,6 +58,10 @@ class DnaerysClientTest {
     @SuppressWarnings("unused")
     private DnaerysServiceGrpc.DnaerysServiceBlockingStub mockBlockingStub;
 
+    private static final SelectByAnnotations NO_ANNOTATIONS = new SelectByAnnotations(
+        null, null, null, null, null, null, null, null, null, null,
+        null, null, null, null, null, null, null, null, null, null, null);
+
     @BeforeEach
     void setUp() {
         // Reset all stubs between tests for isolation
@@ -76,9 +84,9 @@ class DnaerysClientTest {
         @DisplayName("CLI-ANN-001: AF less than filter is set correctly")
         void testAfLessThan() {
             Annotations annotations = client.composeAnnotations(
-                0.01f, null, null, null, null, null,
-                null, null, null, null, null, null,
-                null, null, null, null, null, null, null
+                new SelectByAnnotations(0.01f, null, null, null, null, null,
+                    null, null, null, null, null, null,
+                    null, null, null, null, null, null, null, null, null)
             );
 
             assertThat(annotations.getAfLt()).isEqualTo(0.01f);
@@ -89,9 +97,9 @@ class DnaerysClientTest {
         @DisplayName("CLI-ANN-002: AF greater than filter is set correctly")
         void testAfGreaterThan() {
             Annotations annotations = client.composeAnnotations(
-                null, 0.05f, null, null, null, null,
-                null, null, null, null, null, null,
-                null, null, null, null, null, null, null
+                new SelectByAnnotations(null, 0.05f, null, null, null, null,
+                    null, null, null, null, null, null,
+                    null, null, null, null, null, null, null, null, null)
             );
 
             assertThat(annotations.getAfGt()).isEqualTo(0.05f);
@@ -102,9 +110,9 @@ class DnaerysClientTest {
         @DisplayName("CLI-ANN-003: Impact filter parses CSV correctly")
         void testImpactFilter() {
             Annotations annotations = client.composeAnnotations(
-                null, null, null, null, null, null,
-                "HIGH,MODERATE", null, null, null, null, null,
-                null, null, null, null, null, null, null
+                new SelectByAnnotations(null, null, null, null, null, null,
+                    null, "HIGH,MODERATE", null, null, null, null,
+                    null, null, null, null, null, null, null, null, null)
             );
 
             assertThat(annotations.getImpactList())
@@ -116,13 +124,21 @@ class DnaerysClientTest {
         @DisplayName("CLI-ANN-004: Combined filters are all set correctly")
         void testCombinedFilters() {
             Annotations annotations = client.composeAnnotations(
-                0.01f, 0.0001f,  // AF lt, gt
-                0.05f, 0.001f,   // gnomAD genome AF
-                0.02f, 0.0005f,  // gnomAD exome AF
-                "HIGH", "PROTEIN_CODING", "TRANSCRIPT", "SNV",
-                "MISSENSE_VARIANT", "PATHOGENIC",
-                "LIKELY_PATHOGENIC", 0.9f, 0.5f,
-                true, false, true, false
+                new SelectByAnnotations(
+                    0.01f, 0.0001f,        // AF lt, gt
+                    0.02f, 0.0005f,        // gnomAD exome AF
+                    0.05f, 0.001f,         // gnomAD genome AF
+                    "PATHOGENIC",          // clinSignificance
+                    "HIGH",                // vepImpact
+                    "TRANSCRIPT",          // vepFeature
+                    "PROTEIN_CODING",      // vepBiotype
+                    "SNV",                 // vepVariantType
+                    "MISSENSE_VARIANT",    // vepConsequences
+                    "LIKELY_PATHOGENIC",   // alphaMissenseClass
+                    0.9f, 0.5f,            // AM score lt, gt
+                    true, false,           // biallelic, multiallelic
+                    true, false,           // excludeMales, excludeFemales
+                    null, null)            // minLen, maxLen
             );
 
             assertThat(annotations.getAfLt()).isEqualTo(0.01f);
@@ -150,9 +166,9 @@ class DnaerysClientTest {
         @DisplayName("CLI-ANN-005: Empty/null filters produce empty annotations object")
         void testEmptyFilters() {
             Annotations annotations = client.composeAnnotations(
-                null, null, null, null, null, null,
-                null, null, null, null, null, null,
-                null, null, null, null, null, null, null
+                new SelectByAnnotations(null, null, null, null, null, null,
+                    null, null, null, null, null, null,
+                    null, null, null, null, null, null, null, null, null)
             );
 
             assertThat(annotations.getAfLt()).isZero();
@@ -163,40 +179,40 @@ class DnaerysClientTest {
         }
 
         @Test
-        @DisplayName("CLI-ANN-006: Invalid values are filtered out from CSV")
-        void testInvalidValuesFiltered() {
-            Annotations annotations = client.composeAnnotations(
-                null, null, null, null, null, null,
-                "HIGH,INVALID,MODERATE", null, null, null, null, null,
-                null, null, null, null, null, null, null
+        @DisplayName("CLI-ANN-006: Invalid values throw RuntimeException")
+        void testInvalidValuesThrow() {
+            RuntimeException thrown = org.junit.jupiter.api.Assertions.assertThrows(
+                RuntimeException.class,
+                () -> client.composeAnnotations(
+                    new SelectByAnnotations(null, null, null, null, null, null,
+                        null, "HIGH,INVALID,MODERATE", null, null, null, null,
+                        null, null, null, null, null, null, null, null, null)
+                )
             );
-
-            assertThat(annotations.getImpactList())
-                .hasSize(2)
-                .containsExactlyInAnyOrder(Impact.HIGH, Impact.MODERATE)
-                .doesNotContain(Impact.UNRECOGNIZED);
+            assertThat(thrown.getMessage()).contains("Invalid parameter");
         }
 
         @Test
-        @DisplayName("Negative AF values are not set")
-        void testNegativeAfNotSet() {
-            Annotations annotations = client.composeAnnotations(
-                -0.01f, -0.05f, null, null, null, null,
-                null, null, null, null, null, null,
-                null, null, null, null, null, null, null
+        @DisplayName("Negative AF values throw RuntimeException")
+        void testNegativeAfThrows() {
+            RuntimeException thrown = org.junit.jupiter.api.Assertions.assertThrows(
+                RuntimeException.class,
+                () -> client.composeAnnotations(
+                    new SelectByAnnotations(-0.01f, -0.05f, null, null, null, null,
+                        null, null, null, null, null, null,
+                        null, null, null, null, null, null, null, null, null)
+                )
             );
-
-            assertThat(annotations.getAfLt()).isZero();
-            assertThat(annotations.getAfGt()).isZero();
+            assertThat(thrown.getMessage()).contains("Invalid parameter");
         }
 
         @Test
         @DisplayName("Zero AF values are not set")
         void testZeroAfNotSet() {
             Annotations annotations = client.composeAnnotations(
-                0.0f, 0.0f, null, null, null, null,
-                null, null, null, null, null, null,
-                null, null, null, null, null, null, null
+                new SelectByAnnotations(0.0f, 0.0f, null, null, null, null,
+                    null, null, null, null, null, null,
+                    null, null, null, null, null, null, null, null, null)
             );
 
             assertThat(annotations.getAfLt()).isZero();
@@ -207,9 +223,9 @@ class DnaerysClientTest {
         @DisplayName("gnomAD genome AF filters are set correctly")
         void testGnomadGenomeAf() {
             Annotations annotations = client.composeAnnotations(
-                null, null, 0.05f, 0.001f, null, null,
-                null, null, null, null, null, null,
-                null, null, null, null, null, null, null
+                new SelectByAnnotations(null, null, null, null, 0.05f, 0.001f,
+                    null, null, null, null, null, null,
+                    null, null, null, null, null, null, null, null, null)
             );
 
             assertThat(annotations.getGnomadGenomesAfLt()).isEqualTo(0.05f);
@@ -220,9 +236,9 @@ class DnaerysClientTest {
         @DisplayName("gnomAD exome AF filters are set correctly")
         void testGnomadExomeAf() {
             Annotations annotations = client.composeAnnotations(
-                null, null, null, null, 0.02f, 0.0005f,
-                null, null, null, null, null, null,
-                null, null, null, null, null, null, null
+                new SelectByAnnotations(null, null, 0.02f, 0.0005f, null, null,
+                    null, null, null, null, null, null,
+                    null, null, null, null, null, null, null, null, null)
             );
 
             assertThat(annotations.getGnomadExomesAfLt()).isEqualTo(0.02f);
@@ -233,9 +249,9 @@ class DnaerysClientTest {
         @DisplayName("BioType filter parses CSV correctly")
         void testBioTypeFilter() {
             Annotations annotations = client.composeAnnotations(
-                null, null, null, null, null, null,
-                null, "PROTEIN_CODING,LNCRNA", null, null, null, null,
-                null, null, null, null, null, null, null
+                new SelectByAnnotations(null, null, null, null, null, null,
+                    null, null, null, "PROTEIN_CODING,LNCRNA", null, null,
+                    null, null, null, null, null, null, null, null, null)
             );
 
             assertThat(annotations.getBioTypeList())
@@ -247,9 +263,9 @@ class DnaerysClientTest {
         @DisplayName("FeatureType filter parses CSV correctly")
         void testFeatureTypeFilter() {
             Annotations annotations = client.composeAnnotations(
-                null, null, null, null, null, null,
-                null, null, "TRANSCRIPT,REGULATORYFEATURE", null, null, null,
-                null, null, null, null, null, null, null
+                new SelectByAnnotations(null, null, null, null, null, null,
+                    null, null, "TRANSCRIPT,REGULATORYFEATURE", null, null, null,
+                    null, null, null, null, null, null, null, null, null)
             );
 
             assertThat(annotations.getFeatureTypeList())
@@ -261,9 +277,9 @@ class DnaerysClientTest {
         @DisplayName("VariantType filter parses CSV correctly")
         void testVariantTypeFilter() {
             Annotations annotations = client.composeAnnotations(
-                null, null, null, null, null, null,
-                null, null, null, "SNV,INSERTION,DELETION", null, null,
-                null, null, null, null, null, null, null
+                new SelectByAnnotations(null, null, null, null, null, null,
+                    null, null, null, null, "SNV,INSERTION,DELETION", null,
+                    null, null, null, null, null, null, null, null, null)
             );
 
             assertThat(annotations.getVariantTypeList())
@@ -275,9 +291,9 @@ class DnaerysClientTest {
         @DisplayName("Consequences filter parses CSV correctly")
         void testConsequencesFilter() {
             Annotations annotations = client.composeAnnotations(
-                null, null, null, null, null, null,
-                null, null, null, null, "STOP_GAINED,FRAMESHIFT_VARIANT,MISSENSE_VARIANT", null,
-                null, null, null, null, null, null, null
+                new SelectByAnnotations(null, null, null, null, null, null,
+                    null, null, null, null, null, "STOP_GAINED,FRAMESHIFT_VARIANT,MISSENSE_VARIANT",
+                    null, null, null, null, null, null, null, null, null)
             );
 
             assertThat(annotations.getConsequenceList())
@@ -293,9 +309,9 @@ class DnaerysClientTest {
         @DisplayName("ClinSignificance filter parses CSV correctly")
         void testClinSignificanceFilter() {
             Annotations annotations = client.composeAnnotations(
-                null, null, null, null, null, null,
-                null, null, null, null, null, "PATHOGENIC,LIKELY_PATHOGENIC",
-                null, null, null, null, null, null, null
+                new SelectByAnnotations(null, null, null, null, null, null,
+                    "PATHOGENIC,LIKELY_PATHOGENIC", null, null, null, null, null,
+                    null, null, null, null, null, null, null, null, null)
             );
 
             assertThat(annotations.getClinsgnList())
@@ -307,9 +323,9 @@ class DnaerysClientTest {
         @DisplayName("AlphaMissense filter parses CSV correctly")
         void testAlphaMissenseFilter() {
             Annotations annotations = client.composeAnnotations(
-                null, null, null, null, null, null,
-                null, null, null, null, null, null,
-                "LIKELY_PATHOGENIC,AMBIGUOUS", null, null, null, null, null, null
+                new SelectByAnnotations(null, null, null, null, null, null,
+                    null, null, null, null, null, null,
+                    "LIKELY_PATHOGENIC,AMBIGUOUS", null, null, null, null, null, null, null, null)
             );
 
             assertThat(annotations.getAmClassList())
@@ -321,9 +337,9 @@ class DnaerysClientTest {
         @DisplayName("AlphaMissense score filters are set correctly")
         void testAlphaMissenseScoreFilters() {
             Annotations annotations = client.composeAnnotations(
-                null, null, null, null, null, null,
-                null, null, null, null, null, null,
-                null, 0.9f, 0.5f, null, null, null, null
+                new SelectByAnnotations(null, null, null, null, null, null,
+                    null, null, null, null, null, null,
+                    null, 0.9f, 0.5f, null, null, null, null, null, null)
             );
 
             assertThat(annotations.getAmScoreLt()).isEqualTo(0.9f);
@@ -334,9 +350,9 @@ class DnaerysClientTest {
         @DisplayName("Boolean filters (biallelic, multiallelic) are set when true")
         void testBooleanFiltersTrue() {
             Annotations annotations = client.composeAnnotations(
-                null, null, null, null, null, null,
-                null, null, null, null, null, null,
-                null, null, null, true, true, true, true
+                new SelectByAnnotations(null, null, null, null, null, null,
+                    null, null, null, null, null, null,
+                    null, null, null, true, true, true, true, null, null)
             );
 
             assertThat(annotations.getBiallelicOnly()).isTrue();
@@ -349,9 +365,9 @@ class DnaerysClientTest {
         @DisplayName("Boolean filters are not set when false")
         void testBooleanFiltersFalse() {
             Annotations annotations = client.composeAnnotations(
-                null, null, null, null, null, null,
-                null, null, null, null, null, null,
-                null, null, null, false, false, false, false
+                new SelectByAnnotations(null, null, null, null, null, null,
+                    null, null, null, null, null, null,
+                    null, null, null, false, false, false, false, null, null)
             );
 
             // When false, the flags should not be set (default is false)
@@ -365,9 +381,9 @@ class DnaerysClientTest {
         @DisplayName("Empty string filters are treated as null")
         void testEmptyStringFilters() {
             Annotations annotations = client.composeAnnotations(
-                null, null, null, null, null, null,
-                "", "", "", "", "", "",
-                "", null, null, null, null, null, null
+                new SelectByAnnotations(null, null, null, null, null, null,
+                    "", "", "", "", "", "",
+                    "", null, null, null, null, null, null, null, null)
             );
 
             assertThat(annotations.getImpactList()).isEmpty();
@@ -393,11 +409,9 @@ class DnaerysClientTest {
         void testInvalidChromosomeCount() {
             RuntimeException thrown = org.junit.jupiter.api.Assertions.assertThrows(
                 RuntimeException.class,
-                () -> client.countVariantsInRegion(
-                    "99", 1000, 2000, true, true,
-                    null, null, null, null, null, null, null, null,
-                    null, null, null, null, null, null,
-                    null, null, null, null, null, null, null, null, null
+                () -> client.countVariantsInMultiRegions(
+                    List.of(new GenomicRegion("99", 1000, 2000, null, null)), true, true,
+                    NO_ANNOTATIONS
                 )
             );
 
@@ -410,11 +424,8 @@ class DnaerysClientTest {
             RuntimeException thrown = org.junit.jupiter.api.Assertions.assertThrows(
                 RuntimeException.class,
                 () -> client.selectVariantsInRegion(
-                    "99", 1000, 2000, true, true,
-                    null, null, null, null, null, null, null, null,
-                    null, null, null, null, null, null,
-                    null, null, null, null, null, null, null, null, null,
-                    null, null
+                    new GenomicRegion("99", 1000, 2000, null, null), true, true,
+                    NO_ANNOTATIONS, null, null
                 )
             );
 
@@ -426,15 +437,13 @@ class DnaerysClientTest {
         void testNegativeStartCount() {
             RuntimeException thrown = org.junit.jupiter.api.Assertions.assertThrows(
                 RuntimeException.class,
-                () -> client.countVariantsInRegion(
-                    "1", -100, 2000, true, true,
-                    null, null, null, null, null, null, null, null,
-                    null, null, null, null, null, null,
-                    null, null, null, null, null, null, null, null, null
+                () -> client.countVariantsInMultiRegions(
+                    List.of(new GenomicRegion("1", -100, 2000, null, null)), true, true,
+                    NO_ANNOTATIONS
                 )
             );
 
-            assertThat(thrown.getMessage()).contains("Invalid 'start' or 'end'");
+            assertThat(thrown.getMessage()).contains("Invalid genomic region");
         }
 
         @Test
@@ -442,15 +451,13 @@ class DnaerysClientTest {
         void testInvertedCoordinatesCount() {
             RuntimeException thrown = org.junit.jupiter.api.Assertions.assertThrows(
                 RuntimeException.class,
-                () -> client.countVariantsInRegion(
-                    "1", 2000, 1000, true, true,
-                    null, null, null, null, null, null, null, null,
-                    null, null, null, null, null, null,
-                    null, null, null, null, null, null, null, null, null
+                () -> client.countVariantsInMultiRegions(
+                    List.of(new GenomicRegion("1", 2000, 1000, null, null)), true, true,
+                    NO_ANNOTATIONS
                 )
             );
 
-            assertThat(thrown.getMessage()).contains("Invalid 'start' or 'end'");
+            assertThat(thrown.getMessage()).contains("Invalid genomic region");
         }
 
         @Test
@@ -459,15 +466,12 @@ class DnaerysClientTest {
             RuntimeException thrown = org.junit.jupiter.api.Assertions.assertThrows(
                 RuntimeException.class,
                 () -> client.selectVariantsInRegion(
-                    "1", 2000, 1000, true, true,
-                    null, null, null, null, null, null, null, null,
-                    null, null, null, null, null, null,
-                    null, null, null, null, null, null, null, null, null,
-                    null, null
+                    new GenomicRegion("1", 2000, 1000, null, null), true, true,
+                    NO_ANNOTATIONS, null, null
                 )
             );
 
-            assertThat(thrown.getMessage()).contains("Invalid 'start' or 'end'");
+            assertThat(thrown.getMessage()).contains("Invalid genomic region");
         }
 
         @Test
@@ -475,11 +479,9 @@ class DnaerysClientTest {
         void testNullSampleIdCount() {
             RuntimeException thrown = org.junit.jupiter.api.Assertions.assertThrows(
                 RuntimeException.class,
-                () -> client.countVariantsInRegionInSample(
-                    "1", 1000, 2000, null, true, true,
-                    null, null, null, null, null, null, null, null,
-                    null, null, null, null, null, null,
-                    null, null, null, null, null, null, null, null, null
+                () -> client.countVariantsInMultiRegionsInSample(
+                    List.of(new GenomicRegion("1", 1000, 2000, null, null)), null, true, true,
+                    NO_ANNOTATIONS
                 )
             );
 
@@ -491,11 +493,9 @@ class DnaerysClientTest {
         void testEmptySampleIdCount() {
             RuntimeException thrown = org.junit.jupiter.api.Assertions.assertThrows(
                 RuntimeException.class,
-                () -> client.countVariantsInRegionInSample(
-                    "1", 1000, 2000, "", true, true,
-                    null, null, null, null, null, null, null, null,
-                    null, null, null, null, null, null,
-                    null, null, null, null, null, null, null, null, null
+                () -> client.countVariantsInMultiRegionsInSample(
+                    List.of(new GenomicRegion("1", 1000, 2000, null, null)), "", true, true,
+                    NO_ANNOTATIONS
                 )
             );
 
@@ -508,11 +508,9 @@ class DnaerysClientTest {
         void testVariousInvalidChromosomes(String chromosome) {
             RuntimeException thrown = org.junit.jupiter.api.Assertions.assertThrows(
                 RuntimeException.class,
-                () -> client.countVariantsInRegion(
-                    chromosome, 1000, 2000, true, true,
-                    null, null, null, null, null, null, null, null,
-                    null, null, null, null, null, null,
-                    null, null, null, null, null, null, null, null, null
+                () -> client.countVariantsInMultiRegions(
+                    List.of(new GenomicRegion(chromosome, 1000, 2000, null, null)), true, true,
+                    NO_ANNOTATIONS
                 )
             );
 
@@ -520,27 +518,77 @@ class DnaerysClientTest {
         }
 
         @Test
-        @DisplayName("Variant min/max length normalization with valid coordinates")
-        void testVariantLengthNormalization() {
-            // Stub CountVariantsInRegion to return a count
-            CountAllelesResponse response = CountAllelesResponse.newBuilder()
-                .setCount(100L)
-                .build();
-            dnaerysService.stubFor(
-                method("CountVariantsInRegion")
-                    .willReturn(message(response))
+        @DisplayName("Negative minVariantLengthBp throws RuntimeException")
+        void testNegativeMinVariantLengthThrows() {
+            RuntimeException thrown = org.junit.jupiter.api.Assertions.assertThrows(
+                RuntimeException.class,
+                () -> client.countVariantsInMultiRegions(
+                    List.of(new GenomicRegion("1", 1000, 2000, null, null)), true, true,
+                    new SelectByAnnotations(null, null, null, null, null, null,
+                        null, null, null, null, null, null,
+                        null, null, null, null, null, null, null, -5, null)
+                )
             );
 
-            // Test that negative variant lengths are normalized (not rejected)
-            long count = client.countVariantsInRegion(
-                "1", 1000, 2000, true, true,
-                null, null, -5, -10, null, null, null, null,
-                null, null, null, null, null, null,
-                null, null, null, null, null, null, null, null, null
+            assertThat(thrown.getMessage()).contains("'minVariantLengthBp' must be >= 0");
+        }
+
+        @Test
+        @DisplayName("Empty regions list throws RuntimeException")
+        void testEmptyRegionsList() {
+            RuntimeException thrown = org.junit.jupiter.api.Assertions.assertThrows(
+                RuntimeException.class,
+                () -> client.countVariantsInMultiRegions(
+                    List.of(), true, true, NO_ANNOTATIONS
+                )
             );
 
-            // Should succeed with normalized values
-            assertThat(count).isEqualTo(100L);
+            assertThat(thrown.getMessage()).contains("'regions' list cannot be empty");
+        }
+
+        @Test
+        @DisplayName("Null regions list throws RuntimeException")
+        void testNullRegionsList() {
+            RuntimeException thrown = org.junit.jupiter.api.Assertions.assertThrows(
+                RuntimeException.class,
+                () -> client.countVariantsInMultiRegions(
+                    null, true, true, NO_ANNOTATIONS
+                )
+            );
+
+            assertThat(thrown.getMessage()).contains("'regions' list cannot be empty");
+        }
+
+        @Test
+        @DisplayName("Negative maxVariantLengthBp throws RuntimeException")
+        void testNegativeMaxVariantLengthThrows() {
+            RuntimeException thrown = org.junit.jupiter.api.Assertions.assertThrows(
+                RuntimeException.class,
+                () -> client.countVariantsInMultiRegions(
+                    List.of(new GenomicRegion("1", 1000, 2000, null, null)), true, true,
+                    new SelectByAnnotations(null, null, null, null, null, null,
+                        null, null, null, null, null, null,
+                        null, null, null, null, null, null, null, null, -10)
+                )
+            );
+
+            assertThat(thrown.getMessage()).contains("'maxVariantLengthBp' must be >= 0");
+        }
+
+        @Test
+        @DisplayName("minVariantLengthBp > maxVariantLengthBp throws RuntimeException")
+        void testMinGreaterThanMaxVariantLengthThrows() {
+            RuntimeException thrown = org.junit.jupiter.api.Assertions.assertThrows(
+                RuntimeException.class,
+                () -> client.countVariantsInMultiRegions(
+                    List.of(new GenomicRegion("1", 1000, 2000, null, null)), true, true,
+                    new SelectByAnnotations(null, null, null, null, null, null,
+                        null, null, null, null, null, null,
+                        null, null, null, null, null, null, null, 50, 10)
+                )
+            );
+
+            assertThat(thrown.getMessage()).contains("'minVariantLengthBp' must be <= 'maxVariantLengthBp'");
         }
     }
 
@@ -571,7 +619,7 @@ class DnaerysClientTest {
                 () -> client.countSamplesHomozygousReference("1", 0)
             );
 
-            assertThat(thrown.getMessage()).contains("Invalid position");
+            assertThat(thrown.getMessage()).contains("'position' must be >= 0");
         }
 
         @Test
@@ -582,7 +630,7 @@ class DnaerysClientTest {
                 () -> client.countSamplesHomozygousReference("1", -100)
             );
 
-            assertThat(thrown.getMessage()).contains("Invalid position");
+            assertThat(thrown.getMessage()).contains("'position' must be >= 0");
         }
 
         @Test
@@ -604,7 +652,7 @@ class DnaerysClientTest {
                 () -> client.selectSamplesHomozygousReference("1", 0)
             );
 
-            assertThat(thrown.getMessage()).contains("Invalid position");
+            assertThat(thrown.getMessage()).contains("'position' must be >= 0");
         }
     }
 
@@ -828,11 +876,8 @@ class DnaerysClientTest {
 
             // Call with null limit
             client.selectVariantsInRegion(
-                "1", 1000, 2000, true, true,
-                null, null, null, null, null, null, null, null,
-                null, null, null, null, null, null,
-                null, null, null, null, null, null, null, null, null,
-                null, null  // skip=null, limit=null
+                new GenomicRegion("1", 1000, 2000, null, null), true, true,
+                NO_ANNOTATIONS, null, null
             );
 
             // Verify the request was made with limit=50 (MAX_RETURNED_ITEMS)
@@ -852,11 +897,8 @@ class DnaerysClientTest {
 
             // Call with negative limit
             client.selectVariantsInRegion(
-                "1", 1000, 2000, true, true,
-                null, null, null, null, null, null, null, null,
-                null, null, null, null, null, null,
-                null, null, null, null, null, null, null, null, null,
-                null, -1  // limit=-1
+                new GenomicRegion("1", 1000, 2000, null, null), true, true,
+                NO_ANNOTATIONS, null, -1
             );
 
             verify(mockBlockingStub).selectVariantsInRegion(argThat(request ->
@@ -875,11 +917,8 @@ class DnaerysClientTest {
 
             // Call with over limit
             client.selectVariantsInRegion(
-                "1", 1000, 2000, true, true,
-                null, null, null, null, null, null, null, null,
-                null, null, null, null, null, null,
-                null, null, null, null, null, null, null, null, null,
-                null, 500  // limit=500 (over max)
+                new GenomicRegion("1", 1000, 2000, null, null), true, true,
+                NO_ANNOTATIONS, null, 500
             );
 
             verify(mockBlockingStub).selectVariantsInRegion(argThat(request ->
@@ -898,11 +937,8 @@ class DnaerysClientTest {
 
             // Call with valid limit
             client.selectVariantsInRegion(
-                "1", 1000, 2000, true, true,
-                null, null, null, null, null, null, null, null,
-                null, null, null, null, null, null,
-                null, null, null, null, null, null, null, null, null,
-                null, 25  // limit=25 (valid)
+                new GenomicRegion("1", 1000, 2000, null, null), true, true,
+                NO_ANNOTATIONS, null, 25
             );
 
             verify(mockBlockingStub).selectVariantsInRegion(argThat(request ->
@@ -920,11 +956,8 @@ class DnaerysClientTest {
                 .thenReturn(emptyIterator);
 
             client.selectVariantsInRegion(
-                "1", 1000, 2000, true, true,
-                null, null, null, null, null, null, null, null,
-                null, null, null, null, null, null,
-                null, null, null, null, null, null, null, null, null,
-                null, 50  // skip=null
+                new GenomicRegion("1", 1000, 2000, null, null), true, true,
+                NO_ANNOTATIONS, null, 50
             );
 
             verify(mockBlockingStub).selectVariantsInRegion(argThat(request ->
@@ -942,11 +975,8 @@ class DnaerysClientTest {
                 .thenReturn(emptyIterator);
 
             client.selectVariantsInRegion(
-                "1", 1000, 2000, true, true,
-                null, null, null, null, null, null, null, null,
-                null, null, null, null, null, null,
-                null, null, null, null, null, null, null, null, null,
-                -10, 50  // skip=-10
+                new GenomicRegion("1", 1000, 2000, null, null), true, true,
+                NO_ANNOTATIONS, -10, 50
             );
 
             verify(mockBlockingStub).selectVariantsInRegion(argThat(request ->
@@ -964,16 +994,41 @@ class DnaerysClientTest {
                 .thenReturn(emptyIterator);
 
             client.selectVariantsInRegion(
-                "1", 1000, 2000, true, true,
-                null, null, null, null, null, null, null, null,
-                null, null, null, null, null, null,
-                null, null, null, null, null, null, null, null, null,
-                200, 50  // skip=200 (valid)
+                new GenomicRegion("1", 1000, 2000, null, null), true, true,
+                NO_ANNOTATIONS, 200, 50
             );
 
             verify(mockBlockingStub).selectVariantsInRegion(argThat(request ->
                 request.getSkip() == 200
             ));
+        }
+    }
+
+    // ========================================
+    // ALPHA MISSENSE STAT RECORD TESTS
+    // ========================================
+
+    @Nested
+    @DisplayName("AlphaMissenseStat Record Tests")
+    class AlphaMissenseStatRecordTests {
+
+        @Test
+        @DisplayName("AlphaMissenseStat record holds correct values")
+        void testAlphaMissenseStatRecord() {
+            DnaerysClient.AlphaMissenseStat stat = new DnaerysClient.AlphaMissenseStat(0.65, 0.12, 100);
+
+            assertThat(stat.alphaMissenseMean()).isEqualTo(0.65);
+            assertThat(stat.alphaMissenseDeviation()).isEqualTo(0.12);
+            assertThat(stat.variantCount()).isEqualTo(100);
+        }
+
+        @Test
+        @DisplayName("AlphaMissenseStat record equality")
+        void testAlphaMissenseStatEquality() {
+            DnaerysClient.AlphaMissenseStat stat1 = new DnaerysClient.AlphaMissenseStat(0.65, 0.12, 100);
+            DnaerysClient.AlphaMissenseStat stat2 = new DnaerysClient.AlphaMissenseStat(0.65, 0.12, 100);
+
+            assertThat(stat1).isEqualTo(stat2);
         }
     }
 

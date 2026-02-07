@@ -17,8 +17,8 @@ import java.util.logging.Logger;
  * values are compared against baselines with configurable thresholds.
  *
  * Usage:
- * - Run tests normally: ./mvnw verify -DskipIntegrationTests=false
- * - Update baselines: ./mvnw verify -DskipIntegrationTests=false -DupdateBaseline=true
+ * - Run tests normally: ./mvnw verify -DskipITs=false
+ * - Update baselines: ./mvnw verify -DskipITs=false -DupdateBaseline=true
  */
 public class TestBaselines {
 
@@ -60,7 +60,7 @@ public class TestBaselines {
 
     /**
      * Check if running in baseline update mode.
-     * Usage: ./mvnw verify -DskipIntegrationTests=false -DupdateBaseline=true
+     * Usage: ./mvnw verify -DskipITs=false -DupdateBaseline=true
      */
     public static boolean isUpdateMode() {
         return Boolean.getBoolean("updateBaseline");

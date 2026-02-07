@@ -5,6 +5,8 @@ import io.quarkiverse.mcp.server.ToolResponse;
 import io.quarkiverse.mcp.server.ToolCallException;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
+import org.jboss.logging.Logger;
+
 import java.util.Collection;
 import java.util.List;
 
@@ -13,6 +15,8 @@ public class McpResponse {
 
     @Inject
     JsonUtil jsonUtil;
+
+    private static final Logger LOG = Logger.getLogger(McpResponse.class);
 
     /**
      * Success for collections: Provides text for the LLM and a Map for the UI.
@@ -51,7 +55,7 @@ public class McpResponse {
                 ? ": " + grpcEx.getStatus().getDescription()
                 : "";
 
-            String message = switch (grpcEx.getStatus().getCode()) {
+            String message = "gRPC Exception: " + switch (grpcEx.getStatus().getCode()) {
                 case INVALID_ARGUMENT -> "Invalid request parameters" + details;
                 case NOT_FOUND        -> "Requested genomic data not found" + details;
                 case PERMISSION_DENIED -> "Access denied to Dnaerys resource";
@@ -67,6 +71,8 @@ public class McpResponse {
                 case DATA_LOSS        -> "Unrecoverable data corruption detected";
                 default               -> "Database error (" + grpcEx.getStatus().getCode() + ")" + details;
             };
+
+            LOG.error(message);
             return new ToolCallException(message);
         }
 

@@ -208,10 +208,10 @@ _e.g._ `http://localhost:9000/mcp` or `https://db.dnaerys.org:443/mcp`
 ./mvnw test
 
 # Integration tests (requires db.dnaerys.org access)
-./mvnw verify -DskipIntegrationTests=false
+./mvnw verify -DskipITs=false
 
 # Update test baselines after data changes
-./mvnw verify -DskipIntegrationTests=false -DupdateBaseline=true
+./mvnw verify -DskipITs=false -DupdateBaseline=true
 ```
 
 See [TEST_SPECIFICATION.md](./docs/TEST_SPECIFICATION.md) for detailed test documentation.

@@ -7,6 +7,8 @@ import io.quarkus.test.junit.QuarkusTest;
 import jakarta.inject.Inject;
 import org.dnaerys.client.DnaerysClient;
 import org.dnaerys.cluster.grpc.*;
+import org.dnaerys.mcp.OneKGPdMCPServer.GenomicRegion;
+import org.dnaerys.mcp.OneKGPdMCPServer.SelectByAnnotations;
 import org.dnaerys.mcp.generator.VariantView;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -17,9 +19,7 @@ import java.util.List;
 import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
 /**
@@ -83,22 +83,17 @@ class OneKGPdMCPServerTest {
     class VariantCountToolsTests {
 
         @Test
-        @DisplayName("countVariantsInRegion returns Map with 'count' key")
+        @DisplayName("countVariantsInMultipleRegions returns Map with 'count' key")
         @SuppressWarnings("unchecked")
         void testCountVariantsInRegionReturnsMap() {
-            when(mockClient.countVariantsInRegion(
-                anyString(), anyInt(), anyInt(), anyBoolean(), anyBoolean(),
-                any(), any(), any(), any(), any(), any(), any(), any(),
-                any(), any(), any(), any(), any(), any(),
-                any(), any(), any(), any(), any(), any(), any(), any(), any()
+            when(mockClient.countVariantsInMultiRegions(
+                any(), anyBoolean(), anyBoolean(), any()
             )).thenReturn(5573L);
 
-            ToolResponse toolResponse = server.countVariantsInRegion(
-                "17", 43044295, 43170245,  // BRCA1
+            ToolResponse toolResponse = server.countVariantsInMultipleRegions(
+                List.of(new GenomicRegion("17", 43044295, 43170245, null, null)),
                 true, true,  // selectHet, selectHom
-                null, null, null, null, null, null, null, null,
-                null, null, null, null, null, null, null, null, null,
-                null, null, null, null, null, null
+                null
             );
             Map<String, Long> result = (Map<String, Long>) toolResponse.structuredContent();
 
@@ -107,104 +102,75 @@ class OneKGPdMCPServerTest {
         }
 
         @Test
-        @DisplayName("countVariantsInRegion passes selectHom=true, selectHet=false for homozygous only")
+        @DisplayName("countVariantsInMultipleRegions passes selectHom=true, selectHet=false for homozygous only")
         void testCountVariantsInRegionHomozygousOnlyFlags() {
-            when(mockClient.countVariantsInRegion(
-                anyString(), anyInt(), anyInt(), anyBoolean(), anyBoolean(),
-                any(), any(), any(), any(), any(), any(), any(), any(),
-                any(), any(), any(), any(), any(), any(),
-                any(), any(), any(), any(), any(), any(), any(), any(), any()
+            when(mockClient.countVariantsInMultiRegions(
+                any(), anyBoolean(), anyBoolean(), any()
             )).thenReturn(100L);
 
-            server.countVariantsInRegion(
-                "1", 1000, 2000,
+            server.countVariantsInMultipleRegions(
+                List.of(new GenomicRegion("1", 1000, 2000, null, null)),
                 false, true,  // selectHet=false, selectHom=true (homozygous only)
-                null, null, null, null, null, null, null, null,
-                null, null, null, null, null, null, null, null, null,
-                null, null, null, null, null, null
+                null
             );
 
             // Server swaps: calls client with (selectHom=true, selectHet=false)
-            verify(mockClient).countVariantsInRegion(
-                eq("1"), eq(1000), eq(2000), eq(true), eq(false),
-                any(), any(), any(), any(), any(), any(), any(), any(),
-                any(), any(), any(), any(), any(), any(),
-                any(), any(), any(), any(), any(), any(), any(), any(), any()
+            verify(mockClient).countVariantsInMultiRegions(
+                any(), eq(true), eq(false), any()
             );
         }
 
         @Test
-        @DisplayName("countVariantsInRegion passes selectHom=false, selectHet=true for heterozygous only")
+        @DisplayName("countVariantsInMultipleRegions passes selectHom=false, selectHet=true for heterozygous only")
         void testCountVariantsInRegionHeterozygousOnlyFlags() {
-            when(mockClient.countVariantsInRegion(
-                anyString(), anyInt(), anyInt(), anyBoolean(), anyBoolean(),
-                any(), any(), any(), any(), any(), any(), any(), any(),
-                any(), any(), any(), any(), any(), any(),
-                any(), any(), any(), any(), any(), any(), any(), any(), any()
+            when(mockClient.countVariantsInMultiRegions(
+                any(), anyBoolean(), anyBoolean(), any()
             )).thenReturn(100L);
 
-            server.countVariantsInRegion(
-                "1", 1000, 2000,
+            server.countVariantsInMultipleRegions(
+                List.of(new GenomicRegion("1", 1000, 2000, null, null)),
                 true, false,  // selectHet=true, selectHom=false (heterozygous only)
-                null, null, null, null, null, null, null, null,
-                null, null, null, null, null, null, null, null, null,
-                null, null, null, null, null, null
+                null
             );
 
             // Server swaps: calls client with (selectHom=false, selectHet=true)
-            verify(mockClient).countVariantsInRegion(
-                eq("1"), eq(1000), eq(2000), eq(false), eq(true),
-                any(), any(), any(), any(), any(), any(), any(), any(),
-                any(), any(), any(), any(), any(), any(),
-                any(), any(), any(), any(), any(), any(), any(), any(), any()
+            verify(mockClient).countVariantsInMultiRegions(
+                any(), eq(false), eq(true), any()
             );
         }
 
         @Test
-        @DisplayName("countVariantsInRegion passes selectHom=true, selectHet=true for all variants")
+        @DisplayName("countVariantsInMultipleRegions passes selectHom=true, selectHet=true for all variants")
         void testCountVariantsInRegionAllVariantsFlags() {
-            when(mockClient.countVariantsInRegion(
-                anyString(), anyInt(), anyInt(), anyBoolean(), anyBoolean(),
-                any(), any(), any(), any(), any(), any(), any(), any(),
-                any(), any(), any(), any(), any(), any(),
-                any(), any(), any(), any(), any(), any(), any(), any(), any()
+            when(mockClient.countVariantsInMultiRegions(
+                any(), anyBoolean(), anyBoolean(), any()
             )).thenReturn(200L);
 
-            server.countVariantsInRegion(
-                "1", 1000, 2000,
+            server.countVariantsInMultipleRegions(
+                List.of(new GenomicRegion("1", 1000, 2000, null, null)),
                 true, true,  // selectHet=true, selectHom=true (all variants)
-                null, null, null, null, null, null, null, null,
-                null, null, null, null, null, null, null, null, null,
-                null, null, null, null, null, null
+                null
             );
 
             // Verify the client was called with hom=true, het=true
-            verify(mockClient).countVariantsInRegion(
-                eq("1"), eq(1000), eq(2000), eq(true), eq(true),
-                any(), any(), any(), any(), any(), any(), any(), any(),
-                any(), any(), any(), any(), any(), any(),
-                any(), any(), any(), any(), any(), any(), any(), any(), any()
+            verify(mockClient).countVariantsInMultiRegions(
+                any(), eq(true), eq(true), any()
             );
         }
 
         @Test
-        @DisplayName("countVariantsInRegion throws ToolCallException for invalid chromosome")
+        @DisplayName("countVariantsInMultipleRegions throws ToolCallException for invalid chromosome")
         void testCountVariantsInRegionInvalidChromosome() {
-            when(mockClient.countVariantsInRegion(
-                anyString(), anyInt(), anyInt(), anyBoolean(), anyBoolean(),
-                any(), any(), any(), any(), any(), any(), any(), any(),
-                any(), any(), any(), any(), any(), any(),
-                any(), any(), any(), any(), any(), any(), any(), any(), any()
+            when(mockClient.countVariantsInMultiRegions(
+                any(), anyBoolean(), anyBoolean(), any()
             )).thenThrow(new RuntimeException("Invalid Chromosome"));
 
             ToolCallException thrown = org.junit.jupiter.api.Assertions.assertThrows(
                 ToolCallException.class,
-                () -> server.countVariantsInRegion(
-                    "99", 1000, 2000,  // Invalid chromosome
+                () -> server.countVariantsInMultipleRegions(
+                    List.of(new GenomicRegion("99", 1000, 2000, null, null)),
                     true, true,  // selectHet, selectHom
-                    null, null, null, null, null, null, null, null,
-                    null, null, null, null, null, null, null, null, null,
-                    null, null, null, null, null, null
+                    null
                 )
             );
 
@@ -231,19 +197,13 @@ class OneKGPdMCPServerTest {
                 .setAlt("G")
                 .build();
             when(mockClient.selectVariantsInRegion(
-                anyString(), anyInt(), anyInt(), anyBoolean(), anyBoolean(),
-                any(), any(), any(), any(), any(), any(), any(), any(),
-                any(), any(), any(), any(), any(), any(),
-                any(), any(), any(), any(), any(), any(), any(), any(), any(),
-                any(), any()
+                any(), anyBoolean(), anyBoolean(), any(), any(), any()
             )).thenReturn(List.of(variant));
 
             ToolResponse toolResponse = server.selectVariantsInRegion(
-                "17", 43044295, 43170245,  // BRCA1
+                new GenomicRegion("17", 43044295, 43170245, null, null),
                 true, true,  // selectHet, selectHom
-                null, null, null, null, null, null, null, null,
-                null, null, null, null, null, null, null, null, null,
-                null, null, null, null, null, null, null, null
+                null, null, null
             );
             Map<String, List<VariantView>> result = (Map<String, List<VariantView>>) toolResponse.structuredContent();
 
@@ -255,21 +215,15 @@ class OneKGPdMCPServerTest {
         @DisplayName("selectVariantsInRegion throws ToolCallException for invalid region")
         void testSelectVariantsInRegionInvalidRegion() {
             when(mockClient.selectVariantsInRegion(
-                anyString(), anyInt(), anyInt(), anyBoolean(), anyBoolean(),
-                any(), any(), any(), any(), any(), any(), any(), any(),
-                any(), any(), any(), any(), any(), any(),
-                any(), any(), any(), any(), any(), any(), any(), any(), any(),
-                any(), any()
+                any(), anyBoolean(), anyBoolean(), any(), any(), any()
             )).thenThrow(new RuntimeException("Invalid 'start' or 'end'"));
 
             ToolCallException thrown = org.junit.jupiter.api.Assertions.assertThrows(
                 ToolCallException.class,
                 () -> server.selectVariantsInRegion(
-                    "1", 2000, 1000,  // Inverted coordinates
+                    new GenomicRegion("1", 2000, 1000, null, null),
                     true, true,  // selectHet, selectHom
-                    null, null, null, null, null, null, null, null,
-                    null, null, null, null, null, null, null, null, null,
-                    null, null, null, null, null, null, null, null
+                    null, null, null
                 )
             );
 
@@ -289,19 +243,14 @@ class OneKGPdMCPServerTest {
         @DisplayName("countSamplesWithVariants returns Map with 'count' key")
         @SuppressWarnings("unchecked")
         void testCountSamplesWithVariantsReturnsMap() {
-            when(mockClient.countSamplesInRegion(
-                anyString(), anyInt(), anyInt(), anyBoolean(), anyBoolean(),
-                any(), any(), any(), any(), any(), any(), any(), any(),
-                any(), any(), any(), any(), any(), any(),
-                any(), any(), any(), any(), any(), any(), any(), any(), any()
+            when(mockClient.countSamplesInMultiRegions(
+                any(), anyBoolean(), anyBoolean(), any()
             )).thenReturn(150L);
 
             ToolResponse toolResponse = server.countSamplesWithVariants(
-                "1", 1000, 2000,
+                List.of(new GenomicRegion("1", 1000, 2000, null, null)),
                 true, true,  // selectHet, selectHom
-                null, null, null, null, null, null, null, null,
-                null, null, null, null, null, null, null, null, null,
-                null, null, null, null, null, null
+                null
             );
             Map<String, Long> result = (Map<String, Long>) toolResponse.structuredContent();
 
@@ -314,18 +263,13 @@ class OneKGPdMCPServerTest {
         @SuppressWarnings("unchecked")
         void testSelectSamplesWithVariantsReturnsMap() {
             when(mockClient.selectSamplesInRegion(
-                anyString(), anyInt(), anyInt(), anyBoolean(), anyBoolean(),
-                any(), any(), any(), any(), any(), any(), any(), any(),
-                any(), any(), any(), any(), any(), any(),
-                any(), any(), any(), any(), any(), any(), any(), any(), any()
+                any(), anyBoolean(), anyBoolean(), any()
             )).thenReturn(List.of("HG00403", "HG00405"));
 
             ToolResponse toolResponse = server.selectSamplesWithVariants(
-                "1", 1000, 2000,
+                new GenomicRegion("1", 1000, 2000, null, null),
                 true, true,  // selectHet, selectHom
-                null, null, null, null, null, null, null, null,
-                null, null, null, null, null, null, null, null, null,
-                null, null, null, null, null, null
+                null
             );
             Map<String, List<String>> result = (Map<String, List<String>>) toolResponse.structuredContent();
 
@@ -337,26 +281,18 @@ class OneKGPdMCPServerTest {
         @DisplayName("selectSamplesWithVariants passes selectHom=true, selectHet=false for homozygous only")
         void testSelectSamplesWithHomVariantsFlags() {
             when(mockClient.selectSamplesInRegion(
-                anyString(), anyInt(), anyInt(), anyBoolean(), anyBoolean(),
-                any(), any(), any(), any(), any(), any(), any(), any(),
-                any(), any(), any(), any(), any(), any(),
-                any(), any(), any(), any(), any(), any(), any(), any(), any()
+                any(), anyBoolean(), anyBoolean(), any()
             )).thenReturn(List.of());
 
             server.selectSamplesWithVariants(
-                "1", 1000, 2000,
+                new GenomicRegion("1", 1000, 2000, null, null),
                 false, true,  // selectHet=false, selectHom=true (homozygous only)
-                null, null, null, null, null, null, null, null,
-                null, null, null, null, null, null, null, null, null,
-                null, null, null, null, null, null
+                null
             );
 
             // Server swaps: calls client with (selectHom=true, selectHet=false)
             verify(mockClient).selectSamplesInRegion(
-                eq("1"), eq(1000), eq(2000), eq(true), eq(false),
-                any(), any(), any(), any(), any(), any(), any(), any(),
-                any(), any(), any(), any(), any(), any(),
-                any(), any(), any(), any(), any(), any(), any(), any(), any()
+                any(), eq(true), eq(false), any()
             );
         }
 
@@ -364,26 +300,18 @@ class OneKGPdMCPServerTest {
         @DisplayName("selectSamplesWithVariants passes selectHom=false, selectHet=true for heterozygous only")
         void testSelectSamplesWithHetVariantsFlags() {
             when(mockClient.selectSamplesInRegion(
-                anyString(), anyInt(), anyInt(), anyBoolean(), anyBoolean(),
-                any(), any(), any(), any(), any(), any(), any(), any(),
-                any(), any(), any(), any(), any(), any(),
-                any(), any(), any(), any(), any(), any(), any(), any(), any()
+                any(), anyBoolean(), anyBoolean(), any()
             )).thenReturn(List.of());
 
             server.selectSamplesWithVariants(
-                "1", 1000, 2000,
+                new GenomicRegion("1", 1000, 2000, null, null),
                 true, false,  // selectHet=true, selectHom=false (heterozygous only)
-                null, null, null, null, null, null, null, null,
-                null, null, null, null, null, null, null, null, null,
-                null, null, null, null, null, null
+                null
             );
 
             // Server swaps: calls client with (selectHom=false, selectHet=true)
             verify(mockClient).selectSamplesInRegion(
-                eq("1"), eq(1000), eq(2000), eq(false), eq(true),
-                any(), any(), any(), any(), any(), any(), any(), any(),
-                any(), any(), any(), any(), any(), any(),
-                any(), any(), any(), any(), any(), any(), any(), any(), any()
+                any(), eq(false), eq(true), any()
             );
         }
     }
@@ -399,53 +327,36 @@ class OneKGPdMCPServerTest {
         @Test
         @DisplayName("MCP-003: Parameters are passed through to client correctly")
         void testParameterPassthrough() {
-            when(mockClient.countVariantsInRegion(
-                anyString(), anyInt(), anyInt(), anyBoolean(), anyBoolean(),
-                any(), any(), any(), any(), any(), any(), any(), any(),
-                any(), any(), any(), any(), any(), any(),
-                any(), any(), any(), any(), any(), any(), any(), any(), any()
+            when(mockClient.countVariantsInMultiRegions(
+                any(), anyBoolean(), anyBoolean(), any()
             )).thenReturn(100L);
 
-            // Call with specific parameters
-            ToolResponse response = server.countVariantsInRegion(
-                "17",                    // chromosome
-                43044295,               // start
-                43170245,               // end
+            // Call with specific parameters (refAllele/altAllele are now in GenomicRegion)
+            ToolResponse response = server.countVariantsInMultipleRegions(
+                List.of(new GenomicRegion("17", 43044295, 43170245, "A", "G")),
                 true,                   // selectHet
                 true,                   // selectHom
-                "A",                    // refAllele
-                "G",                    // altAllele
-                0.01f,                  // afLessThan
-                0.0001f,                // afGreaterThan
-                0.02f,                  // gnomadExomeAfLT
-                0.0005f,                // gnomadExomeAfGT
-                0.03f,                  // gnomadGenomeAfLT
-                0.0002f,                // gnomadGenomeAfGT
-                "PATHOGENIC",           // clinSignificance
-                "HIGH",                 // vepImpact
-                "TRANSCRIPT",           // vepFeature
-                "PROTEIN_CODING",       // vepBiotype
-                "SNV",                  // vepVariantType
-                "MISSENSE_VARIANT",     // vepConsequences
-                "LIKELY_PATHOGENIC",    // alphaMissenseClass
-                0.9f,                   // alphaMissenseScoreLT
-                0.5f,                   // alphaMissenseScoreGT
-                true,                   // biallelicOnly
-                false,                  // multiallelicOnly
-                false,                  // excludeMales
-                true,                   // excludeFemales
-                10,                     // minVariantLengthBp
-                50                      // maxVariantLengthBp
+                new SelectByAnnotations(
+                    0.01f, 0.0001f,                // afLessThan, afGreaterThan
+                    0.02f, 0.0005f,                // gnomadExomeAfLT, gnomadExomeAfGT
+                    0.03f, 0.0002f,                // gnomadGenomeAfLT, gnomadGenomeAfGT
+                    "PATHOGENIC",                  // clinSignificance
+                    "HIGH",                        // vepImpact
+                    "TRANSCRIPT",                  // vepFeature
+                    "PROTEIN_CODING",              // vepBiotype
+                    "SNV",                         // vepVariantType
+                    "MISSENSE_VARIANT",            // vepConsequences
+                    "LIKELY_PATHOGENIC",            // alphaMissenseClass
+                    0.9f, 0.5f,                    // alphaMissenseScoreLT, alphaMissenseScoreGT
+                    true, false,                   // biallelicOnly, multiallelicOnly
+                    false, true,                   // excludeMales, excludeFemales
+                    10, 50                         // minVariantLengthBp, maxVariantLengthBp
+                )
             );
 
-            // Verify the client was called (parameter reordering happens in server)
-            // Just verify the core coordinates are passed correctly
-            verify(mockClient).countVariantsInRegion(
-                eq("17"), eq(43044295), eq(43170245),
-                anyBoolean(), anyBoolean(),
-                any(), any(), any(), any(), any(), any(), any(), any(),
-                any(), any(), any(), any(), any(), any(),
-                any(), any(), any(), any(), any(), any(), any(), any(), any()
+            // Verify the client was called
+            verify(mockClient).countVariantsInMultiRegions(
+                any(), anyBoolean(), anyBoolean(), any()
             );
 
             // Verify response is valid
@@ -455,56 +366,40 @@ class OneKGPdMCPServerTest {
         @Test
         @DisplayName("MCP-004: Optional params null are passed correctly")
         void testNullOptionalParameters() {
-            when(mockClient.countVariantsInRegion(
-                anyString(), anyInt(), anyInt(), anyBoolean(), anyBoolean(),
-                any(), any(), any(), any(), any(), any(), any(), any(),
-                any(), any(), any(), any(), any(), any(),
-                any(), any(), any(), any(), any(), any(), any(), any(), any()
+            when(mockClient.countVariantsInMultiRegions(
+                any(), anyBoolean(), anyBoolean(), any()
             )).thenReturn(100L);
 
             // Call with all optional params as null (selectHet/selectHom are required)
-            server.countVariantsInRegion(
-                "1", 1000, 2000,
+            server.countVariantsInMultipleRegions(
+                List.of(new GenomicRegion("1", 1000, 2000, null, null)),
                 true, true,  // selectHet, selectHom (required)
-                null, null, null, null, null, null, null, null,
-                null, null, null, null, null, null, null, null, null,
-                null, null, null, null, null, null
+                null
             );
 
-            // Verify client was called
-            verify(mockClient).countVariantsInRegion(
-                eq("1"), eq(1000), eq(2000), eq(true), eq(true),
-                isNull(), isNull(), isNull(), isNull(), isNull(), isNull(), isNull(), isNull(),
-                isNull(), isNull(), isNull(), isNull(), isNull(), isNull(),
-                isNull(), isNull(), isNull(), isNull(),
-                isNull(), isNull(), isNull(), isNull(), isNull()
+            // Verify client was called with null annotations
+            verify(mockClient).countVariantsInMultiRegions(
+                any(), eq(true), eq(true), isNull()
             );
         }
 
         @Test
-        @DisplayName("Chromosome parameter is correctly mapped")
+        @DisplayName("Chromosome parameter is correctly mapped via GenomicRegion")
         void testChromosomeMapping() {
-            when(mockClient.countVariantsInRegion(
-                anyString(), anyInt(), anyInt(), anyBoolean(), anyBoolean(),
-                any(), any(), any(), any(), any(), any(), any(), any(),
-                any(), any(), any(), any(), any(), any(),
-                any(), any(), any(), any(), any(), any(), any(), any(), any()
+            when(mockClient.countVariantsInMultiRegions(
+                any(), anyBoolean(), anyBoolean(), any()
             )).thenReturn(100L);
 
-            // Test chromosome X
-            server.countVariantsInRegion(
-                "X", 1000, 2000,
+            // Test chromosome X via GenomicRegion
+            server.countVariantsInMultipleRegions(
+                List.of(new GenomicRegion("X", 1000, 2000, null, null)),
                 true, true,  // selectHet, selectHom
-                null, null, null, null, null, null, null, null,
-                null, null, null, null, null, null, null, null, null,
-                null, null, null, null, null, null
+                null
             );
 
-            verify(mockClient).countVariantsInRegion(
-                eq("X"), eq(1000), eq(2000), eq(true), eq(true),
-                any(), any(), any(), any(), any(), any(), any(), any(),
-                any(), any(), any(), any(), any(), any(),
-                any(), any(), any(), any(), any(), any(), any(), any(), any()
+            verify(mockClient).countVariantsInMultiRegions(
+                argThat(regions -> regions.size() == 1 && "X".equals(regions.get(0).chromosome())),
+                eq(true), eq(true), any()
             );
         }
     }
@@ -563,14 +458,14 @@ class OneKGPdMCPServerTest {
         @DisplayName("countSamplesHomozygousReference throws ToolCallException for invalid position")
         void testCountSamplesHomRefInvalidPosition() {
             when(mockClient.countSamplesHomozygousReference(anyString(), anyInt()))
-                .thenThrow(new RuntimeException("Invalid position"));
+                .thenThrow(new RuntimeException("'position' must be >= 0"));
 
             ToolCallException thrown = org.junit.jupiter.api.Assertions.assertThrows(
                 ToolCallException.class,
                 () -> server.countSamplesHomozygousReference("1", 0)
             );
 
-            assertThat(thrown.getMessage()).contains("Invalid position");
+            assertThat(thrown.getMessage()).contains("'position' must be >= 0");
         }
     }
 
@@ -633,6 +528,84 @@ class OneKGPdMCPServerTest {
     }
 
     // ========================================
+    // ALPHA MISSENSE STAT TOOL TESTS
+    // ========================================
+
+    @Nested
+    @DisplayName("AlphaMissense Stat Tool Tests")
+    class AlphaMissenseStatToolTests {
+
+        @Test
+        @DisplayName("computeAlphaMissenseStat returns wrapped result")
+        void testComputeAlphaMissenseStatReturnsWrappedResult() {
+            DnaerysClient.AlphaMissenseStat stat = new DnaerysClient.AlphaMissenseStat(0.65, 0.12, 100);
+            when(mockClient.computeAlphaMissenseStat(any())).thenReturn(stat);
+
+            ToolResponse toolResponse = server.computeAlphaMissenseStat(
+                List.of(new GenomicRegion("17", 43044295, 43170245, null, null))
+            );
+            DnaerysClient.AlphaMissenseStat result = (DnaerysClient.AlphaMissenseStat) toolResponse.structuredContent();
+
+            assertThat(result).isNotNull();
+            assertThat(result.alphaMissenseMean()).isEqualTo(0.65);
+            assertThat(result.alphaMissenseDeviation()).isEqualTo(0.12);
+            assertThat(result.variantCount()).isEqualTo(100);
+        }
+
+        @Test
+        @DisplayName("computeAlphaMissenseStat throws ToolCallException on error")
+        void testComputeAlphaMissenseStatError() {
+            when(mockClient.computeAlphaMissenseStat(any()))
+                .thenThrow(new RuntimeException("Connection failed"));
+
+            ToolCallException thrown = org.junit.jupiter.api.Assertions.assertThrows(
+                ToolCallException.class,
+                () -> server.computeAlphaMissenseStat(
+                    List.of(new GenomicRegion("17", 43044295, 43170245, null, null))
+                )
+            );
+
+            assertThat(thrown.getMessage()).contains("Connection failed");
+        }
+
+        @Test
+        @DisplayName("computeAlphaMissenseStat returns zeros for empty region")
+        void testComputeAlphaMissenseStatEmptyRegion() {
+            DnaerysClient.AlphaMissenseStat stat = new DnaerysClient.AlphaMissenseStat(0d, 0d, 0);
+            when(mockClient.computeAlphaMissenseStat(any())).thenReturn(stat);
+
+            ToolResponse toolResponse = server.computeAlphaMissenseStat(
+                List.of(new GenomicRegion("22", 50000000, 50001000, null, null))
+            );
+            DnaerysClient.AlphaMissenseStat result = (DnaerysClient.AlphaMissenseStat) toolResponse.structuredContent();
+
+            assertThat(result.alphaMissenseMean()).isEqualTo(0d);
+            assertThat(result.alphaMissenseDeviation()).isEqualTo(0d);
+            assertThat(result.variantCount()).isEqualTo(0);
+        }
+
+        @Test
+        @DisplayName("computeAlphaMissenseStat passes regions to client")
+        void testComputeAlphaMissenseStatPassesRegions() {
+            DnaerysClient.AlphaMissenseStat stat = new DnaerysClient.AlphaMissenseStat(0.5, 0.1, 50);
+            when(mockClient.computeAlphaMissenseStat(any())).thenReturn(stat);
+
+            List<GenomicRegion> regions = List.of(
+                new GenomicRegion("17", 43044295, 43170245, null, null),
+                new GenomicRegion("7", 117287120, 117715971, null, null)
+            );
+
+            server.computeAlphaMissenseStat(regions);
+
+            verify(mockClient).computeAlphaMissenseStat(argThat(r ->
+                r.size() == 2 &&
+                "17".equals(r.get(0).chromosome()) &&
+                "7".equals(r.get(1).chromosome())
+            ));
+        }
+    }
+
+    // ========================================
     // ERROR HANDLING TESTS
     // ========================================
 
@@ -643,21 +616,16 @@ class OneKGPdMCPServerTest {
         @Test
         @DisplayName("gRPC error throws ToolCallException for variant count")
         void testGrpcErrorThrowsExceptionForCount() {
-            when(mockClient.countVariantsInRegion(
-                anyString(), anyInt(), anyInt(), anyBoolean(), anyBoolean(),
-                any(), any(), any(), any(), any(), any(), any(), any(),
-                any(), any(), any(), any(), any(), any(),
-                any(), any(), any(), any(), any(), any(), any(), any(), any()
+            when(mockClient.countVariantsInMultiRegions(
+                any(), anyBoolean(), anyBoolean(), any()
             )).thenThrow(new RuntimeException("Connection failed"));
 
             ToolCallException thrown = org.junit.jupiter.api.Assertions.assertThrows(
                 ToolCallException.class,
-                () -> server.countVariantsInRegion(
-                    "1", 1000, 2000,
+                () -> server.countVariantsInMultipleRegions(
+                    List.of(new GenomicRegion("1", 1000, 2000, null, null)),
                     true, true,  // selectHet, selectHom
-                    null, null, null, null, null, null, null, null,
-                    null, null, null, null, null, null, null, null, null,
-                    null, null, null, null, null, null
+                    null
                 )
             );
 
@@ -668,21 +636,15 @@ class OneKGPdMCPServerTest {
         @DisplayName("gRPC error throws ToolCallException for select")
         void testGrpcErrorThrowsExceptionForSelect() {
             when(mockClient.selectVariantsInRegion(
-                anyString(), anyInt(), anyInt(), anyBoolean(), anyBoolean(),
-                any(), any(), any(), any(), any(), any(), any(), any(),
-                any(), any(), any(), any(), any(), any(),
-                any(), any(), any(), any(), any(), any(), any(), any(), any(),
-                any(), any()
+                any(), anyBoolean(), anyBoolean(), any(), any(), any()
             )).thenThrow(new RuntimeException("Connection failed"));
 
             ToolCallException thrown = org.junit.jupiter.api.Assertions.assertThrows(
                 ToolCallException.class,
                 () -> server.selectVariantsInRegion(
-                    "1", 1000, 2000,
+                    new GenomicRegion("1", 1000, 2000, null, null),
                     true, true,  // selectHet, selectHom
-                    null, null, null, null, null, null, null, null,
-                    null, null, null, null, null, null, null, null, null,
-                    null, null, null, null, null, null, null, null
+                    null, null, null
                 )
             );
 
@@ -693,20 +655,15 @@ class OneKGPdMCPServerTest {
         @DisplayName("gRPC error throws ToolCallException for samples")
         void testGrpcErrorThrowsExceptionForSamples() {
             when(mockClient.selectSamplesInRegion(
-                anyString(), anyInt(), anyInt(), anyBoolean(), anyBoolean(),
-                any(), any(), any(), any(), any(), any(), any(), any(),
-                any(), any(), any(), any(), any(), any(),
-                any(), any(), any(), any(), any(), any(), any(), any(), any()
+                any(), anyBoolean(), anyBoolean(), any()
             )).thenThrow(new RuntimeException("Connection failed"));
 
             ToolCallException thrown = org.junit.jupiter.api.Assertions.assertThrows(
                 ToolCallException.class,
                 () -> server.selectSamplesWithVariants(
-                    "1", 1000, 2000,
+                    new GenomicRegion("1", 1000, 2000, null, null),
                     true, true,  // selectHet, selectHom
-                    null, null, null, null, null, null, null, null,
-                    null, null, null, null, null, null, null, null, null,
-                    null, null, null, null, null, null
+                    null
                 )
             );
 

@@ -7,6 +7,7 @@ import io.quarkus.test.junit.QuarkusTest;
 import jakarta.inject.Inject;
 import org.dnaerys.client.DnaerysClient;
 import org.dnaerys.cluster.grpc.*;
+import org.dnaerys.mcp.OneKGPdMCPServer.GenomicRegion;
 import org.dnaerys.mcp.generator.VariantView;
 import org.dnaerys.test.WireMockGrpcResource;
 import org.dnaerys.test.WireMockGrpcResource.InjectWireMockGrpc;
@@ -30,7 +31,7 @@ import static org.wiremock.grpc.dsl.WireMockGrpc.method;
  * Integration tests for OneKGPdMCPServer MCP tools.
  *
  * These tests require network connectivity to db.dnaerys.org.
- * Run with: ./mvnw verify -DskipIntegrationTests=false -Dit.test=OneKGPdMCPServerIT
+ * Run with: ./mvnw verify -DskipITs=false -Dit.test=OneKGPdMCPServerIT
  *
  * Test cases cover:
  * - MCP-INT-001: Metadata tools (getSampleCounts)
@@ -318,11 +319,9 @@ class OneKGPdMCPServerIT {
     void testJsonResponseStructure() {
         // Get some variants to validate structure using selectVariantsInRegion
         ToolResponse toolResponse = server.selectVariantsInRegion(
-                CHR_BRCA1, BRCA1_START, BRCA1_END,
+                new GenomicRegion(CHR_BRCA1, BRCA1_START, BRCA1_END, null, null),
                 true, true,  // selectHet, selectHom
-                null, null, null, null, null, null, null, null,
-                null, null, null, null, null, null, null, null, null,
-                null, null, null, null, null, null, 0, 5  // Get just 5 variants
+                null, 0, 5  // Get just 5 variants
         );
         Map<String, List<VariantView>> result = (Map<String, List<VariantView>>) toolResponse.structuredContent();
 

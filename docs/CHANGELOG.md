@@ -5,6 +5,57 @@ All notable changes to this project made by Claude will be documented in this fi
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## Release 1.2.7
+
+### Changed - 2026-02-07
+#### Prod code has been updated with method signature changes. Test updates to follow.
+
+Method signatures in OneKGPdMCPServer and DnaerysClient were refactored to use two new records:
+ - GenomicRegion(chromosome, start, end, refAllele, altAllele) — replaces individual chr/start/end/ref/alt params
+ - SelectByAnnotations(afLessThan, afGreaterThan, gnomadExomeAfLessThan, gnomadExomeAfGreaterThan, gnomadGenomeAfLessThan,
+   gnomadGenomeAfGreaterThan, clinSignificance, vepImpact, vepFeature, vepBiotype, vepVariantType, vepConsequences,
+   alphaMissenseClass, alphaMissenseScoreLessThan, alphaMissenseScoreGreaterThan, biallelicOnly, multiallelicOnly,
+   excludeMales, excludeFemales, minVariantLengthBp, maxVariantLengthBp) — replaces 19-21 individual filter params
+
+New methods:
+ - OneKGPdMCPServer.java: computeAlphaMissenseStat
+ - DnaerysClient.java: computeAlphaMissenseStat, alphaMissenseStat, paramValidation
+
+● Summary of all test changes:
+
+  Files modified:
+
+  1. OneKGPdMCPServerTest.java — Updated all mock setups, server method calls, and verify() calls to use the new signatures:
+    - countVariantsInMultipleRegions(regions, het, hom, annotations) (4 params)
+    - selectVariantsInRegion(region, het, hom, annotations, skip, limit) (6 params)
+    - countSamplesWithVariants(regions, het, hom, annotations) (4 params)
+    - selectSamplesWithVariants(region, het, hom, annotations) (4 params)
+    - Added SelectByAnnotations import
+  2. DnaerysClientTest.java — Updated composeAnnotations() calls from 19 positional params to SelectByAnnotations,
+     input validation calls from expanded params to GenomicRegion + SelectByAnnotations, and disabled pagination tests.
+     Added NO_ANNOTATIONS helper constant. Carefully handled the field reordering (gnomad exome/genome swap,
+     clinSig/impact/biotype position changes).
+  3. DnaerysClientIT.java — Updated all countVariantsInMultiRegions, selectVariantsInRegion, countVariantsInMultiRegionsInSample,
+     and selectVariantsInRegionInSample calls to use SelectByAnnotations and GenomicRegion.
+  4. OneKGPdMCPServerIT.java — Updated selectVariantsInRegion call to use GenomicRegion.
+
+● Summary of all test changes:
+  File: TestConstants.java
+  Changes: Added GenomicRegion import + 6 region constants
+  ────────────────────────────────────────
+  File: DnaerysClientTest.java
+  Changes: Updated 8 tests for new API signatures, updated 6 error message assertions,
+  replaced testVariantLengthNormalization → testNegativeMinVariantLengthThrows, added 4 new validation tests +
+  2 AlphaMissenseStat record tests, fixed testInvalidValuesFiltered → testInvalidValuesThrow and testNegativeAfNotSet →
+  testNegativeAfThrows to expect exceptions
+  ────────────────────────────────────────
+  File: DnaerysClientIT.java
+  Changes: Renamed 2 WireMock stubs, updated 12 method calls to use List<GenomicRegion>
+  ────────────────────────────────────────
+  File: OneKGPdMCPServerTest.java
+  Changes: Updated 12 tests (mock patterns + server calls), added 4 new AlphaMissenseStat tests
+  Results: 409 tests pass, 0 failures, 0 errors.
+
 ## Release 1.2.6
 
 ### Changed - 2026-01-29

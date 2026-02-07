@@ -1,5 +1,7 @@
 package org.dnaerys.testdata;
 
+import org.dnaerys.mcp.OneKGPdMCPServer.GenomicRegion;
+
 /**
  * Test constants for Dnaerys MCP Server tests.
  *
@@ -49,6 +51,16 @@ public final class TestConstants {
     public static final String CHR_DENSE = "1";
     public static final int DENSE_START = 1000000;
     public static final int DENSE_END = 1100000;
+
+    // ========================================
+    // GENOMIC REGION RECORDS (for multi-region API)
+    // ========================================
+    public static final GenomicRegion REGION_BRCA1 = new GenomicRegion(CHR_BRCA1, BRCA1_START, BRCA1_END, null, null);
+    public static final GenomicRegion REGION_TP53 = new GenomicRegion(CHR_TP53, TP53_START, TP53_END, null, null);
+    public static final GenomicRegion REGION_CFTR = new GenomicRegion(CHR_CFTR, CFTR_START, CFTR_END, null, null);
+    public static final GenomicRegion REGION_HBB = new GenomicRegion(CHR_HBB, HBB_START, HBB_END, null, null);
+    public static final GenomicRegion REGION_SPARSE = new GenomicRegion(CHR_SPARSE, SPARSE_START, SPARSE_END, null, null);
+    public static final GenomicRegion REGION_DENSE = new GenomicRegion(CHR_DENSE, DENSE_START, DENSE_END, null, null);
 
     // ========================================
     // SAMPLE IDs - Default trio: HG00405 (daughter), HG00403 & HG00404 (parents)

@@ -3,7 +3,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>org.dnaerys</groupId>
     <artifactId>onekgpd-mcp</artifactId>
-    <version>1.2.6</version>
+    <version>1.2.7</version>
 
     <properties>
         <compiler-plugin.version>3.14.0</compiler-plugin.version>
@@ -13,12 +13,10 @@
         <quarkus.platform.artifact-id>quarkus-bom</quarkus.platform.artifact-id>
         <quarkus.platform.group-id>io.quarkus.platform</quarkus.platform.group-id>
         <quarkus.platform.version>3.28.3</quarkus.platform.version>
+
         <skipITs>true</skipITs>
-        <!-- Integration tests are SKIPPED by default -->
-        <!-- Enable with: -DskipIntegrationTests=false -->
-        <skipIntegrationTests>true</skipIntegrationTests>
+
         <surefire-plugin.version>3.5.4</surefire-plugin.version>
-        <!-- WireMock gRPC for testing -->
         <wiremock.version>3.13.2</wiremock.version>
         <wiremock-grpc.version>0.11.0</wiremock-grpc.version>
         <protobuf-maven-plugin.version>0.6.1</protobuf-maven-plugin.version>
@@ -76,6 +74,11 @@
             <scope>runtime</scope>
         </dependency>
         <dependency>
+            <groupId>io.netty</groupId>
+            <artifactId>netty-transport-native-epoll</artifactId>
+            <classifier>linux-x86_64</classifier>
+        </dependency>
+        <dependency>
             <groupId>org.bouncycastle</groupId>
             <artifactId>bcprov-jdk18on</artifactId>
             <version>1.83</version>
@@ -85,20 +88,17 @@
             <artifactId>rest-assured</artifactId>
             <scope>test</scope>
         </dependency>
-        <!-- Mockito for unit testing -->
         <dependency>
             <groupId>io.quarkus</groupId>
             <artifactId>quarkus-junit5-mockito</artifactId>
             <scope>test</scope>
         </dependency>
-        <!-- AssertJ for fluent assertions -->
         <dependency>
             <groupId>org.assertj</groupId>
             <artifactId>assertj-core</artifactId>
             <version>3.24.2</version>
             <scope>test</scope>
         </dependency>
-        <!-- WireMock for gRPC mocking in tests -->
         <dependency>
             <groupId>org.wiremock</groupId>
             <artifactId>wiremock</artifactId>
@@ -161,38 +161,28 @@
                     <parameters>true</parameters>
                 </configuration>
             </plugin>
-            <!-- Surefire for unit tests (*Test.java) -->
+
             <plugin>
                 <artifactId>maven-surefire-plugin</artifactId>
                 <version>${surefire-plugin.version}</version>
                 <configuration>
-                    <!-- Exclude ALL integration test patterns from unit test phase -->
-                    <excludes>
-                        <exclude>**/*IT.java</exclude>
-                        <exclude>**/*IntegrationTest.java</exclude>
-                    </excludes>
+                    <failIfNoSpecifiedTests>false</failIfNoSpecifiedTests>
                     <systemPropertyVariables>
                         <java.util.logging.manager>org.jboss.logmanager.LogManager</java.util.logging.manager>
                         <maven.home>${maven.home}</maven.home>
                     </systemPropertyVariables>
                 </configuration>
             </plugin>
-            <!-- Failsafe for integration tests (*IT.java) -->
+
             <plugin>
                 <artifactId>maven-failsafe-plugin</artifactId>
                 <version>${surefire-plugin.version}</version>
                 <configuration>
-                    <includes>
-                        <include>**/*IT.java</include>
-                        <include>**/*IntegrationTest.java</include>
-                    </includes>
-                    <!-- Skip integration tests unless explicitly enabled -->
-                    <skipITs>${skipIntegrationTests}</skipITs>
+                    <skipITs>${skipITs}</skipITs>
                     <systemPropertyVariables>
                         <native.image.path>${project.build.directory}/${project.build.finalName}-runner</native.image.path>
                         <java.util.logging.manager>org.jboss.logmanager.LogManager</java.util.logging.manager>
                         <maven.home>${maven.home}</maven.home>
-                        <!-- WireMock gRPC server configuration for IT tests -->
                         <quarkus.grpc.clients.dnaerys.host>localhost</quarkus.grpc.clients.dnaerys.host>
                         <quarkus.grpc.clients.dnaerys.port>8089</quarkus.grpc.clients.dnaerys.port>
                         <quarkus.grpc.clients.dnaerys.test-port>8089</quarkus.grpc.clients.dnaerys.test-port>
@@ -207,7 +197,7 @@
                     </execution>
                 </executions>
             </plugin>
-            <!-- Generate proto descriptor for WireMock gRPC testing -->
+
             <plugin>
                 <groupId>org.xolstice.maven.plugins</groupId>
                 <artifactId>protobuf-maven-plugin</artifactId>

@@ -26,6 +26,8 @@ import org.dnaerys.cluster.grpc.*;
 import jakarta.annotation.PostConstruct;
 import jakarta.enterprise.context.ApplicationScoped;
 import io.quarkus.grpc.GrpcClient;
+import org.dnaerys.mcp.OneKGPdMCPServer.SelectByAnnotations;
+import org.dnaerys.mcp.OneKGPdMCPServer.GenomicRegion;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.jboss.logging.Logger;
 
@@ -49,130 +51,159 @@ public class DnaerysClient {
     }
 
     private static final Integer MAX_RETURNED_ITEMS = 50;
+    private static final Integer MAX_RECEIVED_ITEMS = 5000;
 
     public enum Gender { MALE, FEMALE, BOTH }
 
     public record DatasetInfo(int variantsTotal, int samplesTotal, int samplesMaleCount, int samplesFemaleCount) {}
 
-    Annotations composeAnnotations(Float afLessThan, Float afGreaterThan,
-                                   Float gnomadAfGenLessThan, Float gnomadAfGenGreaterThan,
-                                   Float gnomadAfExLessThan, Float gnomadAfExGreaterThan,
-                                   String impact, String bioType, String featureType, String variantType,
-                                   String consequences, String clinSignificance,
-                                   String alphaMissense, Float alphaMissenseScoreLT, Float alphaMissenseScoreGT,
-                                   Boolean biallelicOnly, Boolean multiallelicOnly, Boolean excludeMales, Boolean excludeFemales) {
+    public record AlphaMissenseStat(double alphaMissenseMean, double alphaMissenseDeviation, int variantCount) {}
+    public record VariantBurden(String histogram, List<String> highestBurdenSamples, List<String> secondHighestBurdenSamples) {}
+
+    Annotations composeAnnotations(SelectByAnnotations sbn) {
+        if (sbn == null) return Annotations.getDefaultInstance();
 
         Annotations.Builder builder = Annotations.newBuilder();
 
-        if (afLessThan != null && afLessThan > 0) {
-            builder.setAfLt(afLessThan);
+        if (sbn.afLessThan() != null && sbn.afLessThan() > 0) {
+            builder.setAfLt(sbn.afLessThan());
+        } else if (sbn.afLessThan() != null && sbn.afLessThan() < 0) {
+            throw new RuntimeException("Invalid parameter: " + sbn.afLessThan());
         }
 
-        if (afGreaterThan != null && afGreaterThan > 0) {
-            builder.setAfGt(afGreaterThan);
+        if (sbn.afGreaterThan() != null && sbn.afGreaterThan() > 0) {
+            builder.setAfGt(sbn.afGreaterThan());
+        } else if (sbn.afGreaterThan() != null && sbn.afGreaterThan() < 0) {
+            throw new RuntimeException("Invalid parameter: " + sbn.afGreaterThan());
         }
 
-        if (gnomadAfGenLessThan != null && gnomadAfGenLessThan > 0) {
-            builder.setGnomadGenomesAfLt(gnomadAfGenLessThan);
+        if (sbn.gnomadGenomeAfLessThan() != null && sbn.gnomadGenomeAfLessThan() > 0) {
+            builder.setGnomadGenomesAfLt(sbn.gnomadGenomeAfLessThan());
+        } else if (sbn.gnomadGenomeAfLessThan() != null && sbn.gnomadGenomeAfLessThan() < 0) {
+            throw new RuntimeException("Invalid parameter: " + sbn.gnomadGenomeAfLessThan());
         }
 
-        if (gnomadAfGenGreaterThan != null && gnomadAfGenGreaterThan > 0) {
-            builder.setGnomadGenomesAfGt(gnomadAfGenGreaterThan);
+        if (sbn.gnomadGenomeAfGreaterThan() != null && sbn.gnomadGenomeAfGreaterThan() > 0) {
+            builder.setGnomadGenomesAfGt(sbn.gnomadGenomeAfGreaterThan());
+        } else if (sbn.gnomadGenomeAfGreaterThan() != null && sbn.gnomadGenomeAfGreaterThan() < 0) {
+            throw new RuntimeException("Invalid parameter: " + sbn.gnomadGenomeAfGreaterThan());
         }
 
-        if (gnomadAfExLessThan != null && gnomadAfExLessThan > 0) {
-            builder.setGnomadExomesAfLt(gnomadAfExLessThan);
+        if (sbn.gnomadExomeAfLessThan() != null && sbn.gnomadExomeAfLessThan() > 0) {
+            builder.setGnomadExomesAfLt(sbn.gnomadExomeAfLessThan());
+        } else if (sbn.gnomadExomeAfLessThan() != null && sbn.gnomadExomeAfLessThan() < 0) {
+            throw new RuntimeException("Invalid parameter: " + sbn.gnomadExomeAfLessThan());
         }
 
-        if (gnomadAfExGreaterThan != null && gnomadAfExGreaterThan > 0) {
-            builder.setGnomadExomesAfGt(gnomadAfExGreaterThan);
+        if (sbn.gnomadExomeAfGreaterThan() != null && sbn.gnomadExomeAfGreaterThan() > 0) {
+            builder.setGnomadExomesAfGt(sbn.gnomadExomeAfGreaterThan());
+        } else if (sbn.gnomadExomeAfGreaterThan() != null && sbn.gnomadExomeAfGreaterThan() < 0) {
+            throw new RuntimeException("Invalid parameter: " + sbn.gnomadExomeAfGreaterThan());
         }
 
-        if (impact != null && !impact.isEmpty()) {
-            for (String token : impact.split(",")) {
+        if (sbn.vepImpact() != null && !sbn.vepImpact().isEmpty()) {
+            for (String token : sbn.vepImpact().split(",")) {
                 Impact element = ImpactMapper.fromString(token);
                 if (element != Impact.UNRECOGNIZED) {
                     builder.addImpact(element);
+                } else {
+                    throw new RuntimeException("Invalid parameter: " + token);
                 }
             }
         }
 
-        if (bioType != null && !bioType.isEmpty()) {
-            for (String token : bioType.split(",")) {
+        if (sbn.vepBiotype() != null && !sbn.vepBiotype().isEmpty()) {
+            for (String token : sbn.vepBiotype().split(",")) {
                 BioType element = BiotypeMapper.fromString(token);
                 if (element != BioType.UNRECOGNIZED) {
                     builder.addBioType(element);
+                } else {
+                    throw new RuntimeException("Invalid parameter: " + token);
                 }
             }
         }
 
-        if (featureType != null && !featureType.isEmpty()) {
-            for (String token : featureType.split(",")) {
+        if (sbn.vepFeature() != null && !sbn.vepFeature().isEmpty()) {
+            for (String token : sbn.vepFeature().split(",")) {
                 FeatureType element = FeatureTypeMapper.fromString(token);
                 if (element != FeatureType.UNRECOGNIZED) {
                     builder.addFeatureType(element);
+                } else {
+                    throw new RuntimeException("Invalid parameter: " + token);
                 }
             }
         }
 
-        if (variantType != null && !variantType.isEmpty()) {
-            for (String token : variantType.split(",")) {
+        if (sbn.vepVariantType() != null && !sbn.vepVariantType().isEmpty()) {
+            for (String token : sbn.vepVariantType().split(",")) {
                 VariantType element = VariantTypeMapper.fromString(token);
                 if (element != VariantType.UNRECOGNIZED) {
                     builder.addVariantType(element);
+                } else {
+                    throw new RuntimeException("Invalid parameter: " + token);
                 }
             }
         }
 
-        if (consequences != null && !consequences.isEmpty()) {
-            for (String token : consequences.split(",")) {
+        if (sbn.vepConsequences() != null && !sbn.vepConsequences().isEmpty()) {
+            for (String token : sbn.vepConsequences().split(",")) {
                 Consequence element = ConsequencesMapper.fromString(token);
                 if (element != Consequence.UNRECOGNIZED) {
                     builder.addConsequence(element);
+                } else {
+                    throw new RuntimeException("Invalid parameter: " + token);
                 }
             }
         }
 
-        if (clinSignificance != null && !clinSignificance.isEmpty()) {
-            for (String token : clinSignificance.split(",")) {
+        if (sbn.clinSignificance() != null && !sbn.clinSignificance().isEmpty()) {
+            for (String token : sbn.clinSignificance().split(",")) {
                 ClinSignificance element = ClinSigMapper.fromString(token);
                 if (element != ClinSignificance.UNRECOGNIZED) {
                     builder.addClinsgn(element);
+                } else {
+                    throw new RuntimeException("Invalid parameter: " + token);
                 }
             }
         }
 
-        if (alphaMissense != null && !alphaMissense.isEmpty()) {
-            for (String token : alphaMissense.split(",")) {
+        if (sbn.alphaMissenseClass() != null && !sbn.alphaMissenseClass().isEmpty()) {
+            for (String token : sbn.alphaMissenseClass().split(",")) {
                 AlphaMissense element = AlphaMissenseMapper.fromString(token);
                 if (element != AlphaMissense.UNRECOGNIZED) {
                     builder.addAmClass(element);
+                } else {
+                    throw new RuntimeException("Invalid parameter: " + token);
                 }
             }
         }
 
-        if (alphaMissenseScoreLT != null && alphaMissenseScoreLT > 0) {
-            builder.setAmScoreLt(alphaMissenseScoreLT);
+        if (sbn.alphaMissenseScoreLessThan() != null && sbn.alphaMissenseScoreLessThan() > 0) {
+            builder.setAmScoreLt(sbn.alphaMissenseScoreLessThan());
+        } else if (sbn.alphaMissenseScoreLessThan() != null && sbn.alphaMissenseScoreLessThan() < 0) {
+            throw new RuntimeException("Invalid parameter: " + sbn.alphaMissenseScoreLessThan());
         }
 
-        if (alphaMissenseScoreGT != null && alphaMissenseScoreGT > 0) {
-            builder.setAmScoreGt(alphaMissenseScoreGT);
+        if (sbn.alphaMissenseScoreGreaterThan() != null && sbn.alphaMissenseScoreGreaterThan() > 0) {
+            builder.setAmScoreGt(sbn.alphaMissenseScoreGreaterThan());
+        } else if (sbn.alphaMissenseScoreGreaterThan() != null && sbn.alphaMissenseScoreGreaterThan() < 0) {
+            throw new RuntimeException("Invalid parameter: " + sbn.alphaMissenseScoreGreaterThan());
         }
 
-        if (biallelicOnly != null && biallelicOnly) {
-            builder.setBiallelicOnly(biallelicOnly);
+        if (sbn.biallelicOnly() != null && sbn.biallelicOnly()) {
+            builder.setBiallelicOnly(sbn.biallelicOnly());
         }
 
-        if (multiallelicOnly != null && multiallelicOnly) {
-            builder.setMultiallelicOnly(multiallelicOnly);
+        if (sbn.multiallelicOnly() != null && sbn.multiallelicOnly()) {
+            builder.setMultiallelicOnly(sbn.multiallelicOnly());
         }
 
-        if (excludeMales != null && excludeMales) {
-            builder.setExcludeMales(excludeMales);
+        if (sbn.excludeMales() != null && sbn.excludeMales()) {
+            builder.setExcludeMales(sbn.excludeMales());
         }
 
-        if (excludeFemales != null && excludeFemales) {
-            builder.setExcludeFemales(excludeFemales);
+        if (sbn.excludeFemales() != null && sbn.excludeFemales()) {
+            builder.setExcludeFemales(sbn.excludeFemales());
         }
 
         return builder.build();
@@ -210,286 +241,194 @@ public class DnaerysClient {
             .toList();
     }
 
-    public long countVariantsInRegion(
-        String chromosome, int start, int end, boolean selectHom, boolean selectHet,
-        String refAllele, String altAllele, Integer varMinLength, Integer varMaxLength,
-        Boolean biallelicOnly, Boolean multiallelicOnly, Boolean excludeMales, Boolean excludeFemales,
-        Float afLessThan, Float afGreaterThan, Float gnomadAfGenLessThan, Float gnomadAfGenGreaterThan,
-        Float gnomadAfExLessThan, Float gnomadAfExGreaterThan, String impact, String bioType,
-        String featureType, String variantType, String consequences, String alphaMissense,
-        Float alphaMissenseScoreLT, Float alphaMissenseScoreGT, String clinSignificance) {
+    public long countVariantsInMultiRegions(List<GenomicRegion> regions, boolean selectHom, boolean selectHet,
+                                            SelectByAnnotations sbn) {
+        paramValidation(regions, sbn == null ? null : sbn.minVariantLengthBp(), sbn == null ? null : sbn.maxVariantLengthBp());
+        Annotations annotations = composeAnnotations(sbn);
 
-        if (start < 0 || end < start)
-            throw new RuntimeException("Invalid 'start' or 'end' of a region");
+        var builder = CountAllelesInMultiRegionsRequest.newBuilder();
 
-        Chromosome chr = ContigsMapping.contigName2GrpcChr(chromosome);
-        if (chr.equals(Chromosome.UNRECOGNIZED))
-            throw new RuntimeException("Invalid Chromosome");
+        regions.forEach(r -> {
+            builder.addChr(ContigsMapping.contigName2GrpcChr(r.chromosome()));
+            builder.addStart(r.start());
+            builder.addEnd(r.end());
+            builder.addRef(r.refAllele() == null ? "" : r.refAllele());
+            builder.addAlt(r.altAllele() == null ? "" : r.altAllele());
+        });
 
-        int minLen = (varMinLength == null || varMinLength < 0) ? 0 : varMinLength;
-        int maxLen = (varMaxLength == null || varMaxLength < 0) ? 0 : varMaxLength;
+        if (sbn != null && sbn.minVariantLengthBp() != null) builder.setVariantMinLength(sbn.minVariantLengthBp());
+        if (sbn != null && sbn.maxVariantLengthBp() != null) builder.setVariantMaxLength(sbn.maxVariantLengthBp());
 
-        if (maxLen < minLen) {
-            minLen = 0;
-            maxLen = Integer.MAX_VALUE;
-        }
-
-        Annotations annotations = composeAnnotations(afLessThan, afGreaterThan, gnomadAfGenLessThan, gnomadAfGenGreaterThan,
-            gnomadAfExLessThan, gnomadAfExGreaterThan, impact, bioType, featureType, variantType, consequences, clinSignificance,
-            alphaMissense, alphaMissenseScoreLT, alphaMissenseScoreGT, biallelicOnly, multiallelicOnly, excludeMales, excludeFemales);
-
-        CountAllelesInRegionRequest request = CountAllelesInRegionRequest.newBuilder()
+        CountAllelesInMultiRegionsRequest request = builder
             .setAssembly(RefAssembly.GRCh38)
-            .setChr(chr)
-            .setStart(start)
-            .setEnd(end)
-            .setAlt(altAllele == null ? "" : altAllele)
-            .setRef(refAllele == null ? "" : refAllele)
-            .setVariantMinLength(minLen)
-            .setVariantMaxLength(maxLen)
             .setHom(selectHom)
             .setHet(selectHet)
             .setAnn(annotations)
             .build();
 
-        return blockingStub.countVariantsInRegion(request).getCount();
+        return blockingStub.countVariantsInMultiRegions(request).getCount();
     }
 
-    public long countVariantsInRegionInSample(
-        String chromosome, int start, int end, String sample, boolean selectHom, boolean selectHet,
-        String refAllele, String altAllele, Integer varMinLength, Integer varMaxLength,
-        Boolean biallelicOnly, Boolean multiallelicOnly, Boolean excludeMales, Boolean excludeFemales,
-        Float afLessThan, Float afGreaterThan, Float gnomadAfGenLessThan, Float gnomadAfGenGreaterThan,
-        Float gnomadAfExLessThan, Float gnomadAfExGreaterThan, String impact, String bioType,
-        String featureType, String variantType, String consequences, String alphaMissense,
-        Float alphaMissenseScoreLT, Float alphaMissenseScoreGT, String clinSignificance) {
-
-        if (start < 0 || end < start)
-            throw new RuntimeException("Invalid 'start' or 'end' of a region");
-
+    public long countVariantsInMultiRegionsInSample(List<GenomicRegion> regions, String sample, boolean selectHom,
+                                                    boolean selectHet, SelectByAnnotations sbn) {
         if (sample == null || sample.isEmpty())
             throw new RuntimeException("Sample ID must not be empty");
 
-        Chromosome chr = ContigsMapping.contigName2GrpcChr(chromosome);
-        if (chr.equals(Chromosome.UNRECOGNIZED))
-            throw new RuntimeException("Invalid Chromosome");
+        paramValidation(regions, sbn == null ? null : sbn.minVariantLengthBp(), sbn == null ? null : sbn.maxVariantLengthBp());
+        Annotations annotations = composeAnnotations(sbn);
 
-        int minLen = (varMinLength == null || varMinLength < 0) ? 0 : varMinLength;
-        int maxLen = (varMaxLength == null || varMaxLength < 0) ? 0 : varMaxLength;
+        var builder = CountAllelesInMultiRegionsInSamplesRequest.newBuilder();
 
-        if (maxLen < minLen) {
-            minLen = 0;
-            maxLen = Integer.MAX_VALUE;
-        }
+        regions.forEach(r -> {
+            builder.addChr(ContigsMapping.contigName2GrpcChr(r.chromosome()));
+            builder.addStart(r.start());
+            builder.addEnd(r.end());
+            builder.addRef(r.refAllele() == null ? "" : r.refAllele());
+            builder.addAlt(r.altAllele() == null ? "" : r.altAllele());
+        });
 
-        Annotations annotations = composeAnnotations(afLessThan, afGreaterThan, gnomadAfGenLessThan, gnomadAfGenGreaterThan,
-            gnomadAfExLessThan, gnomadAfExGreaterThan, impact, bioType, featureType, variantType, consequences, clinSignificance,
-            alphaMissense, alphaMissenseScoreLT, alphaMissenseScoreGT, biallelicOnly, multiallelicOnly, excludeMales, excludeFemales);
+        if (sbn != null && sbn.minVariantLengthBp() != null) builder.setVariantMinLength(sbn.minVariantLengthBp());
+        if (sbn != null && sbn.maxVariantLengthBp() != null) builder.setVariantMaxLength(sbn.maxVariantLengthBp());
 
-        CountAllelesInRegionInSamplesRequest request = CountAllelesInRegionInSamplesRequest.newBuilder()
+        CountAllelesInMultiRegionsInSamplesRequest request = builder
             .setAssembly(RefAssembly.GRCh38)
-            .setChr(chr)
-            .setStart(start)
-            .setEnd(end)
             .addSamples(sample)
-            .setAlt(altAllele == null ? "" : altAllele)
-            .setRef(refAllele == null ? "" : refAllele)
-            .setVariantMinLength(minLen)
-            .setVariantMaxLength(maxLen)
             .setHom(selectHom)
             .setHet(selectHet)
             .setAnn(annotations)
             .build();
 
-        return blockingStub.countVariantsInRegionInSamples(request).getCount();
+        return blockingStub.countVariantsInMultiRegionsInSamples(request).getCount();
     }
 
-    public List<Variant> selectVariantsInRegion(
-            String chromosome, int start, int end, boolean selectHom, boolean selectHet,
-            String refAllele, String altAllele, Integer varMinLength, Integer varMaxLength,
-            Boolean biallelicOnly, Boolean multiallelicOnly, Boolean excludeMales, Boolean excludeFemales,
-            Float afLessThan, Float afGreaterThan, Float gnomadAfGenLessThan, Float gnomadAfGenGreaterThan,
-            Float gnomadAfExLessThan, Float gnomadAfExGreaterThan, String impact, String bioType,
-            String featureType, String variantType, String consequences, String alphaMissense,
-            Float alphaMissenseScoreLT, Float alphaMissenseScoreGT, String clinSignificance,
-            Integer skip, Integer limit) {
+    public List<Variant> selectVariantsInRegion(GenomicRegion region, boolean selectHom, boolean selectHet,
+                                                SelectByAnnotations sbn, Integer skip, Integer limit) {
+        paramValidation(region, sbn == null ? null : sbn.minVariantLengthBp(), sbn == null ? null : sbn.maxVariantLengthBp(), skip, limit);
+        Annotations annotations = composeAnnotations(sbn);
+        Chromosome chr = ContigsMapping.contigName2GrpcChr(region.chromosome());
 
-        if (start < 0 || end < start)
-            throw new RuntimeException("Invalid 'start' or 'end' of a region");
+        var builder = AllelesInRegionRequest.newBuilder();
 
-        int finalSkip = (skip == null || skip < 0) ? 0 : skip;
-        int finalLimit = (limit == null || limit < 0 || limit > MAX_RETURNED_ITEMS) ? MAX_RETURNED_ITEMS : limit;
+        if (region.refAllele() != null) builder.setRef(region.refAllele());
+        if (region.altAllele() != null) builder.setAlt(region.altAllele());
+        if (sbn != null && sbn.minVariantLengthBp() != null) builder.setVariantMinLength(sbn.minVariantLengthBp());
+        if (sbn != null && sbn.maxVariantLengthBp() != null) builder.setVariantMaxLength(sbn.maxVariantLengthBp());
+        if (skip != null) builder.setSkip(skip);
+        if (limit != null) {
+            builder.setLimit(limit);
+        } else {
+            builder.setLimit(MAX_RETURNED_ITEMS);
+        }
 
-        Chromosome chr = ContigsMapping.contigName2GrpcChr(chromosome);
-        if (chr.equals(Chromosome.UNRECOGNIZED))
-            throw new RuntimeException("Invalid Chromosome");
-
-        Annotations annotations = composeAnnotations(afLessThan, afGreaterThan, gnomadAfGenLessThan, gnomadAfGenGreaterThan,
-            gnomadAfExLessThan, gnomadAfExGreaterThan, impact, bioType, featureType, variantType, consequences, clinSignificance,
-            alphaMissense, alphaMissenseScoreLT, alphaMissenseScoreGT, biallelicOnly, multiallelicOnly, excludeMales, excludeFemales);
-
-        AllelesInRegionRequest request = AllelesInRegionRequest.newBuilder()
+        AllelesInRegionRequest request = builder
             .setAssembly(RefAssembly.GRCh38)
             .setChr(chr)
-            .setStart(start)
-            .setEnd(end)
-            .setAlt(altAllele == null ? "" : altAllele)
-            .setRef(refAllele == null ? "" : refAllele)
-            .setVariantMinLength(varMinLength == null || varMinLength <= 0 ? 0 : varMinLength)
-            .setVariantMaxLength(varMaxLength == null || varMaxLength <= 0 ? Integer.MAX_VALUE : varMaxLength)
+            .setStart(region.start())
+            .setEnd(region.end())
             .setHom(selectHom)
             .setHet(selectHet)
             .setAnn(annotations)
-            .setLimit(finalLimit)
-            .setSkip(finalSkip)
             .build();
 
-        List<Variant> results = new ArrayList<>();
+        Set<Variant> results = new HashSet<>();
         Iterator<AllelesResponse> responseStream = blockingStub.selectVariantsInRegion(request);
 
         while (responseStream.hasNext()) {
             results.addAll(responseStream.next().getVariantsList());
         }
 
-        return results;
+        return new ArrayList<>(results);
     }
 
-    public List<Variant> selectVariantsInRegionInSample(
-        String chromosome, int start, int end, String sample, boolean selectHom, boolean selectHet,
-        String refAllele, String altAllele, Integer varMinLength, Integer varMaxLength,
-        Boolean biallelicOnly, Boolean multiallelicOnly, Boolean excludeMales, Boolean excludeFemales,
-        Float afLessThan, Float afGreaterThan, Float gnomadAfGenLessThan, Float gnomadAfGenGreaterThan,
-        Float gnomadAfExLessThan, Float gnomadAfExGreaterThan, String impact, String bioType,
-        String featureType, String variantType, String consequences, String alphaMissense,
-        Float alphaMissenseScoreLT, Float alphaMissenseScoreGT, String clinSignificance,
-        Integer skip, Integer limit) {
-
-        if (start < 0 || end < start)
-            throw new RuntimeException("Invalid 'start' or 'end' of a region");
-
+    public List<Variant> selectVariantsInRegionInSample(GenomicRegion region, String sample, boolean selectHom,
+                                                        boolean selectHet, SelectByAnnotations sbn, Integer skip, Integer limit) {
         if (sample == null || sample.isEmpty())
             throw new RuntimeException("Sample ID must not be empty");
 
-        Chromosome chr = ContigsMapping.contigName2GrpcChr(chromosome);
-        if (chr.equals(Chromosome.UNRECOGNIZED))
-            throw new RuntimeException("Invalid Chromosome");
+        paramValidation(region, sbn == null ? null : sbn.minVariantLengthBp(), sbn == null ? null : sbn.maxVariantLengthBp(), skip, limit);
+        Annotations annotations = composeAnnotations(sbn);
+        Chromosome chr = ContigsMapping.contigName2GrpcChr(region.chromosome());
 
-        int finalSkip = (skip == null || skip < 0) ? 0 : skip;
-        int finalLimit = (limit == null || limit < 0 || limit > MAX_RETURNED_ITEMS) ? MAX_RETURNED_ITEMS : limit;
+        var builder = AllelesInRegionInSamplesRequest.newBuilder();
 
-        Annotations annotations = composeAnnotations(afLessThan, afGreaterThan, gnomadAfGenLessThan, gnomadAfGenGreaterThan,
-            gnomadAfExLessThan, gnomadAfExGreaterThan, impact, bioType, featureType, variantType, consequences, clinSignificance,
-            alphaMissense, alphaMissenseScoreLT, alphaMissenseScoreGT, biallelicOnly, multiallelicOnly, excludeMales, excludeFemales);
+        if (region.refAllele() != null) builder.setRef(region.refAllele());
+        if (region.altAllele() != null) builder.setAlt(region.altAllele());
+        if (sbn != null && sbn.minVariantLengthBp() != null) builder.setVariantMinLength(sbn.minVariantLengthBp());
+        if (sbn != null && sbn.maxVariantLengthBp() != null) builder.setVariantMaxLength(sbn.maxVariantLengthBp());
+        if (skip != null) builder.setSkip(skip);
+        if (limit != null) {
+            builder.setLimit(limit);
+        } else {
+            builder.setLimit(MAX_RETURNED_ITEMS);
+        }
 
-        AllelesInRegionInSamplesRequest request = AllelesInRegionInSamplesRequest.newBuilder()
+        AllelesInRegionInSamplesRequest request = builder
             .setAssembly(RefAssembly.GRCh38)
             .setChr(chr)
-            .setStart(start)
-            .setEnd(end)
+            .setStart(region.start())
+            .setEnd(region.end())
             .addSamples(sample)
-            .setAlt(altAllele == null ? "" : altAllele)
-            .setRef(refAllele == null ? "" : refAllele)
-            .setVariantMinLength(varMinLength == null || varMinLength <= 0 ? 0 : varMinLength)
-            .setVariantMaxLength(varMaxLength == null || varMaxLength <= 0 ? Integer.MAX_VALUE : varMaxLength)
             .setHom(selectHom)
             .setHet(selectHet)
             .setAnn(annotations)
-            .setLimit(finalLimit)
-            .setSkip(finalSkip)
             .build();
 
-        List<Variant> results = new ArrayList<>();
+        Set<Variant> results = new HashSet<>();
         Iterator<AllelesResponse> responseStream = blockingStub.selectVariantsInRegionInSamples(request);
 
         while (responseStream.hasNext()) {
             results.addAll(responseStream.next().getVariantsList());
         }
 
-        return results;
+        return new ArrayList<>(results);
     }
 
-    public long countSamplesInRegion(
-        String chromosome, int start, int end, boolean selectHom, boolean selectHet,
-        String refAllele, String altAllele, Integer varMinLength, Integer varMaxLength,
-        Boolean biallelicOnly, Boolean multiallelicOnly, Boolean excludeMales, Boolean excludeFemales,
-        Float afLessThan, Float afGreaterThan, Float gnomadAfGenLessThan, Float gnomadAfGenGreaterThan,
-        Float gnomadAfExLessThan, Float gnomadAfExGreaterThan, String impact, String bioType,
-        String featureType, String variantType, String consequences, String alphaMissense,
-        Float alphaMissenseScoreLT, Float alphaMissenseScoreGT, String clinSignificance) {
+    public long countSamplesInMultiRegions(List<GenomicRegion> regions, boolean selectHom, boolean selectHet,
+                                           SelectByAnnotations sbn) {
+        paramValidation(regions, sbn == null ? null : sbn.minVariantLengthBp(), sbn == null ? null : sbn.maxVariantLengthBp());
+        Annotations annotations = composeAnnotations(sbn);
 
-        if (start < 0 || end < start)
-            throw new RuntimeException("Invalid 'start' or 'end' of a region");
+        var builder = SamplesInMultiRegionsRequest.newBuilder();
 
-        Chromosome chr = ContigsMapping.contigName2GrpcChr(chromosome);
-        if (chr.equals(Chromosome.UNRECOGNIZED))
-            throw new RuntimeException("Invalid Chromosome");
+        regions.forEach(r -> {
+            builder.addChr(ContigsMapping.contigName2GrpcChr(r.chromosome()));
+            builder.addStart(r.start());
+            builder.addEnd(r.end());
+            builder.addRef(r.refAllele() == null ? "" : r.refAllele());
+            builder.addAlt(r.altAllele() == null ? "" : r.altAllele());
+        });
 
-        int minLen = (varMinLength == null || varMinLength < 0) ? 0 : varMinLength;
-        int maxLen = (varMaxLength == null || varMaxLength < 0) ? 0 : varMaxLength;
+        if (sbn != null && sbn.minVariantLengthBp() != null) builder.setVariantMinLength(sbn.minVariantLengthBp());
+        if (sbn != null && sbn.maxVariantLengthBp() != null) builder.setVariantMaxLength(sbn.maxVariantLengthBp());
 
-        if (maxLen < minLen) {
-            minLen = 0;
-            maxLen = Integer.MAX_VALUE;
-        }
-
-        Annotations annotations = composeAnnotations(afLessThan, afGreaterThan, gnomadAfGenLessThan, gnomadAfGenGreaterThan,
-            gnomadAfExLessThan, gnomadAfExGreaterThan, impact, bioType, featureType, variantType, consequences, clinSignificance,
-            alphaMissense, alphaMissenseScoreLT, alphaMissenseScoreGT, biallelicOnly, multiallelicOnly, excludeMales, excludeFemales);
-
-        SamplesInRegionRequest request = SamplesInRegionRequest.newBuilder()
+        SamplesInMultiRegionsRequest request = builder
             .setAssembly(RefAssembly.GRCh38)
-            .setChr(chr)
-            .setStart(start)
-            .setEnd(end)
-            .setAlt(altAllele == null ? "" : altAllele)
-            .setRef(refAllele == null ? "" : refAllele)
-            .setVariantMinLength(minLen)
-            .setVariantMaxLength(maxLen)
             .setHom(selectHom)
             .setHet(selectHet)
             .setAnn(annotations)
             .build();
 
-        return blockingStub.countSamplesInRegion(request).getCount();
+        return blockingStub.countSamplesInMultiRegions(request).getCount();
     }
 
-    public List<String> selectSamplesInRegion(
-        String chromosome, int start, int end, boolean selectHom, boolean selectHet,
-        String refAllele, String altAllele, Integer varMinLength, Integer varMaxLength,
-        Boolean biallelicOnly, Boolean multiallelicOnly, Boolean excludeMales, Boolean excludeFemales,
-        Float afLessThan, Float afGreaterThan, Float gnomadAfGenLessThan, Float gnomadAfGenGreaterThan,
-        Float gnomadAfExLessThan, Float gnomadAfExGreaterThan, String impact, String bioType,
-        String featureType, String variantType, String consequences, String alphaMissense,
-        Float alphaMissenseScoreLT, Float alphaMissenseScoreGT, String clinSignificance) {
+    public List<String> selectSamplesInRegion(GenomicRegion region, boolean selectHom, boolean selectHet, SelectByAnnotations sbn) {
 
-        if (start < 0 || end < start)
-            throw new RuntimeException("Invalid 'start' or 'end' of a region");
+        paramValidation(region, sbn == null ? null : sbn.minVariantLengthBp(), sbn == null ? null : sbn.maxVariantLengthBp(), 0, 0);
+        Annotations annotations = composeAnnotations(sbn);
+        Chromosome chr = ContigsMapping.contigName2GrpcChr(region.chromosome());
 
-        Chromosome chr = ContigsMapping.contigName2GrpcChr(chromosome);
-        if (chr.equals(Chromosome.UNRECOGNIZED))
-            throw new RuntimeException("Invalid Chromosome");
+        var builder = SamplesInRegionRequest.newBuilder();
 
-        int minLen = (varMinLength == null || varMinLength < 0) ? 0 : varMinLength;
-        int maxLen = (varMaxLength == null || varMaxLength < 0) ? 0 : varMaxLength;
+        if (region.refAllele() != null) builder.setRef(region.refAllele());
+        if (region.altAllele() != null) builder.setAlt(region.altAllele());
+        if (sbn != null && sbn.minVariantLengthBp() != null) builder.setVariantMinLength(sbn.minVariantLengthBp());
+        if (sbn != null && sbn.maxVariantLengthBp() != null) builder.setVariantMaxLength(sbn.maxVariantLengthBp());
 
-        if (maxLen < minLen) {
-            minLen = 0;
-            maxLen = Integer.MAX_VALUE;
-        }
-
-        Annotations annotations = composeAnnotations(afLessThan, afGreaterThan, gnomadAfGenLessThan, gnomadAfGenGreaterThan,
-            gnomadAfExLessThan, gnomadAfExGreaterThan, impact, bioType, featureType, variantType, consequences, clinSignificance,
-            alphaMissense, alphaMissenseScoreLT, alphaMissenseScoreGT, biallelicOnly, multiallelicOnly, excludeMales, excludeFemales);
-
-        SamplesInRegionRequest request = SamplesInRegionRequest.newBuilder()
+        SamplesInRegionRequest request = builder
             .setAssembly(RefAssembly.GRCh38)
             .setChr(chr)
-            .setStart(start)
-            .setEnd(end)
-            .setAlt(altAllele == null ? "" : altAllele)
-            .setRef(refAllele == null ? "" : refAllele)
-            .setVariantMinLength(minLen)
-            .setVariantMaxLength(maxLen)
+            .setStart(region.start())
+            .setEnd(region.end())
             .setHom(selectHom)
             .setHet(selectHet)
             .setAnn(annotations)
@@ -504,7 +443,7 @@ public class DnaerysClient {
             throw new RuntimeException("Invalid Chromosome");
 
         if (position <= 0)
-            throw new RuntimeException("Invalid position");
+            throw new RuntimeException("Invalid parameter: 'position' must be >= 0");
 
         SamplesHomRefRequest request = SamplesHomRefRequest.newBuilder()
             .setAssembly(RefAssembly.GRCh38)
@@ -521,7 +460,7 @@ public class DnaerysClient {
             throw new RuntimeException("Invalid Chromosome");
 
         if (position <= 0)
-            throw new RuntimeException("Invalid position");
+            throw new RuntimeException("Invalid parameter: 'position' must be >= 0");
 
         SamplesHomRefRequest request = SamplesHomRefRequest.newBuilder()
             .setAssembly(RefAssembly.GRCh38)
@@ -551,5 +490,131 @@ public class DnaerysClient {
                 .build();
         List<Relatedness> response = blockingStub.kinshipDuo(request).getRelList();
         return response.getFirst().getDegree().toString();
+    }
+
+    public AlphaMissenseStat computeAlphaMissenseStat(List<GenomicRegion> regions) {
+        // count vars
+        boolean selectHom = true;
+        boolean selectHet = true;
+        SelectByAnnotations sbn = SelectByAnnotations.withAlphaMissenseScore(42f);
+
+        long amTotal = countVariantsInMultiRegions(regions, selectHom, selectHet, sbn);
+        if (amTotal > MAX_RECEIVED_ITEMS) {
+            throw new RuntimeException(String.format(
+                "Total number of selected variants exceeds %s. Try to reduce the number of regions or ranges.",
+                MAX_RECEIVED_ITEMS));
+        }
+
+        Annotations annotations = composeAnnotations(sbn);
+
+        // collect vars
+        int pageNumber = 0;
+        final int pageSize = 100;
+        int lastSize = 0;
+        boolean keepGoing = true;
+        Set<Variant> results = new HashSet<>((int)amTotal);
+
+        while (keepGoing) {
+            int skip = pageNumber * pageSize;
+
+            var builder = AllelesInMultiRegionsRequest.newBuilder();
+            regions.forEach(r -> {
+                builder.addChr(ContigsMapping.contigName2GrpcChr(r.chromosome()));
+                builder.addStart(r.start());
+                builder.addEnd(r.end());
+                builder.addRef(r.refAllele() == null ? "" : r.refAllele());
+                builder.addAlt(r.altAllele() == null ? "" : r.altAllele());
+            });
+
+            AllelesInMultiRegionsRequest request = builder
+                .setAssembly(RefAssembly.GRCh38)
+                .setHom(selectHom)
+                .setHet(selectHet)
+                .setAnn(annotations)
+                .setSkip(skip)
+                .setLimit(pageSize)
+                .build();
+
+            Iterator<AllelesResponse> responseStream = blockingStub.selectVariantsInMultiRegions(request);
+
+            while (responseStream.hasNext()) {
+                // somehow responseStream returns duplicated elements, hence Set
+                results.addAll(responseStream.next().getVariantsList());
+            }
+
+            if (results.size() > lastSize) {
+                lastSize = results.size();
+            } else {
+                keepGoing = false; // no new variants in the last query --> we've retrieved all variants from all nodes
+                if (lastSize > amTotal) {
+                    LOG.errorf("Internal data inconsistency. Counted AM vars: %d, retrieved AM vars: %d", amTotal, lastSize);
+                }
+            }
+            pageNumber++;
+        }
+
+        return alphaMissenseStat(results);
+    }
+
+    private AlphaMissenseStat alphaMissenseStat(Set<Variant> variants) {
+        if (variants.isEmpty()) {
+            return new AlphaMissenseStat(0d, 0d, 0);
+        }
+
+        // Calculate mean
+        int count = 0;
+        double sum = 0.0;
+
+        for (Variant variant : variants) {
+            sum += variant.getAmScore();
+            count++;
+        }
+
+        double mean = sum / count;
+
+        // Calculate sum of squared differences
+        double sumSquaredDiff = 0.0;
+
+        for (Variant variant : variants) {
+            double diff = variant.getAmScore() - mean;
+            sumSquaredDiff += diff * diff;
+        }
+
+        // Population standard deviation
+        double variance = sumSquaredDiff / count;
+        double stdDev = Math.sqrt(variance);
+
+        return new AlphaMissenseStat(mean, stdDev, count);
+    }
+
+    private void paramValidation(GenomicRegion region, Integer varMinLength, Integer varMaxLength, Integer skip, Integer limit) {
+        Chromosome chr = ContigsMapping.contigName2GrpcChr(region.chromosome());
+        if (chr.equals(Chromosome.UNRECOGNIZED)) throw new RuntimeException("Invalid Chromosome");
+
+        if (region.start() < 0 || region.end() < region.start()) {
+            throw new RuntimeException(String.format(
+                "Invalid genomic region: %s:%d-%d. Start must be >= 0 and end must be >= start.",
+                region.chromosome(), region.start(), region.end()));
+        }
+
+        if (skip != null && skip < 0) throw new RuntimeException("Invalid parameter: 'skip' must be >= 0.");
+        if (limit != null && (limit < 0 || limit > MAX_RETURNED_ITEMS)) {
+            throw new RuntimeException("Invalid parameter: 'limit' must be >= 0 and <= " + MAX_RETURNED_ITEMS);
+        }
+
+        if (varMinLength != null && varMinLength < 0) throw new RuntimeException("Invalid parameter: 'minVariantLengthBp' must be >= 0.");
+        if (varMaxLength != null && varMaxLength < 0) throw new RuntimeException("Invalid parameter: 'maxVariantLengthBp' must be >= 0.");
+        if (varMinLength != null && varMaxLength != null && varMaxLength < varMinLength) {
+            throw new RuntimeException("Invalid parameter: 'minVariantLengthBp' must be <= 'maxVariantLengthBp'.");
+        }
+    }
+
+    private void paramValidation(List<GenomicRegion> regions, Integer varMinLength, Integer varMaxLength) {
+        if (regions == null || regions.isEmpty()) {
+            throw new RuntimeException("The 'regions' list cannot be empty.");
+        }
+        for (var region : regions) {
+            paramValidation(region, varMinLength, varMaxLength, 0, 0);
+        }
     }
 }
