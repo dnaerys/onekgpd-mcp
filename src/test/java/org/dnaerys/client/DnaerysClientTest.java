@@ -1009,13 +1009,13 @@ class DnaerysClientTest {
     // ========================================
 
     @Nested
-    @DisplayName("AlphaMissenseStat Record Tests")
-    class AlphaMissenseStatRecordTests {
+    @DisplayName("AlphaMissenseAvg Record Tests")
+    class AlphaMissenseAvgRecordTests {
 
         @Test
-        @DisplayName("AlphaMissenseStat record holds correct values")
-        void testAlphaMissenseStatRecord() {
-            DnaerysClient.AlphaMissenseStat stat = new DnaerysClient.AlphaMissenseStat(0.65, 0.12, 100);
+        @DisplayName("AlphaMissenseAvg record holds correct values")
+        void testAlphaMissenseAvgRecord() {
+            DnaerysClient.AlphaMissenseAvg stat = new DnaerysClient.AlphaMissenseAvg(0.65, 0.12, 100);
 
             assertThat(stat.alphaMissenseMean()).isEqualTo(0.65);
             assertThat(stat.alphaMissenseDeviation()).isEqualTo(0.12);
@@ -1023,10 +1023,10 @@ class DnaerysClientTest {
         }
 
         @Test
-        @DisplayName("AlphaMissenseStat record equality")
-        void testAlphaMissenseStatEquality() {
-            DnaerysClient.AlphaMissenseStat stat1 = new DnaerysClient.AlphaMissenseStat(0.65, 0.12, 100);
-            DnaerysClient.AlphaMissenseStat stat2 = new DnaerysClient.AlphaMissenseStat(0.65, 0.12, 100);
+        @DisplayName("AlphaMissenseAvg record equality")
+        void testAlphaMissenseAvgEquality() {
+            DnaerysClient.AlphaMissenseAvg stat1 = new DnaerysClient.AlphaMissenseAvg(0.65, 0.12, 100);
+            DnaerysClient.AlphaMissenseAvg stat2 = new DnaerysClient.AlphaMissenseAvg(0.65, 0.12, 100);
 
             assertThat(stat1).isEqualTo(stat2);
         }

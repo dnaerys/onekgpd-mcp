@@ -533,18 +533,18 @@ class OneKGPdMCPServerTest {
 
     @Nested
     @DisplayName("AlphaMissense Stat Tool Tests")
-    class AlphaMissenseStatToolTests {
+    class AlphaMissenseAvgToolTests {
 
         @Test
-        @DisplayName("computeAlphaMissenseStat returns wrapped result")
-        void testComputeAlphaMissenseStatReturnsWrappedResult() {
-            DnaerysClient.AlphaMissenseStat stat = new DnaerysClient.AlphaMissenseStat(0.65, 0.12, 100);
-            when(mockClient.computeAlphaMissenseStat(any())).thenReturn(stat);
+        @DisplayName("ComputeAlphaMissenseAvg returns wrapped result")
+        void testComputeAlphaMissenseAvgReturnsWrappedResult() {
+            DnaerysClient.AlphaMissenseAvg stat = new DnaerysClient.AlphaMissenseAvg(0.65, 0.12, 100);
+            when(mockClient.computeAlphaMissenseAvg(any())).thenReturn(stat);
 
-            ToolResponse toolResponse = server.computeAlphaMissenseStat(
+            ToolResponse toolResponse = server.computeAlphaMissenseAvg(
                 List.of(new GenomicRegion("17", 43044295, 43170245, null, null))
             );
-            DnaerysClient.AlphaMissenseStat result = (DnaerysClient.AlphaMissenseStat) toolResponse.structuredContent();
+            DnaerysClient.AlphaMissenseAvg result = (DnaerysClient.AlphaMissenseAvg) toolResponse.structuredContent();
 
             assertThat(result).isNotNull();
             assertThat(result.alphaMissenseMean()).isEqualTo(0.65);
@@ -553,14 +553,14 @@ class OneKGPdMCPServerTest {
         }
 
         @Test
-        @DisplayName("computeAlphaMissenseStat throws ToolCallException on error")
-        void testComputeAlphaMissenseStatError() {
-            when(mockClient.computeAlphaMissenseStat(any()))
+        @DisplayName("ComputeAlphaMissenseAvg throws ToolCallException on error")
+        void testComputeAlphaMissenseAvgError() {
+            when(mockClient.computeAlphaMissenseAvg(any()))
                 .thenThrow(new RuntimeException("Connection failed"));
 
             ToolCallException thrown = org.junit.jupiter.api.Assertions.assertThrows(
                 ToolCallException.class,
-                () -> server.computeAlphaMissenseStat(
+                () -> server.computeAlphaMissenseAvg(
                     List.of(new GenomicRegion("17", 43044295, 43170245, null, null))
                 )
             );
@@ -569,15 +569,15 @@ class OneKGPdMCPServerTest {
         }
 
         @Test
-        @DisplayName("computeAlphaMissenseStat returns zeros for empty region")
-        void testComputeAlphaMissenseStatEmptyRegion() {
-            DnaerysClient.AlphaMissenseStat stat = new DnaerysClient.AlphaMissenseStat(0d, 0d, 0);
-            when(mockClient.computeAlphaMissenseStat(any())).thenReturn(stat);
+        @DisplayName("ComputeAlphaMissenseAvg returns zeros for empty region")
+        void testComputeAlphaMissenseAvgEmptyRegion() {
+            DnaerysClient.AlphaMissenseAvg stat = new DnaerysClient.AlphaMissenseAvg(0d, 0d, 0);
+            when(mockClient.computeAlphaMissenseAvg(any())).thenReturn(stat);
 
-            ToolResponse toolResponse = server.computeAlphaMissenseStat(
+            ToolResponse toolResponse = server.computeAlphaMissenseAvg(
                 List.of(new GenomicRegion("22", 50000000, 50001000, null, null))
             );
-            DnaerysClient.AlphaMissenseStat result = (DnaerysClient.AlphaMissenseStat) toolResponse.structuredContent();
+            DnaerysClient.AlphaMissenseAvg result = (DnaerysClient.AlphaMissenseAvg) toolResponse.structuredContent();
 
             assertThat(result.alphaMissenseMean()).isEqualTo(0d);
             assertThat(result.alphaMissenseDeviation()).isEqualTo(0d);
@@ -585,19 +585,19 @@ class OneKGPdMCPServerTest {
         }
 
         @Test
-        @DisplayName("computeAlphaMissenseStat passes regions to client")
-        void testComputeAlphaMissenseStatPassesRegions() {
-            DnaerysClient.AlphaMissenseStat stat = new DnaerysClient.AlphaMissenseStat(0.5, 0.1, 50);
-            when(mockClient.computeAlphaMissenseStat(any())).thenReturn(stat);
+        @DisplayName("ComputeAlphaMissenseAvg passes regions to client")
+        void testComputeAlphaMissenseAvgPassesRegions() {
+            DnaerysClient.AlphaMissenseAvg stat = new DnaerysClient.AlphaMissenseAvg(0.5, 0.1, 50);
+            when(mockClient.computeAlphaMissenseAvg(any())).thenReturn(stat);
 
             List<GenomicRegion> regions = List.of(
                 new GenomicRegion("17", 43044295, 43170245, null, null),
                 new GenomicRegion("7", 117287120, 117715971, null, null)
             );
 
-            server.computeAlphaMissenseStat(regions);
+            server.computeAlphaMissenseAvg(regions);
 
-            verify(mockClient).computeAlphaMissenseStat(argThat(r ->
+            verify(mockClient).computeAlphaMissenseAvg(argThat(r ->
                 r.size() == 2 &&
                 "17".equals(r.get(0).chromosome()) &&
                 "7".equals(r.get(1).chromosome())

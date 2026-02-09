@@ -3,7 +3,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>org.dnaerys</groupId>
     <artifactId>onekgpd-mcp</artifactId>
-    <version>1.2.7</version>
+    <version>1.2.8</version>
 
     <properties>
         <compiler-plugin.version>3.14.0</compiler-plugin.version>
@@ -12,10 +12,10 @@
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
         <quarkus.platform.artifact-id>quarkus-bom</quarkus.platform.artifact-id>
         <quarkus.platform.group-id>io.quarkus.platform</quarkus.platform.group-id>
-        <quarkus.platform.version>3.28.3</quarkus.platform.version>
+        <quarkus.platform.version>3.31.2</quarkus.platform.version>
+        <quarkus-mcp-server.version>1.9.1</quarkus-mcp-server.version>
 
         <skipITs>true</skipITs>
-
         <surefire-plugin.version>3.5.4</surefire-plugin.version>
         <wiremock.version>3.13.2</wiremock.version>
         <wiremock-grpc.version>0.11.0</wiremock-grpc.version>
@@ -32,9 +32,9 @@
                 <scope>import</scope>
             </dependency>
             <dependency>
-                <groupId>${quarkus.platform.group-id}</groupId>
+                <groupId>io.quarkiverse.mcp</groupId>
                 <artifactId>quarkus-mcp-server-bom</artifactId>
-                <version>${quarkus.platform.version}</version>
+                <version>${quarkus-mcp-server.version}</version>
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>
@@ -50,14 +50,16 @@
             <groupId>io.quarkus</groupId>
             <artifactId>quarkus-rest</artifactId>
         </dependency>
+
         <dependency>
             <groupId>io.quarkiverse.mcp</groupId>
-            <artifactId>quarkus-mcp-server-sse</artifactId>
+            <artifactId>quarkus-mcp-server-http</artifactId>
         </dependency>
         <dependency>
             <groupId>io.quarkiverse.mcp</groupId>
             <artifactId>quarkus-mcp-server-stdio</artifactId>
         </dependency>
+
         <dependency>
             <groupId>io.quarkus</groupId>
             <artifactId>quarkus-junit5</artifactId>
@@ -161,7 +163,6 @@
                     <parameters>true</parameters>
                 </configuration>
             </plugin>
-
             <plugin>
                 <artifactId>maven-surefire-plugin</artifactId>
                 <version>${surefire-plugin.version}</version>
@@ -173,7 +174,6 @@
                     </systemPropertyVariables>
                 </configuration>
             </plugin>
-
             <plugin>
                 <artifactId>maven-failsafe-plugin</artifactId>
                 <version>${surefire-plugin.version}</version>
@@ -197,13 +197,12 @@
                     </execution>
                 </executions>
             </plugin>
-
             <plugin>
                 <groupId>org.xolstice.maven.plugins</groupId>
                 <artifactId>protobuf-maven-plugin</artifactId>
                 <version>${protobuf-maven-plugin.version}</version>
                 <configuration>
-                    <protocArtifact>com.google.protobuf:protoc:3.25.1:exe:${os.detected.classifier}</protocArtifact>
+                    <protocArtifact>com.google.protobuf:protoc:3.25.5:exe:${os.detected.classifier}</protocArtifact>
                     <protoSourceRoot>${project.basedir}/src/main/proto</protoSourceRoot>
                     <writeDescriptorSet>true</writeDescriptorSet>
                     <descriptorSetFileName>dnaerys-service.dsc</descriptorSetFileName>
@@ -222,7 +221,6 @@
             </plugin>
         </plugins>
     </build>
-
     <profiles>
         <profile>
             <id>native</id>

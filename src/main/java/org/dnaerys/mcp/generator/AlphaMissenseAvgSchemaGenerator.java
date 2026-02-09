@@ -6,7 +6,7 @@ import io.quarkiverse.mcp.server.OutputSchemaGenerator;
 import jakarta.enterprise.context.ApplicationScoped;
 
 @ApplicationScoped
-public class AlphaMissenseStatSchemaGenerator implements OutputSchemaGenerator {
+public class AlphaMissenseAvgSchemaGenerator implements OutputSchemaGenerator {
 
     @Override
     public Map<String, Object> generate(Class<?> type) {

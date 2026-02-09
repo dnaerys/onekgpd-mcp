@@ -1,9 +1,17 @@
 # Changelog
 
-All notable changes to this project made by Claude will be documented in this file.
+All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## Release 1.2.8
+### Changed - 2026-02-08
+
+- New methods/tools
+  - computeVariantBurden
+- Quarkus upgrade to 3.31.2
+- Refactoring
 
 ## Release 1.2.7
 
@@ -478,7 +486,7 @@ Refactored all test files to match new API changes in implementation:
     - `brca1.total.variants=5573`, `brca1.high.impact=8`, `brca1.pathogenic=3`
     - `tp53.total.variants=1206`, `tp53.missense.variants=26`
     - `sample.hg00405.brca1.count=30`
-  - Baseline update mode: `./mvnw verify -DskipIntegrationTests=false -DupdateBaseline=true`
+  - Baseline update mode: `./mvnw verify -DskipITs=false -DupdateBaseline=true`
 
 ### Technical Details - 2026-01-22
 - Integration tests run against live db.dnaerys.org:80 (plain gRPC)
@@ -512,9 +520,9 @@ Refactored all test files to match new API changes in implementation:
   - `application.properties` (test resources) - Test configuration with logging, gRPC settings
 
 - Maven build configuration
-  - `skipIntegrationTests` property (default: true) for test separation
+  - `skipITs` property (default: true) for test separation
   - Surefire plugin configuration (excludes *IT.java, *IntegrationTest.java)
-  - Failsafe plugin configuration (includes *IT.java, *IntegrationTest.java, skipITs=${skipIntegrationTests})
+  - Failsafe plugin configuration (includes *IT.java, *IntegrationTest.java, skipITs=${skipITs})
   - Test dependencies: quarkus-junit5-mockito, assertj-core 3.24.2
 
 ### Changed - 2026-01-15

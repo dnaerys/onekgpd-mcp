@@ -16,7 +16,10 @@
 
 package org.dnaerys.client;
 
+import java.time.Duration;
+import java.time.Instant;
 import java.util.*;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import org.dnaerys.client.entity.*;
@@ -52,13 +55,14 @@ public class DnaerysClient {
 
     private static final Integer MAX_RETURNED_ITEMS = 50;
     private static final Integer MAX_RECEIVED_ITEMS = 5000;
+    private static final Integer TOTAL_SAMPLES = 3202;
 
     public enum Gender { MALE, FEMALE, BOTH }
 
     public record DatasetInfo(int variantsTotal, int samplesTotal, int samplesMaleCount, int samplesFemaleCount) {}
 
-    public record AlphaMissenseStat(double alphaMissenseMean, double alphaMissenseDeviation, int variantCount) {}
-    public record VariantBurden(String histogram, List<String> highestBurdenSamples, List<String> secondHighestBurdenSamples) {}
+    public record AlphaMissenseAvg(double alphaMissenseMean, double alphaMissenseDeviation, int variantCount) {}
+    public record VariantBurden(String histogram, String highestBurdenSamples, String secondHighestBurdenSamples) {}
 
     Annotations composeAnnotations(SelectByAnnotations sbn) {
         if (sbn == null) return Annotations.getDefaultInstance();
@@ -243,7 +247,7 @@ public class DnaerysClient {
 
     public long countVariantsInMultiRegions(List<GenomicRegion> regions, boolean selectHom, boolean selectHet,
                                             SelectByAnnotations sbn) {
-        paramValidation(regions, sbn == null ? null : sbn.minVariantLengthBp(), sbn == null ? null : sbn.maxVariantLengthBp());
+        paramValidation(regions, sbn);
         Annotations annotations = composeAnnotations(sbn);
 
         var builder = CountAllelesInMultiRegionsRequest.newBuilder();
@@ -271,10 +275,24 @@ public class DnaerysClient {
 
     public long countVariantsInMultiRegionsInSample(List<GenomicRegion> regions, String sample, boolean selectHom,
                                                     boolean selectHet, SelectByAnnotations sbn) {
-        if (sample == null || sample.isEmpty())
-            throw new RuntimeException("Sample ID must not be empty");
+        return countVariantsInMultiRegionsInSample(regions, sample, selectHom, selectHet, sbn, true);
+    }
 
-        paramValidation(regions, sbn == null ? null : sbn.minVariantLengthBp(), sbn == null ? null : sbn.maxVariantLengthBp());
+    public long countVariantsInMultiRegionsInSample(List<GenomicRegion> regions, String sample, boolean selectHom,
+                                                    boolean selectHet, SelectByAnnotations sbn, boolean validateParameters) {
+        if (validateParameters) {
+            if (sample == null || sample.isEmpty()) {
+                throw new RuntimeException("Sample ID must not be empty");
+            } else {
+                List<String> allSamples = getSampleIds(DnaerysClient.Gender.BOTH);
+                if (!allSamples.contains(sample)) {
+                    throw new RuntimeException(String.format(
+                        "Invalid parameter: sample '%s' does not exist", sample));
+                }
+            }
+            paramValidation(regions, sbn);
+        }
+
         Annotations annotations = composeAnnotations(sbn);
 
         var builder = CountAllelesInMultiRegionsInSamplesRequest.newBuilder();
@@ -385,7 +403,7 @@ public class DnaerysClient {
 
     public long countSamplesInMultiRegions(List<GenomicRegion> regions, boolean selectHom, boolean selectHet,
                                            SelectByAnnotations sbn) {
-        paramValidation(regions, sbn == null ? null : sbn.minVariantLengthBp(), sbn == null ? null : sbn.maxVariantLengthBp());
+        paramValidation(regions, sbn);
         Annotations annotations = composeAnnotations(sbn);
 
         var builder = SamplesInMultiRegionsRequest.newBuilder();
@@ -435,6 +453,34 @@ public class DnaerysClient {
             .build();
 
         return blockingStub.selectSamplesInRegion(request).getSamplesList();
+    }
+
+    public List<String> selectSamplesInMultiRegions(List<GenomicRegion> regions, boolean selectHom, boolean selectHet,
+                                                    SelectByAnnotations sbn) {
+        paramValidation(regions, sbn);
+        Annotations annotations = composeAnnotations(sbn);
+
+        var builder = SamplesInMultiRegionsRequest.newBuilder();
+
+        regions.forEach(r -> {
+            builder.addChr(ContigsMapping.contigName2GrpcChr(r.chromosome()));
+            builder.addStart(r.start());
+            builder.addEnd(r.end());
+            builder.addRef(r.refAllele() == null ? "" : r.refAllele());
+            builder.addAlt(r.altAllele() == null ? "" : r.altAllele());
+        });
+
+        if (sbn != null && sbn.minVariantLengthBp() != null) builder.setVariantMinLength(sbn.minVariantLengthBp());
+        if (sbn != null && sbn.maxVariantLengthBp() != null) builder.setVariantMaxLength(sbn.maxVariantLengthBp());
+
+        SamplesInMultiRegionsRequest request = builder
+            .setAssembly(RefAssembly.GRCh38)
+            .setHom(selectHom)
+            .setHet(selectHet)
+            .setAnn(annotations)
+            .build();
+
+        return blockingStub.selectSamplesInMultiRegions(request).getSamplesList();
     }
 
     public long countSamplesHomozygousReference(String chromosome, int position) {
@@ -492,7 +538,7 @@ public class DnaerysClient {
         return response.getFirst().getDegree().toString();
     }
 
-    public AlphaMissenseStat computeAlphaMissenseStat(List<GenomicRegion> regions) {
+    public AlphaMissenseAvg computeAlphaMissenseAvg(List<GenomicRegion> regions) {
         // count vars
         boolean selectHom = true;
         boolean selectHet = true;
@@ -553,12 +599,12 @@ public class DnaerysClient {
             pageNumber++;
         }
 
-        return alphaMissenseStat(results);
+        return alphaMissenseAvg(results);
     }
 
-    private AlphaMissenseStat alphaMissenseStat(Set<Variant> variants) {
+    private AlphaMissenseAvg alphaMissenseAvg(Set<Variant> variants) {
         if (variants.isEmpty()) {
-            return new AlphaMissenseStat(0d, 0d, 0);
+            return new AlphaMissenseAvg(0d, 0d, 0);
         }
 
         // Calculate mean
@@ -584,12 +630,132 @@ public class DnaerysClient {
         double variance = sumSquaredDiff / count;
         double stdDev = Math.sqrt(variance);
 
-        return new AlphaMissenseStat(mean, stdDev, count);
+        return new AlphaMissenseAvg(mean, stdDev, count);
+    }
+
+    public VariantBurden computeVariantBurden(List<GenomicRegion> regions, List<String> samples,
+                                              Boolean selectHom, Boolean selectHet, SelectByAnnotations sbn) {
+        Instant startTimestamp = Instant.now();
+        Integer zeroVarSamples = 0;
+
+        paramValidation(regions, sbn);
+
+        if (samples == null || samples.isEmpty()) {
+            // Default case - all samples in the dataset with matching variants
+            samples = selectSamplesInMultiRegions(regions, selectHom, selectHet, sbn);
+            zeroVarSamples = TOTAL_SAMPLES - samples.size();
+        } else {
+            // Parameters validation
+            for (String sample : samples) {
+                List<String> allSamples = getSampleIds(DnaerysClient.Gender.BOTH);
+                if (!allSamples.contains(sample)) {
+                    throw new RuntimeException(String.format(
+                        "Invalid parameter: sample '%s' does not exist", sample));
+                }
+            }
+        }
+
+        // Calculate variant burden for each sample
+        Map<String, Integer> sampleBurdens = new HashMap<>();
+
+        for (String sample : samples) {
+            int variantCount = (int) countVariantsInMultiRegionsInSample(regions, sample, selectHom, selectHet, sbn, false);
+            sampleBurdens.put(sample, variantCount);
+        }
+
+        // Generate histogram of variant counts
+        String histogram = generateHistogram(sampleBurdens, zeroVarSamples);
+
+        // Find samples with highest and second-highest burden
+        String highestBurdenSamplesJson = "";
+        String secondHighestBurdenSamplesJson = "";
+
+        if (!sampleBurdens.isEmpty()) {
+            List<Integer> sortedUniqueBurdens = sampleBurdens.values().stream()
+                .distinct()
+                .sorted(Collections.reverseOrder())
+                .collect(Collectors.toList());
+
+            if (!sortedUniqueBurdens.isEmpty()) {
+                int highestBurden = sortedUniqueBurdens.get(0);
+
+                List<String> highestBurdenSamples = new ArrayList<>();
+                for (Map.Entry<String, Integer> entry : sampleBurdens.entrySet()) {
+                    if (entry.getValue() == highestBurden) {
+                        highestBurdenSamples.add(entry.getKey());
+                    }
+                }
+                highestBurdenSamplesJson = createBurdenSamplesJson(highestBurden, highestBurdenSamples);
+
+                if (sortedUniqueBurdens.size() > 1) {
+                    int secondHighestBurden = sortedUniqueBurdens.get(1);
+                    List<String> secondHighestBurdenSamples = new ArrayList<>();
+                    for (Map.Entry<String, Integer> entry : sampleBurdens.entrySet()) {
+                        if (entry.getValue() == secondHighestBurden) {
+                            secondHighestBurdenSamples.add(entry.getKey());
+                        }
+                    }
+                    secondHighestBurdenSamplesJson = createBurdenSamplesJson(secondHighestBurden, secondHighestBurdenSamples);
+                }
+            }
+        }
+
+        Instant endTimestamp = Instant.now();
+        Duration timeElapsed = Duration.between(startTimestamp, endTimestamp);
+        LOG.debugf("VariantBurden duration: %s ms", timeElapsed.toMillis());
+
+        return new VariantBurden(histogram, highestBurdenSamplesJson, secondHighestBurdenSamplesJson);
+    }
+
+    private String generateHistogram(Map<String, Integer> sampleBurdens, Integer zeroVarSamples) {
+        // Count frequency of each burden value
+        Map<Integer, Integer> burdenFrequency = new HashMap<>(); // Map(variantBurden, sampleCount)
+        burdenFrequency.put(0, zeroVarSamples);
+        for (Integer burden : sampleBurdens.values()) {
+            burdenFrequency.merge(burden, 1, Integer::sum);
+        }
+
+        // Format as JSON array string
+        StringBuilder histogram = new StringBuilder();
+        histogram.append("[");
+
+        List<Integer> sortedBurdens = burdenFrequency.keySet().stream()
+            .sorted()
+            .collect(Collectors.toList());
+
+        for (int i = 0; i < sortedBurdens.size(); i++) {
+            Integer burden = sortedBurdens.get(i);
+            Integer frequency = burdenFrequency.get(burden);
+            if (i > 0) {
+                histogram.append(",");
+            }
+            histogram
+                .append("{\"variantCount\":\"").append(burden)
+                .append("\",\"samples\":\"").append(frequency).append("\"}");
+        }
+
+        histogram.append("]");
+        return histogram.toString();
+    }
+
+    private String createBurdenSamplesJson(int variantCount, List<String> samples) {
+        StringBuilder json = new StringBuilder();
+        json.append("{\"variantCount\":\"").append(variantCount).append("\",\"samples\":[");
+
+        for (int i = 0; i < samples.size(); i++) {
+            if (i > 0) {
+                json.append(",");
+            }
+            json.append("\"").append(samples.get(i)).append("\"");
+        }
+
+        json.append("]}");
+        return json.toString();
     }
 
     private void paramValidation(GenomicRegion region, Integer varMinLength, Integer varMaxLength, Integer skip, Integer limit) {
         Chromosome chr = ContigsMapping.contigName2GrpcChr(region.chromosome());
-        if (chr.equals(Chromosome.UNRECOGNIZED)) throw new RuntimeException("Invalid Chromosome");
+        if (chr.equals(Chromosome.UNRECOGNIZED)) throw new RuntimeException("Invalid Chromosome: " + region.chromosome());
 
         if (region.start() < 0 || region.end() < region.start()) {
             throw new RuntimeException(String.format(
@@ -609,10 +775,12 @@ public class DnaerysClient {
         }
     }
 
-    private void paramValidation(List<GenomicRegion> regions, Integer varMinLength, Integer varMaxLength) {
+    private void paramValidation(List<GenomicRegion> regions, SelectByAnnotations sbn) {
         if (regions == null || regions.isEmpty()) {
             throw new RuntimeException("The 'regions' list cannot be empty.");
         }
+        Integer varMinLength = sbn == null ? null : sbn.minVariantLengthBp();
+        Integer varMaxLength = sbn == null ? null : sbn.maxVariantLengthBp();
         for (var region : regions) {
             paramValidation(region, varMinLength, varMaxLength, 0, 0);
         }

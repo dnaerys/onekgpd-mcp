@@ -90,7 +90,10 @@ Implemented as a Java EE service, accessing _KGP dataset_ via gRPC calls to publ
 
 - provides MCP over _Streamable HTTP_, _HTTP/SSE_ and _STDIO_ transports
 - service implementation is based on [Quarkus MCP Server framework](https://docs.quarkiverse.io/quarkus-mcp-server/dev/)
-
+- tools: _computeAlphaMissenseAvg, computeVariantBurden, countSamplesHomozygousReference, countSamplesWithVariants,
+  countVariantsInMultipleRegions, countVariantsInMultipleRegionsInSample, getDatasetInfo, getKinshipDegree,
+  selectSamplesHomozygousReference, selectSamplesWithVariants, selectVariantsInRegion, selectVariantsInRegionInSample_
+  - [implementation](./src/main/java/org/dnaerys/mcp/OneKGPdMCPServer.java)
 
 ## Installation
 
@@ -102,13 +105,13 @@ Project can be run locally with MCP over _stdio_ and/or _http_ transports
     - jar is located in `target/onekgpd-mcp-runner.jar` and includes all dependencies
 
 ```shell script
-./mvnw package -DskipTests -Dquarkus.package.jar.type=uber-jar
+./mvnw clean package -DskipTests -Dquarkus.package.jar.type=uber-jar
 ```
 
 with skipping test compilation
 
 ```shell script
-./mvnw package -Dmaven.test.skip=true -Dquarkus.package.jar.type=uber-jar
+./mvnw  clean package -Dmaven.test.skip=true -Dquarkus.package.jar.type=uber-jar
 ```
 
 - run it locally with _dev profile_

@@ -21,6 +21,7 @@ import io.quarkiverse.mcp.server.ToolArg;
 import io.quarkiverse.mcp.server.ToolResponse;
 import io.quarkus.logging.Log;
 import io.quarkus.runtime.Startup;
+import io.smallrye.common.annotation.Blocking;
 import jakarta.enterprise.context.ApplicationScoped;
 
 import jakarta.inject.Inject;
@@ -635,10 +636,10 @@ public class OneKGPdMCPServer {
     }
 
     @Tool(
-        title = "computeAlphaMissenseStat",
+        title = "computeAlphaMissenseAvg",
         structuredContent = true,
         annotations = @Tool.Annotations(
-            title = "computeAlphaMissenseStat",
+            title = "computeAlphaMissenseAvg",
             readOnlyHint = true,
             destructiveHint = false,
             idempotentHint = true,
@@ -648,14 +649,57 @@ public class OneKGPdMCPServer {
             "RETURNS: AlphaMissense Score Mean value, Standard Deviation.\n" +
             "Refer to the Output Schema for field definitions.",
         outputSchema = @Tool.OutputSchema(
-            from = DnaerysClient.AlphaMissenseStat.class,
-            generator = AlphaMissenseStatSchemaGenerator.class
+            from = DnaerysClient.AlphaMissenseAvg.class,
+            generator = AlphaMissenseAvgSchemaGenerator.class
         )
     )
-    public ToolResponse computeAlphaMissenseStat(
+    public ToolResponse computeAlphaMissenseAvg(
         @ToolArg(description = "Genomic regions, at least one") List<GenomicRegion> regions) {
         try {
-            DnaerysClient.AlphaMissenseStat result = client.computeAlphaMissenseStat(regions);
+            DnaerysClient.AlphaMissenseAvg result = client.computeAlphaMissenseAvg(regions);
+            return mcpResponse.success(result);
+        } catch (Exception e) {
+            throw McpResponse.handle(e);
+        }
+    }
+
+    @Tool(
+        title = "computeVariantBurden",
+        structuredContent = true,
+        annotations = @Tool.Annotations(
+            title = "computeVariantBurden",
+            readOnlyHint = true,
+            destructiveHint = false,
+            idempotentHint = true,
+            openWorldHint = false
+        ),
+        description = "COMPUTE variant burden across multiple regions for samples for selected variants.\n\n" +
+
+            "ZYGOSITY Parameters Logic:\n" +
+            "- Use selectHet=true: to include samples with HETEROZYGOUS variants (0/1 genotypes)\n" +
+            "- Use selectHom=true: to include samples with HOMOZYGOUS variants (1/1 genotypes)\n" +
+
+            "ANNOTATION PARAMETERS Logic:\n" +
+            "- Filters: ALL filters are combined with AND logic\n" +
+            "- CSV parameters: OR logic. Example: impact='HIGH,MODERATE' selects variants with HIGH OR MODERATE impact\n\n" +
+
+            "RETURNS:\n" +
+            "- Histogram: number of samples having certain number of variants.\n" +
+            "- List of samples with maximum burden and 2nd highest burden.",
+        outputSchema = @Tool.OutputSchema(
+            from = DnaerysClient.VariantBurden.class,
+            generator = VariantBurdenSchemaGenerator.class
+        )
+    )
+    @Blocking
+    public ToolResponse computeVariantBurden(
+        @ToolArg(description = "Genomic regions, at least one") List<GenomicRegion> regions,
+        @ToolArg(description = HET_DESC) Boolean selectHet,
+        @ToolArg(description = HOM_DESC) Boolean selectHom,
+        @ToolArg(description = "List of samples. Calculates variant burden for ALL samples in KGP if list is empty") List<String> samples,
+        @ToolArg(description = ANN_DESC, required = false) SelectByAnnotations annotations) {
+        try {
+            DnaerysClient.VariantBurden result = client.computeVariantBurden(regions, samples, selectHom, selectHet, annotations);
             return mcpResponse.success(result);
         } catch (Exception e) {
             throw McpResponse.handle(e);
