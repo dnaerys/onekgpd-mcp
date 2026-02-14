@@ -80,9 +80,9 @@ Implemented as a Java EE service, accessing _KGP dataset_ via gRPC calls to publ
 
 - provides MCP over _Streamable HTTP_, _HTTP/SSE_ and _STDIO_ transports
 - service implementation is based on [Quarkus MCP Server framework](https://docs.quarkiverse.io/quarkus-mcp-server/dev/)
-- tools: _computeAlphaMissenseAvg, computeVariantBurden, countSamplesHomozygousReference, countSamplesWithVariants,
-  countVariantsInMultipleRegions, countVariantsInMultipleRegionsInSample, getDatasetInfo, getKinshipDegree,
-  selectSamplesHomozygousReference, selectSamplesWithVariants, selectVariantsInRegion, selectVariantsInRegionInSample_
+- tools: _computeAlphaMissenseAvg, computeVariantBurden, countSamples, countSamplesHomozygousReference, countVariants,
+  countVariantsInSamples, getDatasetInfo, getKinshipDegree, selectSamples, selectSamplesHomozygousReference,
+  selectVariants, selectVariantsInSamples_
   - [implementation](./src/main/java/org/dnaerys/mcp/OneKGPdMCPServer.java)
 
 ## Installation
