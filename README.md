@@ -70,16 +70,6 @@ Reasoning through the AlphaMissense structural implications, can you detect a 'b
 in Glutathione reductase is consistently paired with high-confidence benign or potentially activating variants in the
 Thioredoxin system ? Synthesize a model of 'Redox Robustness' based on the co-occurrence of these variants across the cohort._
 
-#### Structural Proteogenomics
-
-> _Treat the 26S Proteasome as a mechanically redundant 3D machine and map every missense variant from the KGP individuals
-across all 33 subunits. Perform a spatial analysis to determine if pathogenic variation is statistically partitioned toward
-the distal 'Lid' (Zone C) rather than the evolutionary constrained 'Core' (Zone A) or 'Gating' (Zone B) interfaces. Identify
-individuals with a high cumulative burden (3+ 'Likely Pathogenic' variants) to investigate inter-subunit compensation,
-searching for paired 'weakening' and 'stabilizing' mutations at protein-protein hinges. Finally, define the 'mechanical
-tolerance' of the proteasome by establishing the maximum cumulative structural disruption observed in a single healthy
-individual based on AlphaMissense scores and calculated ΔΔG values._
-
 _[More examples](./examples/README.md)_
 
 ---

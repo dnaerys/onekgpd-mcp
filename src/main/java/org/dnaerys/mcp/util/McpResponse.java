@@ -9,6 +9,7 @@ import org.jboss.logging.Logger;
 
 import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 
 @ApplicationScoped
 public class McpResponse {
@@ -19,10 +20,23 @@ public class McpResponse {
     private static final Logger LOG = Logger.getLogger(McpResponse.class);
 
     /**
-     * Success for collections: Provides text for the LLM and a Map for the UI.
+     * Success for collections
      */
     public ToolResponse success(Object structured, Collection<?> rawData) {
         String jsonText = jsonUtil.toJsonArray(rawData);
+        return new ToolResponse(
+            false,
+            List.of(new TextContent(jsonText)),
+            structured,
+            null
+        );
+    }
+
+    /**
+     * Success for maps of collections
+     */
+    public ToolResponse success(Object structured, Map<String, ? extends Collection<?>> rawData) {
+        String jsonText = jsonUtil.stringify(rawData);
         return new ToolResponse(
             false,
             List.of(new TextContent(jsonText)),

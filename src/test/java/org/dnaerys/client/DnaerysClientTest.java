@@ -409,7 +409,7 @@ class DnaerysClientTest {
         void testInvalidChromosomeCount() {
             RuntimeException thrown = org.junit.jupiter.api.Assertions.assertThrows(
                 RuntimeException.class,
-                () -> client.countVariantsInMultiRegions(
+                () -> client.countVariants(
                     List.of(new GenomicRegion("99", 1000, 2000, null, null)), true, true,
                     NO_ANNOTATIONS
                 )
@@ -423,8 +423,8 @@ class DnaerysClientTest {
         void testInvalidChromosomeSelect() {
             RuntimeException thrown = org.junit.jupiter.api.Assertions.assertThrows(
                 RuntimeException.class,
-                () -> client.selectVariantsInRegion(
-                    new GenomicRegion("99", 1000, 2000, null, null), true, true,
+                () -> client.selectVariants(
+                    List.of(new GenomicRegion("99", 1000, 2000, null, null)), true, true,
                     NO_ANNOTATIONS, null, null
                 )
             );
@@ -437,7 +437,7 @@ class DnaerysClientTest {
         void testNegativeStartCount() {
             RuntimeException thrown = org.junit.jupiter.api.Assertions.assertThrows(
                 RuntimeException.class,
-                () -> client.countVariantsInMultiRegions(
+                () -> client.countVariants(
                     List.of(new GenomicRegion("1", -100, 2000, null, null)), true, true,
                     NO_ANNOTATIONS
                 )
@@ -451,7 +451,7 @@ class DnaerysClientTest {
         void testInvertedCoordinatesCount() {
             RuntimeException thrown = org.junit.jupiter.api.Assertions.assertThrows(
                 RuntimeException.class,
-                () -> client.countVariantsInMultiRegions(
+                () -> client.countVariants(
                     List.of(new GenomicRegion("1", 2000, 1000, null, null)), true, true,
                     NO_ANNOTATIONS
                 )
@@ -465,8 +465,8 @@ class DnaerysClientTest {
         void testInvertedCoordinatesSelect() {
             RuntimeException thrown = org.junit.jupiter.api.Assertions.assertThrows(
                 RuntimeException.class,
-                () -> client.selectVariantsInRegion(
-                    new GenomicRegion("1", 2000, 1000, null, null), true, true,
+                () -> client.selectVariants(
+                    List.of(new GenomicRegion("1", 2000, 1000, null, null)), true, true,
                     NO_ANNOTATIONS, null, null
                 )
             );
@@ -475,31 +475,31 @@ class DnaerysClientTest {
         }
 
         @Test
-        @DisplayName("Null sample ID throws RuntimeException for count in sample")
-        void testNullSampleIdCount() {
+        @DisplayName("Null samples list throws RuntimeException for count in samples")
+        void testNullSamplesCount() {
             RuntimeException thrown = org.junit.jupiter.api.Assertions.assertThrows(
                 RuntimeException.class,
-                () -> client.countVariantsInMultiRegionsInSample(
+                () -> client.countVariantsInSamples(
                     List.of(new GenomicRegion("1", 1000, 2000, null, null)), null, true, true,
                     NO_ANNOTATIONS
                 )
             );
 
-            assertThat(thrown.getMessage()).contains("Sample ID must not be empty");
+            assertThat(thrown.getMessage()).contains("Samples ID must not be empty");
         }
 
         @Test
-        @DisplayName("Empty sample ID throws RuntimeException for count in sample")
-        void testEmptySampleIdCount() {
+        @DisplayName("Empty samples list throws RuntimeException for count in samples")
+        void testEmptySamplesCount() {
             RuntimeException thrown = org.junit.jupiter.api.Assertions.assertThrows(
                 RuntimeException.class,
-                () -> client.countVariantsInMultiRegionsInSample(
-                    List.of(new GenomicRegion("1", 1000, 2000, null, null)), "", true, true,
+                () -> client.countVariantsInSamples(
+                    List.of(new GenomicRegion("1", 1000, 2000, null, null)), List.of(), true, true,
                     NO_ANNOTATIONS
                 )
             );
 
-            assertThat(thrown.getMessage()).contains("Sample ID must not be empty");
+            assertThat(thrown.getMessage()).contains("Samples ID must not be empty");
         }
 
         @ParameterizedTest(name = "Chromosome ''{0}'' is invalid")
@@ -508,7 +508,7 @@ class DnaerysClientTest {
         void testVariousInvalidChromosomes(String chromosome) {
             RuntimeException thrown = org.junit.jupiter.api.Assertions.assertThrows(
                 RuntimeException.class,
-                () -> client.countVariantsInMultiRegions(
+                () -> client.countVariants(
                     List.of(new GenomicRegion(chromosome, 1000, 2000, null, null)), true, true,
                     NO_ANNOTATIONS
                 )
@@ -522,7 +522,7 @@ class DnaerysClientTest {
         void testNegativeMinVariantLengthThrows() {
             RuntimeException thrown = org.junit.jupiter.api.Assertions.assertThrows(
                 RuntimeException.class,
-                () -> client.countVariantsInMultiRegions(
+                () -> client.countVariants(
                     List.of(new GenomicRegion("1", 1000, 2000, null, null)), true, true,
                     new SelectByAnnotations(null, null, null, null, null, null,
                         null, null, null, null, null, null,
@@ -538,7 +538,7 @@ class DnaerysClientTest {
         void testEmptyRegionsList() {
             RuntimeException thrown = org.junit.jupiter.api.Assertions.assertThrows(
                 RuntimeException.class,
-                () -> client.countVariantsInMultiRegions(
+                () -> client.countVariants(
                     List.of(), true, true, NO_ANNOTATIONS
                 )
             );
@@ -551,7 +551,7 @@ class DnaerysClientTest {
         void testNullRegionsList() {
             RuntimeException thrown = org.junit.jupiter.api.Assertions.assertThrows(
                 RuntimeException.class,
-                () -> client.countVariantsInMultiRegions(
+                () -> client.countVariants(
                     null, true, true, NO_ANNOTATIONS
                 )
             );
@@ -564,7 +564,7 @@ class DnaerysClientTest {
         void testNegativeMaxVariantLengthThrows() {
             RuntimeException thrown = org.junit.jupiter.api.Assertions.assertThrows(
                 RuntimeException.class,
-                () -> client.countVariantsInMultiRegions(
+                () -> client.countVariants(
                     List.of(new GenomicRegion("1", 1000, 2000, null, null)), true, true,
                     new SelectByAnnotations(null, null, null, null, null, null,
                         null, null, null, null, null, null,
@@ -580,7 +580,7 @@ class DnaerysClientTest {
         void testMinGreaterThanMaxVariantLengthThrows() {
             RuntimeException thrown = org.junit.jupiter.api.Assertions.assertThrows(
                 RuntimeException.class,
-                () -> client.countVariantsInMultiRegions(
+                () -> client.countVariants(
                     List.of(new GenomicRegion("1", 1000, 2000, null, null)), true, true,
                     new SelectByAnnotations(null, null, null, null, null, null,
                         null, null, null, null, null, null,
@@ -871,17 +871,17 @@ class DnaerysClientTest {
             @SuppressWarnings("unchecked")
             Iterator<AllelesResponse> emptyIterator = mock(Iterator.class);
             when(emptyIterator.hasNext()).thenReturn(false);
-            when(mockBlockingStub.selectVariantsInRegion(any(AllelesInRegionRequest.class)))
+            when(mockBlockingStub.selectVariantsInMultiRegions(any(AllelesInMultiRegionsRequest.class)))
                 .thenReturn(emptyIterator);
 
             // Call with null limit
-            client.selectVariantsInRegion(
-                new GenomicRegion("1", 1000, 2000, null, null), true, true,
+            client.selectVariants(
+                List.of(new GenomicRegion("1", 1000, 2000, null, null)), true, true,
                 NO_ANNOTATIONS, null, null
             );
 
             // Verify the request was made with limit=50 (MAX_RETURNED_ITEMS)
-            verify(mockBlockingStub).selectVariantsInRegion(argThat(request ->
+            verify(mockBlockingStub).selectVariantsInMultiRegions(argThat(request ->
                 request.getLimit() == 50 && request.getSkip() == 0
             ));
         }
@@ -892,16 +892,16 @@ class DnaerysClientTest {
             @SuppressWarnings("unchecked")
             Iterator<AllelesResponse> emptyIterator = mock(Iterator.class);
             when(emptyIterator.hasNext()).thenReturn(false);
-            when(mockBlockingStub.selectVariantsInRegion(any(AllelesInRegionRequest.class)))
+            when(mockBlockingStub.selectVariantsInMultiRegions(any(AllelesInMultiRegionsRequest.class)))
                 .thenReturn(emptyIterator);
 
             // Call with negative limit
-            client.selectVariantsInRegion(
-                new GenomicRegion("1", 1000, 2000, null, null), true, true,
+            client.selectVariants(
+                List.of(new GenomicRegion("1", 1000, 2000, null, null)), true, true,
                 NO_ANNOTATIONS, null, -1
             );
 
-            verify(mockBlockingStub).selectVariantsInRegion(argThat(request ->
+            verify(mockBlockingStub).selectVariantsInMultiRegions(argThat(request ->
                 request.getLimit() == 50
             ));
         }
@@ -912,16 +912,16 @@ class DnaerysClientTest {
             @SuppressWarnings("unchecked")
             Iterator<AllelesResponse> emptyIterator = mock(Iterator.class);
             when(emptyIterator.hasNext()).thenReturn(false);
-            when(mockBlockingStub.selectVariantsInRegion(any(AllelesInRegionRequest.class)))
+            when(mockBlockingStub.selectVariantsInMultiRegions(any(AllelesInMultiRegionsRequest.class)))
                 .thenReturn(emptyIterator);
 
             // Call with over limit
-            client.selectVariantsInRegion(
-                new GenomicRegion("1", 1000, 2000, null, null), true, true,
+            client.selectVariants(
+                List.of(new GenomicRegion("1", 1000, 2000, null, null)), true, true,
                 NO_ANNOTATIONS, null, 500
             );
 
-            verify(mockBlockingStub).selectVariantsInRegion(argThat(request ->
+            verify(mockBlockingStub).selectVariantsInMultiRegions(argThat(request ->
                 request.getLimit() == 50
             ));
         }
@@ -932,16 +932,16 @@ class DnaerysClientTest {
             @SuppressWarnings("unchecked")
             Iterator<AllelesResponse> emptyIterator = mock(Iterator.class);
             when(emptyIterator.hasNext()).thenReturn(false);
-            when(mockBlockingStub.selectVariantsInRegion(any(AllelesInRegionRequest.class)))
+            when(mockBlockingStub.selectVariantsInMultiRegions(any(AllelesInMultiRegionsRequest.class)))
                 .thenReturn(emptyIterator);
 
             // Call with valid limit
-            client.selectVariantsInRegion(
-                new GenomicRegion("1", 1000, 2000, null, null), true, true,
+            client.selectVariants(
+                List.of(new GenomicRegion("1", 1000, 2000, null, null)), true, true,
                 NO_ANNOTATIONS, null, 25
             );
 
-            verify(mockBlockingStub).selectVariantsInRegion(argThat(request ->
+            verify(mockBlockingStub).selectVariantsInMultiRegions(argThat(request ->
                 request.getLimit() == 25
             ));
         }
@@ -952,15 +952,15 @@ class DnaerysClientTest {
             @SuppressWarnings("unchecked")
             Iterator<AllelesResponse> emptyIterator = mock(Iterator.class);
             when(emptyIterator.hasNext()).thenReturn(false);
-            when(mockBlockingStub.selectVariantsInRegion(any(AllelesInRegionRequest.class)))
+            when(mockBlockingStub.selectVariantsInMultiRegions(any(AllelesInMultiRegionsRequest.class)))
                 .thenReturn(emptyIterator);
 
-            client.selectVariantsInRegion(
-                new GenomicRegion("1", 1000, 2000, null, null), true, true,
+            client.selectVariants(
+                List.of(new GenomicRegion("1", 1000, 2000, null, null)), true, true,
                 NO_ANNOTATIONS, null, 50
             );
 
-            verify(mockBlockingStub).selectVariantsInRegion(argThat(request ->
+            verify(mockBlockingStub).selectVariantsInMultiRegions(argThat(request ->
                 request.getSkip() == 0
             ));
         }
@@ -971,15 +971,15 @@ class DnaerysClientTest {
             @SuppressWarnings("unchecked")
             Iterator<AllelesResponse> emptyIterator = mock(Iterator.class);
             when(emptyIterator.hasNext()).thenReturn(false);
-            when(mockBlockingStub.selectVariantsInRegion(any(AllelesInRegionRequest.class)))
+            when(mockBlockingStub.selectVariantsInMultiRegions(any(AllelesInMultiRegionsRequest.class)))
                 .thenReturn(emptyIterator);
 
-            client.selectVariantsInRegion(
-                new GenomicRegion("1", 1000, 2000, null, null), true, true,
+            client.selectVariants(
+                List.of(new GenomicRegion("1", 1000, 2000, null, null)), true, true,
                 NO_ANNOTATIONS, -10, 50
             );
 
-            verify(mockBlockingStub).selectVariantsInRegion(argThat(request ->
+            verify(mockBlockingStub).selectVariantsInMultiRegions(argThat(request ->
                 request.getSkip() == 0
             ));
         }
@@ -990,15 +990,15 @@ class DnaerysClientTest {
             @SuppressWarnings("unchecked")
             Iterator<AllelesResponse> emptyIterator = mock(Iterator.class);
             when(emptyIterator.hasNext()).thenReturn(false);
-            when(mockBlockingStub.selectVariantsInRegion(any(AllelesInRegionRequest.class)))
+            when(mockBlockingStub.selectVariantsInMultiRegions(any(AllelesInMultiRegionsRequest.class)))
                 .thenReturn(emptyIterator);
 
-            client.selectVariantsInRegion(
-                new GenomicRegion("1", 1000, 2000, null, null), true, true,
+            client.selectVariants(
+                List.of(new GenomicRegion("1", 1000, 2000, null, null)), true, true,
                 NO_ANNOTATIONS, 200, 50
             );
 
-            verify(mockBlockingStub).selectVariantsInRegion(argThat(request ->
+            verify(mockBlockingStub).selectVariantsInMultiRegions(argThat(request ->
                 request.getSkip() == 200
             ));
         }

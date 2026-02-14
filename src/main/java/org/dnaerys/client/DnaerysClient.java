@@ -60,6 +60,7 @@ public class DnaerysClient {
     public enum Gender { MALE, FEMALE, BOTH }
 
     public record DatasetInfo(int variantsTotal, int samplesTotal, int samplesMaleCount, int samplesFemaleCount) {}
+    public record VariantsInSample(String sample, List<Variant> variants) {}
 
     public record AlphaMissenseAvg(double alphaMissenseMean, double alphaMissenseDeviation, int variantCount) {}
     public record VariantBurden(String histogram, String highestBurdenSamples, String secondHighestBurdenSamples) {}
@@ -245,8 +246,8 @@ public class DnaerysClient {
             .toList();
     }
 
-    public long countVariantsInMultiRegions(List<GenomicRegion> regions, boolean selectHom, boolean selectHet,
-                                            SelectByAnnotations sbn) {
+    public int countVariants(List<GenomicRegion> regions, boolean selectHom, boolean selectHet,
+                             SelectByAnnotations sbn) {
         paramValidation(regions, sbn);
         Annotations annotations = composeAnnotations(sbn);
 
@@ -270,27 +271,70 @@ public class DnaerysClient {
             .setAnn(annotations)
             .build();
 
-        return blockingStub.countVariantsInMultiRegions(request).getCount();
+        return (int) blockingStub.countVariantsInMultiRegions(request).getCount();
     }
 
-    public long countVariantsInMultiRegionsInSample(List<GenomicRegion> regions, String sample, boolean selectHom,
-                                                    boolean selectHet, SelectByAnnotations sbn) {
-        return countVariantsInMultiRegionsInSample(regions, sample, selectHom, selectHet, sbn, true);
+    public List<Variant> selectVariants(List<GenomicRegion> regions, boolean selectHom, boolean selectHet,
+                                        SelectByAnnotations sbn, Integer skip, Integer limit) {
+        paramValidation(regions, sbn, skip, limit);
+        Annotations annotations = composeAnnotations(sbn);
+
+        var builder = AllelesInMultiRegionsRequest.newBuilder();
+
+        regions.forEach(r -> {
+            builder.addChr(ContigsMapping.contigName2GrpcChr(r.chromosome()));
+            builder.addStart(r.start());
+            builder.addEnd(r.end());
+            builder.addRef(r.refAllele() == null ? "" : r.refAllele());
+            builder.addAlt(r.altAllele() == null ? "" : r.altAllele());
+        });
+
+        if (sbn != null && sbn.minVariantLengthBp() != null) builder.setVariantMinLength(sbn.minVariantLengthBp());
+        if (sbn != null && sbn.maxVariantLengthBp() != null) builder.setVariantMaxLength(sbn.maxVariantLengthBp());
+        if (skip != null) builder.setSkip(skip);
+        if (limit != null) {
+            builder.setLimit(limit);
+        } else {
+            builder.setLimit(MAX_RETURNED_ITEMS);
+        }
+
+        AllelesInMultiRegionsRequest request = builder
+            .setAssembly(RefAssembly.GRCh38)
+            .setHom(selectHom)
+            .setHet(selectHet)
+            .setAnn(annotations)
+            .build();
+
+        Set<Variant> results = new HashSet<>();
+        Iterator<AllelesResponse> responseStream = blockingStub.selectVariantsInMultiRegions(request);
+
+        while (responseStream.hasNext()) {
+            results.addAll(responseStream.next().getVariantsList());
+        }
+
+        return new ArrayList<>(results);
     }
 
-    public long countVariantsInMultiRegionsInSample(List<GenomicRegion> regions, String sample, boolean selectHom,
-                                                    boolean selectHet, SelectByAnnotations sbn, boolean validateParameters) {
+    public int countVariantsInSamples(List<GenomicRegion> regions, List<String> samples, boolean selectHom,
+                                      boolean selectHet, SelectByAnnotations sbn) {
+        return countVariantsInSamples(regions, samples, selectHom, selectHet, sbn, true);
+    }
+
+    public int countVariantsInSamples(List<GenomicRegion> regions, List<String> samples, boolean selectHom,
+                                      boolean selectHet, SelectByAnnotations sbn, boolean validateParameters) {
         if (validateParameters) {
-            if (sample == null || sample.isEmpty()) {
-                throw new RuntimeException("Sample ID must not be empty");
+            if (samples == null || samples.isEmpty()) {
+                throw new RuntimeException("Samples ID must not be empty");
             } else {
                 List<String> allSamples = getSampleIds(DnaerysClient.Gender.BOTH);
-                if (!allSamples.contains(sample)) {
-                    throw new RuntimeException(String.format(
-                        "Invalid parameter: sample '%s' does not exist", sample));
+                for (String sample : samples) {
+                    if (!allSamples.contains(sample)) {
+                        throw new RuntimeException(String.format(
+                            "Invalid parameter: sample '%s' does not exist", sample));
+                    }
                 }
+                paramValidation(regions, sbn);
             }
-            paramValidation(regions, sbn);
         }
 
         Annotations annotations = composeAnnotations(sbn);
@@ -305,104 +349,85 @@ public class DnaerysClient {
             builder.addAlt(r.altAllele() == null ? "" : r.altAllele());
         });
 
+        samples.forEach(sample -> {
+            builder.addSamples(sample);
+        });
+
         if (sbn != null && sbn.minVariantLengthBp() != null) builder.setVariantMinLength(sbn.minVariantLengthBp());
         if (sbn != null && sbn.maxVariantLengthBp() != null) builder.setVariantMaxLength(sbn.maxVariantLengthBp());
 
         CountAllelesInMultiRegionsInSamplesRequest request = builder
             .setAssembly(RefAssembly.GRCh38)
-            .addSamples(sample)
             .setHom(selectHom)
             .setHet(selectHet)
             .setAnn(annotations)
             .build();
 
-        return blockingStub.countVariantsInMultiRegionsInSamples(request).getCount();
+        return (int) blockingStub.countVariantsInMultiRegionsInSamples(request).getCount();
     }
 
-    public List<Variant> selectVariantsInRegion(GenomicRegion region, boolean selectHom, boolean selectHet,
-                                                SelectByAnnotations sbn, Integer skip, Integer limit) {
-        paramValidation(region, sbn == null ? null : sbn.minVariantLengthBp(), sbn == null ? null : sbn.maxVariantLengthBp(), skip, limit);
-        Annotations annotations = composeAnnotations(sbn);
-        Chromosome chr = ContigsMapping.contigName2GrpcChr(region.chromosome());
-
-        var builder = AllelesInRegionRequest.newBuilder();
-
-        if (region.refAllele() != null) builder.setRef(region.refAllele());
-        if (region.altAllele() != null) builder.setAlt(region.altAllele());
-        if (sbn != null && sbn.minVariantLengthBp() != null) builder.setVariantMinLength(sbn.minVariantLengthBp());
-        if (sbn != null && sbn.maxVariantLengthBp() != null) builder.setVariantMaxLength(sbn.maxVariantLengthBp());
-        if (skip != null) builder.setSkip(skip);
-        if (limit != null) {
-            builder.setLimit(limit);
+    public Map<String, Set<Variant>> selectVariantsInSamples(
+            List<GenomicRegion> regions, List<String> samples, boolean selectHom,
+            boolean selectHet, SelectByAnnotations sbn, Integer skip, Integer limit) {
+        if (samples == null || samples.isEmpty()) {
+            throw new RuntimeException("Samples ID must not be empty");
         } else {
-            builder.setLimit(MAX_RETURNED_ITEMS);
+            List<String> allSamples = getSampleIds(DnaerysClient.Gender.BOTH);
+            for (String sample : samples) {
+                if (!allSamples.contains(sample)) {
+                    throw new RuntimeException(String.format(
+                        "Invalid parameter: sample '%s' does not exist", sample));
+                }
+            }
         }
 
-        AllelesInRegionRequest request = builder
-            .setAssembly(RefAssembly.GRCh38)
-            .setChr(chr)
-            .setStart(region.start())
-            .setEnd(region.end())
-            .setHom(selectHom)
-            .setHet(selectHet)
-            .setAnn(annotations)
-            .build();
-
-        Set<Variant> results = new HashSet<>();
-        Iterator<AllelesResponse> responseStream = blockingStub.selectVariantsInRegion(request);
-
-        while (responseStream.hasNext()) {
-            results.addAll(responseStream.next().getVariantsList());
-        }
-
-        return new ArrayList<>(results);
-    }
-
-    public List<Variant> selectVariantsInRegionInSample(GenomicRegion region, String sample, boolean selectHom,
-                                                        boolean selectHet, SelectByAnnotations sbn, Integer skip, Integer limit) {
-        if (sample == null || sample.isEmpty())
-            throw new RuntimeException("Sample ID must not be empty");
-
-        paramValidation(region, sbn == null ? null : sbn.minVariantLengthBp(), sbn == null ? null : sbn.maxVariantLengthBp(), skip, limit);
+        paramValidation(regions, sbn, skip, limit);
         Annotations annotations = composeAnnotations(sbn);
-        Chromosome chr = ContigsMapping.contigName2GrpcChr(region.chromosome());
 
-        var builder = AllelesInRegionInSamplesRequest.newBuilder();
+        Map<String, Set<Variant>> variantsInSamples = new HashMap<>();
 
-        if (region.refAllele() != null) builder.setRef(region.refAllele());
-        if (region.altAllele() != null) builder.setAlt(region.altAllele());
-        if (sbn != null && sbn.minVariantLengthBp() != null) builder.setVariantMinLength(sbn.minVariantLengthBp());
-        if (sbn != null && sbn.maxVariantLengthBp() != null) builder.setVariantMaxLength(sbn.maxVariantLengthBp());
-        if (skip != null) builder.setSkip(skip);
-        if (limit != null) {
-            builder.setLimit(limit);
-        } else {
-            builder.setLimit(MAX_RETURNED_ITEMS);
+        for (String sample : samples) {
+            var builder = AllelesInMultiRegionsInSamplesRequest.newBuilder();
+
+            regions.forEach(r -> {
+                builder.addChr(ContigsMapping.contigName2GrpcChr(r.chromosome()));
+                builder.addStart(r.start());
+                builder.addEnd(r.end());
+                builder.addRef(r.refAllele() == null ? "" : r.refAllele());
+                builder.addAlt(r.altAllele() == null ? "" : r.altAllele());
+            });
+
+            if (sbn != null && sbn.minVariantLengthBp() != null) builder.setVariantMinLength(sbn.minVariantLengthBp());
+            if (sbn != null && sbn.maxVariantLengthBp() != null) builder.setVariantMaxLength(sbn.maxVariantLengthBp());
+            if (skip != null) builder.setSkip(skip);
+            if (limit != null) {
+                builder.setLimit(limit);
+            } else {
+                builder.setLimit(MAX_RETURNED_ITEMS);
+            }
+
+            AllelesInMultiRegionsInSamplesRequest request = builder
+                .setAssembly(RefAssembly.GRCh38)
+                .setHom(selectHom)
+                .setHet(selectHet)
+                .addSamples(sample)
+                .setAnn(annotations)
+                .build();
+
+            Set<Variant> results = new HashSet<>();
+            Iterator<AllelesResponse> responseStream = blockingStub.selectVariantsInMultiRegionsInSamples(request);
+
+            while (responseStream.hasNext()) {
+                results.addAll(responseStream.next().getVariantsList());
+            }
+            variantsInSamples.put(sample, results);
         }
 
-        AllelesInRegionInSamplesRequest request = builder
-            .setAssembly(RefAssembly.GRCh38)
-            .setChr(chr)
-            .setStart(region.start())
-            .setEnd(region.end())
-            .addSamples(sample)
-            .setHom(selectHom)
-            .setHet(selectHet)
-            .setAnn(annotations)
-            .build();
-
-        Set<Variant> results = new HashSet<>();
-        Iterator<AllelesResponse> responseStream = blockingStub.selectVariantsInRegionInSamples(request);
-
-        while (responseStream.hasNext()) {
-            results.addAll(responseStream.next().getVariantsList());
-        }
-
-        return new ArrayList<>(results);
+        return variantsInSamples;
     }
 
-    public long countSamplesInMultiRegions(List<GenomicRegion> regions, boolean selectHom, boolean selectHet,
-                                           SelectByAnnotations sbn) {
+    public int countSamples(List<GenomicRegion> regions, boolean selectHom, boolean selectHet,
+                            SelectByAnnotations sbn) {
         paramValidation(regions, sbn);
         Annotations annotations = composeAnnotations(sbn);
 
@@ -429,34 +454,8 @@ public class DnaerysClient {
         return blockingStub.countSamplesInMultiRegions(request).getCount();
     }
 
-    public List<String> selectSamplesInRegion(GenomicRegion region, boolean selectHom, boolean selectHet, SelectByAnnotations sbn) {
-
-        paramValidation(region, sbn == null ? null : sbn.minVariantLengthBp(), sbn == null ? null : sbn.maxVariantLengthBp(), 0, 0);
-        Annotations annotations = composeAnnotations(sbn);
-        Chromosome chr = ContigsMapping.contigName2GrpcChr(region.chromosome());
-
-        var builder = SamplesInRegionRequest.newBuilder();
-
-        if (region.refAllele() != null) builder.setRef(region.refAllele());
-        if (region.altAllele() != null) builder.setAlt(region.altAllele());
-        if (sbn != null && sbn.minVariantLengthBp() != null) builder.setVariantMinLength(sbn.minVariantLengthBp());
-        if (sbn != null && sbn.maxVariantLengthBp() != null) builder.setVariantMaxLength(sbn.maxVariantLengthBp());
-
-        SamplesInRegionRequest request = builder
-            .setAssembly(RefAssembly.GRCh38)
-            .setChr(chr)
-            .setStart(region.start())
-            .setEnd(region.end())
-            .setHom(selectHom)
-            .setHet(selectHet)
-            .setAnn(annotations)
-            .build();
-
-        return blockingStub.selectSamplesInRegion(request).getSamplesList();
-    }
-
-    public List<String> selectSamplesInMultiRegions(List<GenomicRegion> regions, boolean selectHom, boolean selectHet,
-                                                    SelectByAnnotations sbn) {
+    public List<String> selectSamples(List<GenomicRegion> regions, boolean selectHom, boolean selectHet,
+                                      SelectByAnnotations sbn) {
         paramValidation(regions, sbn);
         Annotations annotations = composeAnnotations(sbn);
 
@@ -483,7 +482,7 @@ public class DnaerysClient {
         return blockingStub.selectSamplesInMultiRegions(request).getSamplesList();
     }
 
-    public long countSamplesHomozygousReference(String chromosome, int position) {
+    public int countSamplesHomozygousReference(String chromosome, int position) {
         Chromosome chr = ContigsMapping.contigName2GrpcChr(chromosome);
         if (chr.equals(Chromosome.UNRECOGNIZED))
             throw new RuntimeException("Invalid Chromosome");
@@ -544,7 +543,7 @@ public class DnaerysClient {
         boolean selectHet = true;
         SelectByAnnotations sbn = SelectByAnnotations.withAlphaMissenseScore(42f);
 
-        long amTotal = countVariantsInMultiRegions(regions, selectHom, selectHet, sbn);
+        int amTotal = countVariants(regions, selectHom, selectHet, sbn);
         if (amTotal > MAX_RECEIVED_ITEMS) {
             throw new RuntimeException(String.format(
                 "Total number of selected variants exceeds %s. Try to reduce the number of regions or ranges.",
@@ -642,12 +641,12 @@ public class DnaerysClient {
 
         if (samples == null || samples.isEmpty()) {
             // Default case - all samples in the dataset with matching variants
-            samples = selectSamplesInMultiRegions(regions, selectHom, selectHet, sbn);
+            samples = selectSamples(regions, selectHom, selectHet, sbn);
             zeroVarSamples = TOTAL_SAMPLES - samples.size();
         } else {
             // Parameters validation
+            List<String> allSamples = getSampleIds(DnaerysClient.Gender.BOTH);
             for (String sample : samples) {
-                List<String> allSamples = getSampleIds(DnaerysClient.Gender.BOTH);
                 if (!allSamples.contains(sample)) {
                     throw new RuntimeException(String.format(
                         "Invalid parameter: sample '%s' does not exist", sample));
@@ -659,7 +658,7 @@ public class DnaerysClient {
         Map<String, Integer> sampleBurdens = new HashMap<>();
 
         for (String sample : samples) {
-            int variantCount = (int) countVariantsInMultiRegionsInSample(regions, sample, selectHom, selectHet, sbn, false);
+            int variantCount = countVariantsInSamples(regions, List.of(sample), selectHom, selectHet, sbn, false);
             sampleBurdens.put(sample, variantCount);
         }
 
@@ -753,7 +752,17 @@ public class DnaerysClient {
         return json.toString();
     }
 
-    private void paramValidation(GenomicRegion region, Integer varMinLength, Integer varMaxLength, Integer skip, Integer limit) {
+    private void regionValidation(GenomicRegion region) {
+        if (region.chromosome() == null) {
+            throw new RuntimeException("Invalid parameter: 'chromosome' must be provided");
+        }
+        if (region.start() == 0) {
+            throw new RuntimeException("Invalid parameter: 'start' must be provided");
+        }
+        if (region.end() == 0) {
+            throw new RuntimeException("Invalid parameter: 'end' must be provided");
+        }
+
         Chromosome chr = ContigsMapping.contigName2GrpcChr(region.chromosome());
         if (chr.equals(Chromosome.UNRECOGNIZED)) throw new RuntimeException("Invalid Chromosome: " + region.chromosome());
 
@@ -762,27 +771,32 @@ public class DnaerysClient {
                 "Invalid genomic region: %s:%d-%d. Start must be >= 0 and end must be >= start.",
                 region.chromosome(), region.start(), region.end()));
         }
+    }
 
-        if (skip != null && skip < 0) throw new RuntimeException("Invalid parameter: 'skip' must be >= 0.");
-        if (limit != null && (limit < 0 || limit > MAX_RETURNED_ITEMS)) {
-            throw new RuntimeException("Invalid parameter: 'limit' must be >= 0 and <= " + MAX_RETURNED_ITEMS);
+    private void paramValidation(List<GenomicRegion> regions, SelectByAnnotations sbn) {
+        paramValidation(regions, sbn, 0, 0);
+    }
+
+    private void paramValidation(List<GenomicRegion> regions, SelectByAnnotations sbn, Integer skip, Integer limit) {
+        if (regions == null || regions.isEmpty()) {
+            throw new RuntimeException("The 'regions' list cannot be empty.");
         }
+        Integer varMinLength = sbn == null ? null : sbn.minVariantLengthBp();
+        Integer varMaxLength = sbn == null ? null : sbn.maxVariantLengthBp();
 
         if (varMinLength != null && varMinLength < 0) throw new RuntimeException("Invalid parameter: 'minVariantLengthBp' must be >= 0.");
         if (varMaxLength != null && varMaxLength < 0) throw new RuntimeException("Invalid parameter: 'maxVariantLengthBp' must be >= 0.");
         if (varMinLength != null && varMaxLength != null && varMaxLength < varMinLength) {
             throw new RuntimeException("Invalid parameter: 'minVariantLengthBp' must be <= 'maxVariantLengthBp'.");
         }
-    }
 
-    private void paramValidation(List<GenomicRegion> regions, SelectByAnnotations sbn) {
-        if (regions == null || regions.isEmpty()) {
-            throw new RuntimeException("The 'regions' list cannot be empty.");
+        if (skip != null && skip < 0) throw new RuntimeException("Invalid parameter: 'skip' must be >= 0.");
+        if (limit != null && (limit < 0 || limit > MAX_RETURNED_ITEMS)) {
+            throw new RuntimeException("Invalid parameter: 'limit' must be >= 0 and <= " + MAX_RETURNED_ITEMS);
         }
-        Integer varMinLength = sbn == null ? null : sbn.minVariantLengthBp();
-        Integer varMaxLength = sbn == null ? null : sbn.maxVariantLengthBp();
+
         for (var region : regions) {
-            paramValidation(region, varMinLength, varMaxLength, 0, 0);
+            regionValidation(region);
         }
     }
 }

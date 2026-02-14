@@ -1,9 +1,46 @@
 # Changelog
 
-All notable changes to this project will be documented in this file.
+## All notable changes to this project will be documented in this file.
 
-The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
-and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+## Release 1.2.9
+### Changed - 2026-02-14
+
+● Method names refactoring
+● Method signature refactoring
+● Summary of the changes made across test files:
+
+  OneKGPdMCPServerTest.java (unit tests):
+  - countVariantsInMultipleRegions → countVariants (server calls)
+  - countVariantsInMultiRegions → countVariants (mock client calls)
+  - selectVariantsInRegion(GenomicRegion, ...) → selectVariants(List<GenomicRegion>, ...)
+  - countSamplesWithVariants → countSamples
+  - selectSamplesWithVariants(GenomicRegion, ...) → selectSamples(List<GenomicRegion>, ...)
+  - selectSamplesInRegion → selectSamples (mock client)
+  - countSamplesInMultiRegions → countSamples (mock client)
+  - Return types: Long/long → Integer/int for all count results
+
+  DnaerysClientTest.java (unit tests):
+  - countVariantsInMultiRegions → countVariants
+  - selectVariantsInRegion(GenomicRegion, ...) → selectVariants(List<GenomicRegion>, ...)
+  - countVariantsInMultiRegionsInSample(regions, String, ...) → countVariantsInSamples(regions, List<String>, ...)
+  - AllelesInRegionRequest → AllelesInMultiRegionsRequest
+  - Fixed verify stubs: selectVariants → selectVariantsInMultiRegions (gRPC method)
+
+  DnaerysClientIT.java (integration tests):
+  - countVariantsInMultiRegions → countVariants, long → int
+  - selectVariantsInRegion(GenomicRegion, ...) → selectVariants(List<GenomicRegion>, ...)
+  - countVariantsInSample(regions, String, ...) → countVariantsInSamples(regions, List<String>, ...)
+  - selectVariantsInRegionInSample(region, String, ...) → selectVariantsInSamples(List<region>, List<String>, ...) with
+  Map<String, Set<Variant>> return type
+  - Added Map and Set imports
+
+  OneKGPdMCPServerIT.java (integration tests):
+  - selectVariantsInRegion(GenomicRegion, ...) → selectVariants(List<GenomicRegion>, ...)
+  - Map<String, Long> → Map<String, Integer> for HomRef count result
+
+  WireMock gRPC stub method names updates to match the renamed gRPC RPCs:
+  - SelectVariantsInRegion → SelectVariantsInMultiRegions (in both DnaerysClientIT and OneKGPdMCPServerIT)
+  - SelectVariantsInRegionInSamples → SelectVariantsInMultiRegionsInSamples (in DnaerysClientIT)
 
 ## Release 1.2.8
 ### Changed - 2026-02-08
@@ -535,3 +572,7 @@ Refactored all test files to match new API changes in implementation:
 - Zero failures, zero errors
 - Follows specification TEST_SPECIFICATION.md v1.2
 - Integration tests properly skipped by default (`./mvnw verify` shows "Tests are skipped")
+
+---
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
+and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).

@@ -105,8 +105,8 @@ class OneKGPdMCPServerIT {
                                 .build())
                         .build())));
 
-        // 4. Stub for SelectVariantsInRegion (streaming - for JSON structure test)
-        dnaerysService.stubFor(method("SelectVariantsInRegion")
+        // 4. Stub for SelectVariantsInMultiRegions (streaming - for JSON structure test)
+        dnaerysService.stubFor(method("SelectVariantsInMultiRegions")
                 .willReturn(message(AllelesResponse.newBuilder()
                         .addVariants(Variant.newBuilder()
                                 .setChr(Chromosome.CHR_17)
@@ -219,11 +219,11 @@ class OneKGPdMCPServerIT {
                     CHR_BRCA1,   // chromosome
                     testPosition // position
             );
-            Map<String, Long> countResult = (Map<String, Long>) countResponse.structuredContent();
+            Map<String, Integer> countResult = (Map<String, Integer>) countResponse.structuredContent();
 
             assertNotNull(countResult, "Count result should not be null");
             assertTrue(countResult.containsKey("count"), "Result should contain 'count' key");
-            long count = countResult.get("count");
+            int count = countResult.get("count");
             // Count can be -1 if no variants exist at this position
             assertTrue(count >= -1, "Count should be >= -1");
 
@@ -317,9 +317,9 @@ class OneKGPdMCPServerIT {
     @Order(5)
     @DisplayName("Validate JSON response structure from variant tools")
     void testJsonResponseStructure() {
-        // Get some variants to validate structure using selectVariantsInRegion
-        ToolResponse toolResponse = server.selectVariantsInRegion(
-                new GenomicRegion(CHR_BRCA1, BRCA1_START, BRCA1_END, null, null),
+        // Get some variants to validate structure using selectVariants
+        ToolResponse toolResponse = server.selectVariants(
+                List.of(new GenomicRegion(CHR_BRCA1, BRCA1_START, BRCA1_END, null, null)),
                 true, true,  // selectHet, selectHom
                 null, 0, 5  // Get just 5 variants
         );

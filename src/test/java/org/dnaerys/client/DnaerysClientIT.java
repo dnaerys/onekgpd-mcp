@@ -18,6 +18,8 @@ import org.wiremock.grpc.dsl.WireMockGrpcService;
 import com.github.tomakehurst.wiremock.WireMockServer;
 
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.logging.Logger;
 
 import static org.dnaerys.testdata.TestConstants.*;
@@ -94,8 +96,8 @@ class DnaerysClientIT {
                         .setCount(150)
                         .build())));
 
-        // 3. Stub for SelectVariantsInRegion (streaming - returns one batch)
-        dnaerysService.stubFor(method("SelectVariantsInRegion")
+        // 3. Stub for SelectVariantsInMultiRegions (streaming - returns one batch)
+        dnaerysService.stubFor(method("SelectVariantsInMultiRegions")
                 .willReturn(message(AllelesResponse.newBuilder()
                         .addVariants(Variant.newBuilder()
                                 .setChr(Chromosome.CHR_17)
@@ -115,8 +117,8 @@ class DnaerysClientIT {
                         .setCount(25)
                         .build())));
 
-        // 5. Stub for SelectVariantsInRegionInSamples (sample-specific select)
-        dnaerysService.stubFor(method("SelectVariantsInRegionInSamples")
+        // 5. Stub for SelectVariantsInMultiRegionsInSamples (sample-specific select)
+        dnaerysService.stubFor(method("SelectVariantsInMultiRegionsInSamples")
                 .willReturn(message(AllelesResponse.newBuilder()
                         .addVariants(Variant.newBuilder()
                                 .setChr(Chromosome.CHR_17)
@@ -244,7 +246,7 @@ class DnaerysClientIT {
     void testRegionQuery() {
         // CLI-INT-010: BRCA1 variant count (unfiltered)
         // Note: selectHom=true and selectHet=true means select ALL variants (both hom and het)
-        long brca1Count = client.countVariantsInMultiRegions(
+        int brca1Count = client.countVariants(
                 List.of(REGION_BRCA1),
                 true, true, // selectHom, selectHet (true, true = all variants)
                 NO_ANNOTATIONS
@@ -256,8 +258,8 @@ class DnaerysClientIT {
         LOGGER.info("Baseline result for brca1.total.variants: " + brca1Result.message());
 
         // CLI-INT-011: BRCA1 variant select
-        List<Variant> brca1Variants = client.selectVariantsInRegion(
-                REGION_BRCA1,
+        List<Variant> brca1Variants = client.selectVariants(
+                List.of(REGION_BRCA1),
                 true, true, // selectHom, selectHet
                 NO_ANNOTATIONS, null, null // skip, limit
         );
@@ -268,7 +270,7 @@ class DnaerysClientIT {
                 "BRCA1 variants should respect MAX_RETURNED_ITEMS limit");
 
         // CLI-INT-012: Sparse region (may have few/no variants)
-        long sparseCount = client.countVariantsInMultiRegions(
+        int sparseCount = client.countVariants(
                 List.of(REGION_SPARSE),
                 true, true,
                 NO_ANNOTATIONS
@@ -279,7 +281,7 @@ class DnaerysClientIT {
         LOGGER.info("Sparse region variant count: " + sparseCount);
 
         // CLI-INT-013: High impact only
-        long highImpactCount = client.countVariantsInMultiRegions(
+        int highImpactCount = client.countVariants(
                 List.of(REGION_BRCA1),
                 true, true,
                 new SelectByAnnotations(null, null, null, null, null, null,
@@ -294,7 +296,7 @@ class DnaerysClientIT {
         LOGGER.info("Baseline result for brca1.high.impact: " + highImpactResult.message());
 
         // CLI-INT-014: Pathogenic only (ClinVar)
-        long pathogenicCount = client.countVariantsInMultiRegions(
+        int pathogenicCount = client.countVariants(
                 List.of(REGION_BRCA1),
                 true, true,
                 new SelectByAnnotations(null, null, null, null, null, null,
@@ -309,7 +311,7 @@ class DnaerysClientIT {
         LOGGER.info("BRCA1 pathogenic variant count: " + pathogenicCount);
 
         // CLI-INT-015: Rare variants (AF < 0.01)
-        long rareCount = client.countVariantsInMultiRegions(
+        int rareCount = client.countVariants(
                 List.of(REGION_BRCA1),
                 true, true,
                 new SelectByAnnotations(0.01f, null, null, null, null, null,
@@ -342,8 +344,8 @@ class DnaerysClientIT {
     void testPaginationEnforcement() {
         // Use dense region for pagination tests (many variants expected)
         // CLI-INT-020: Pagination limit enforcement (request more than limit)
-        List<Variant> overLimitResults = client.selectVariantsInRegion(
-                new GenomicRegion(CHR_DENSE, DENSE_START, DENSE_END, null, null),
+        List<Variant> overLimitResults = client.selectVariants(
+                List.of(new GenomicRegion(CHR_DENSE, DENSE_START, DENSE_END, null, null)),
                 true, true, // selectHom, selectHet (all variants)
                 NO_ANNOTATIONS,
                 0, 500 // skip=0, limit=500 (should be capped to MAX_RETURNED_ITEMS)
@@ -355,15 +357,15 @@ class DnaerysClientIT {
                         "), got " + overLimitResults.size());
 
         // CLI-INT-021: Skip functionality
-        List<Variant> page1 = client.selectVariantsInRegion(
-                new GenomicRegion(CHR_DENSE, DENSE_START, DENSE_END, null, null),
+        List<Variant> page1 = client.selectVariants(
+                List.of(new GenomicRegion(CHR_DENSE, DENSE_START, DENSE_END, null, null)),
                 true, true, // selectHom, selectHet
                 NO_ANNOTATIONS,
                 0, MAX_RETURNED_ITEMS // First page
         );
 
-        List<Variant> page2 = client.selectVariantsInRegion(
-                new GenomicRegion(CHR_DENSE, DENSE_START, DENSE_END, null, null),
+        List<Variant> page2 = client.selectVariants(
+                List.of(new GenomicRegion(CHR_DENSE, DENSE_START, DENSE_END, null, null)),
                 true, true, // selectHom, selectHet
                 NO_ANNOTATIONS,
                 MAX_RETURNED_ITEMS, MAX_RETURNED_ITEMS // Second page (skip first batch)
@@ -389,8 +391,8 @@ class DnaerysClientIT {
         // Already covered above - page1 and page2 should not overlap
 
         // CLI-INT-023: Beyond data range
-        List<Variant> beyondRange = client.selectVariantsInRegion(
-                new GenomicRegion(CHR_DENSE, DENSE_START, DENSE_END, null, null),
+        List<Variant> beyondRange = client.selectVariants(
+                List.of(new GenomicRegion(CHR_DENSE, DENSE_START, DENSE_END, null, null)),
                 true, true, // selectHom, selectHet
                 NO_ANNOTATIONS,
                 1000000, MAX_RETURNED_ITEMS // Very large skip
@@ -416,7 +418,7 @@ class DnaerysClientIT {
     @DisplayName("Filter combinations - AF + impact + clinSig combined filtering")
     void testFilterCombinations() {
         // Get unfiltered count first
-        long unfilteredCount = client.countVariantsInMultiRegions(
+        int unfilteredCount = client.countVariants(
                 List.of(REGION_TP53),
                 true, true, // selectHom, selectHet (all variants)
                 NO_ANNOTATIONS
@@ -426,7 +428,7 @@ class DnaerysClientIT {
         TestBaselines.compare("tp53.total.variants", unfilteredCount);
 
         // Test combined filter: HIGH impact + rare (AF < 0.01)
-        long highRareCount = client.countVariantsInMultiRegions(
+        int highRareCount = client.countVariants(
                 List.of(REGION_TP53),
                 true, true, // selectHom, selectHet
                 new SelectByAnnotations(0.01f, null, null, null, null, null,
@@ -438,7 +440,7 @@ class DnaerysClientIT {
                 "Combined filter count should be <= unfiltered");
 
         // Test triple filter: HIGH impact + rare + MISSENSE_VARIANT consequence
-        long tripleFilterCount = client.countVariantsInMultiRegions(
+        int tripleFilterCount = client.countVariants(
                 List.of(REGION_TP53),
                 true, true, // selectHom, selectHet
                 new SelectByAnnotations(0.01f, null, null, null, null, null,
@@ -466,9 +468,9 @@ class DnaerysClientIT {
     @DisplayName("CLI-INT-030 to CLI-INT-034: Sample-specific variant queries")
     void testSampleQuery() {
         // CLI-INT-030: Valid sample variant count (both hom and het)
-        long sampleCount = client.countVariantsInMultiRegionsInSample(
+        int sampleCount = client.countVariantsInSamples(
                 List.of(REGION_BRCA1),
-                SAMPLE_FEMALE, // Use HG00405
+                List.of(SAMPLE_FEMALE), // Use HG00405
                 true, true, // selectHom, selectHet (all variants)
                 NO_ANNOTATIONS
         );
@@ -478,24 +480,24 @@ class DnaerysClientIT {
         TestBaselines.compare("sample.hg00405.brca1.count", sampleCount);
 
         // CLI-INT-031: Valid sample variant select
-        List<Variant> sampleVariants = client.selectVariantsInRegionInSample(
-                REGION_BRCA1,
-                SAMPLE_FEMALE,
+        Map<String, Set<Variant>> sampleVariants = client.selectVariantsInSamples(
+                List.of(REGION_BRCA1),
+                List.of(SAMPLE_FEMALE),
                 true, true, // selectHom, selectHet
                 NO_ANNOTATIONS, null, null
         );
 
-        assertNotNull(sampleVariants, "Sample variants list should not be null");
+        assertNotNull(sampleVariants, "Sample variants map should not be null");
         // Results may be empty if sample has no variants in BRCA1
 
         // CLI-INT-032: Invalid sample ID - server behavior determines result
         // Note: The server may return 0 for an unknown sample or may throw an error
         // This test verifies the query completes without client-side exceptions
-        long invalidSampleCount = 0L;
+        int invalidSampleCount = 0;
         try {
-            invalidSampleCount = client.countVariantsInMultiRegionsInSample(
+            invalidSampleCount = client.countVariantsInSamples(
                     List.of(REGION_BRCA1),
-                    "INVALID_SAMPLE_ID",
+                    List.of("INVALID_SAMPLE_ID"),
                     true, true, // selectHom, selectHet
                     NO_ANNOTATIONS
             );
@@ -504,21 +506,21 @@ class DnaerysClientIT {
             LOGGER.info("Invalid sample query threw exception (expected): " + e.getMessage());
         }
 
-        assertTrue(invalidSampleCount >= 0L,
+        assertTrue(invalidSampleCount >= 0,
                 "Invalid sample count should be >= 0 (or exception thrown)");
 
         // CLI-INT-033: Homozygous variants in sample
-        long homCount = client.countVariantsInMultiRegionsInSample(
+        int homCount = client.countVariantsInSamples(
                 List.of(REGION_BRCA1),
-                SAMPLE_FEMALE,
+                List.of(SAMPLE_FEMALE),
                 true, false, // selectHom=true, selectHet=false
                 NO_ANNOTATIONS
         );
 
         // CLI-INT-034: Heterozygous variants in sample
-        long hetCount = client.countVariantsInMultiRegionsInSample(
+        int hetCount = client.countVariantsInSamples(
                 List.of(REGION_BRCA1),
-                SAMPLE_FEMALE,
+                List.of(SAMPLE_FEMALE),
                 false, true, // selectHom=false, selectHet=true
                 NO_ANNOTATIONS
         );

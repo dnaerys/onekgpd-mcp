@@ -30,8 +30,11 @@ import org.dnaerys.cluster.grpc.Variant;
 import org.dnaerys.mcp.generator.*;
 import org.dnaerys.mcp.util.McpResponse;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 @SuppressWarnings("unused")
 @ApplicationScoped
@@ -233,10 +236,10 @@ public class OneKGPdMCPServer {
     }
 
     @Tool(
-        title = "countVariantsInMultipleRegions",
+        title = "countVariants",
         structuredContent = true,
         annotations = @Tool.Annotations(
-            title = "countVariantsInMultipleRegions",
+            title = "countVariants",
             readOnlyHint = true,
             destructiveHint = false,
             idempotentHint = true,
@@ -256,8 +259,8 @@ public class OneKGPdMCPServer {
             "- Use selectHet=false AND selectHom=true: when need HOMOZYGOUS variants ONLY (1/1 genotypes)\n\n" +
 
             "WORKFLOW:\n" +
-            "1. Use this tool FIRST: to assess result size before calling selectVariantsInRegion\n" +
-            "2. If count is manageable, call selectVariantsInRegion with same filters if variant details are required\n" +
+            "1. Use this tool FIRST: to assess result size before calling selectVariants\n" +
+            "2. If count is manageable, call selectVariants with same filters if variant details are required\n" +
 
             "PARAMETERS Logic:\n" +
             "- Filters: ALL filters are combined with AND logic\n" +
@@ -268,13 +271,13 @@ public class OneKGPdMCPServer {
             generator = CountSchemaGenerator.class
         )
     )
-    public ToolResponse countVariantsInMultipleRegions(
+    public ToolResponse countVariants(
                 @ToolArg(description = "Genomic regions, at least one") List<GenomicRegion> regions,
                 @ToolArg(description = HET_DESC) Boolean selectHet,
                 @ToolArg(description = HOM_DESC) Boolean selectHom,
                 @ToolArg(description = ANN_DESC, required = false) SelectByAnnotations annotations) {
         try {
-            Long count = client.countVariantsInMultiRegions(regions,selectHom, selectHet, annotations);
+            Integer count = client.countVariants(regions,selectHom, selectHet, annotations);
             return mcpResponse.success(Map.of("count", count));
         } catch (Exception e) {
             throw McpResponse.handle(e);
@@ -282,17 +285,17 @@ public class OneKGPdMCPServer {
     }
 
     @Tool(
-        title = "selectVariantsInRegion",
+        title = "selectVariants",
         structuredContent = true,
         annotations = @Tool.Annotations(
-            title = "selectVariantsInRegion",
+            title = "selectVariants",
             readOnlyHint = true,
             destructiveHint = false,
             idempotentHint = true,
             openWorldHint = false
         ),
         description =
-            "SELECT variants in genomic region in 1000 Genomes.\n" +
+            "SELECT variants which exist in ANY genomic region provided, in 1000 Genomes.\n" +
             "Returns: variants with gnomADe/gnomADg AF, AlphaMissense score, HGVSp, cohort-wide stats matching criteria.\n" +
             "Filters: REF/ALT, AF (KGP/gnomAD), VEP impact/biotype/consequences, variant type, AlphaMissense class/score, ClinVar significance.\n\n" +
 
@@ -305,7 +308,7 @@ public class OneKGPdMCPServer {
             "- Use selectHet=false AND selectHom=true: when need HOMOZYGOUS variants ONLY (1/1 genotypes)\n\n" +
 
             "WORKFLOW:\n" +
-            "1. ALWAYS call countVariantsInRegion first to assess result size\n" +
+            "1. ALWAYS call countVariants first to assess result size\n" +
             "2. Apply this tool with appropriate filters\n\n" +
 
             "PARAMETERS Logic:\n" +
@@ -319,15 +322,15 @@ public class OneKGPdMCPServer {
             generator = VariantArraySchemaGenerator.class
         )
     )
-    public ToolResponse selectVariantsInRegion(
-                @ToolArg(description = "Genomic region") GenomicRegion region,
+    public ToolResponse selectVariants(
+                @ToolArg(description = "Genomic regions, at least one") List<GenomicRegion> regions,
                 @ToolArg(description = HET_DESC) Boolean selectHet,
                 @ToolArg(description = HOM_DESC) Boolean selectHom,
                 @ToolArg(description = ANN_DESC, required = false) SelectByAnnotations annotations,
                 @ToolArg(description = SKIP_DESC, required = false) Integer skip,
                 @ToolArg(description = LIM_DESC, required = false) Integer limit) {
         try {
-            List<Variant> variants = client.selectVariantsInRegion(region, selectHom, selectHet, annotations, skip, limit);
+            List<Variant> variants = client.selectVariants(regions, selectHom, selectHet, annotations, skip, limit);
             List<VariantView> vv = variants.stream()
                 .map(VariantView::fromGrpc)
                 .toList();
@@ -339,18 +342,18 @@ public class OneKGPdMCPServer {
     }
 
     @Tool(
-        title = "countVariantsInMultipleRegionsInSample",
+        title = "countVariantsInSamples",
         structuredContent = true,
         annotations = @Tool.Annotations(
-            title = "countVariantsInMultipleRegionsInSample",
+            title = "countVariantsInSamples",
             readOnlyHint = true,
             destructiveHint = false,
             idempotentHint = true,
             openWorldHint = false
         ),
         description =
-            "COUNT variants in a specific SAMPLE which exist in ANY genomic region provided, in 1000 Genomes.\n" +
-            "Returns: Integer count of variants matching criteria in the specified sample in ANY region.\n" +
+            "COUNT variants which exist in ANY genomic region provided in the specified SAMPLES.\n" +
+            "Returns: Integer count of variants matching criteria in the specified samples in ANY region.\n" +
             "Filters: REF/ALT, AF (KGP/gnomAD), VEP impact/biotype/consequences, variant type, AlphaMissense class/score, ClinVar significance.\n\n" +
 
             "ZYGOSITY Parameters Logic:\n" +
@@ -363,7 +366,7 @@ public class OneKGPdMCPServer {
 
             "WORKFLOW:\n" +
             "1. Use this tool FIRST to get variant count for the sample\n" +
-            "2. If count is manageable, call selectVariantsInRegionInSample with same filters if variant details are required\n\n" +
+            "2. If count is manageable, call selectVariantsInSamples with same filters if variant details are required\n\n" +
 
             "PARAMETERS Logic:\n" +
             "- Filters: ALL filters are combined with AND logic\n" +
@@ -374,14 +377,14 @@ public class OneKGPdMCPServer {
             generator = CountSchemaGenerator.class
         )
     )
-    public ToolResponse countVariantsInMultipleRegionsInSample(
+    public ToolResponse countVariantsInSamples(
                 @ToolArg(description = "Genomic regions, at least one") List<GenomicRegion> regions,
                 @ToolArg(description = HET_DESC) Boolean selectHet,
                 @ToolArg(description = HOM_DESC) Boolean selectHom,
-                @ToolArg(description = "sample id") String sampleId,
+                @ToolArg(description = "List of samples") List<String> samples,
                 @ToolArg(description = ANN_DESC, required = false) SelectByAnnotations annotations) {
         try {
-            Long count = client.countVariantsInMultiRegionsInSample(regions, sampleId, selectHom, selectHet, annotations);
+            Integer count = client.countVariantsInSamples(regions, samples, selectHom, selectHet, annotations);
             return mcpResponse.success(Map.of("count", count));
         } catch (Exception e) {
             throw McpResponse.handle(e);
@@ -389,17 +392,17 @@ public class OneKGPdMCPServer {
     }
 
     @Tool(
-        title = "selectVariantsInRegionInSample",
+        title = "selectVariantsInSamples",
         structuredContent = true,
         annotations = @Tool.Annotations(
-            title = "selectVariantsInRegionInSample",
+            title = "selectVariantsInSamples",
             readOnlyHint = true,
             destructiveHint = false,
             idempotentHint = true,
             openWorldHint = false
         ),
         description =
-            "SELECT variants in a specific SAMPLE in genomic region in 1000 Genomes.\n" +
+            "SELECT variants which exist in ANY genomic region provided in the specified SAMPLES.\n" +
             "Returns: variants with gnomADe/gnomADg AF, AlphaMissense score, HGVSp, cohort-wide stats matching criteria.\n" +
             "Filters: REF/ALT, AF (KGP/gnomAD), VEP impact/biotype/consequences, variant type, AlphaMissense class/score, ClinVar significance.\n\n" +
 
@@ -412,7 +415,7 @@ public class OneKGPdMCPServer {
             "- Use selectHet=false AND selectHom=true: when need HOMOZYGOUS variants ONLY (1/1 genotypes)\n\n" +
 
             "WORKFLOW:\n" +
-            "1. ALWAYS call countVariantsInRegionInSample first to assess result size\n" +
+            "1. ALWAYS call countVariantsInSamples first to assess result size\n" +
             "2. Apply this tool with appropriate filters\n\n" +
 
             "PARAMETERS Logic:\n" +
@@ -420,37 +423,55 @@ public class OneKGPdMCPServer {
             "- CSV parameters: OR logic. Example: impact='HIGH,MODERATE' selects variants with HIGH OR MODERATE impact\n" +
             "- Pagination: skip, limit (max=50)\n\n" +
 
-            "RETURNS: Refer to the Output Schema for field definitions. Empty array [] if no matches.",
+            "RETURNS: Array of variants for each sample",
         outputSchema = @Tool.OutputSchema(
             from = VariantView.class,
-            generator = VariantArraySchemaGenerator.class
+            generator = VariantMapSchemaGenerator.class  // Changed generator
         )
     )
-    public ToolResponse selectVariantsInRegionInSample(
-                @ToolArg(description = "Genomic region") GenomicRegion region,
+    public ToolResponse selectVariantsInSamples(
+                @ToolArg(description = "Genomic regions, at least one") List<GenomicRegion> regions,
                 @ToolArg(description = HET_DESC) Boolean selectHet,
                 @ToolArg(description = HOM_DESC) Boolean selectHom,
-                @ToolArg(description = "sample id") String sampleId,
+                @ToolArg(description = "List of samples") List<String> samples,
                 @ToolArg(description = ANN_DESC, required = false) SelectByAnnotations annotations,
                 @ToolArg(description = SKIP_DESC, required = false) Integer skip,
                 @ToolArg(description = LIM_DESC, required = false) Integer limit) {
         try {
-            List<Variant> variants = client.selectVariantsInRegionInSample(region, sampleId, selectHom, selectHet, annotations, skip, limit);
-            List<VariantView> vv = variants.stream()
-                .map(VariantView::fromGrpc)
+            Map<String, Set<Variant>> variantsBySample = client.selectVariantsInSamples(regions, samples, selectHom, selectHet, annotations, skip, limit);
+
+            // Convert to array of {sample, variants} objects
+            List<Map<String, Object>> arrayFormat = variantsBySample.entrySet().stream()
+                .map(entry -> Map.of(
+                    "sample", (Object) entry.getKey(),
+                    "variants", (Object) entry.getValue().stream()
+                        .map(VariantView::fromGrpc)
+                        .toList()
+                ))
                 .toList();
-            Map<String, Object> structured = Map.of("variants", vv);
-            return mcpResponse.success(structured, vv);
+
+            Map<String, Object> structured = Map.of("variantsBySample", arrayFormat);
+
+            // For rawData, keep the map structure for stringify
+            Map<String, List<VariantView>> viewsBySample = variantsBySample.entrySet().stream()
+                .collect(Collectors.toMap(
+                    Map.Entry::getKey,
+                    entry -> entry.getValue().stream()
+                        .map(VariantView::fromGrpc)
+                        .toList()
+                ));
+
+            return mcpResponse.success(structured, viewsBySample);
         } catch (Exception e) {
             throw McpResponse.handle(e);
         }
     }
 
     @Tool(
-        title = "countSamplesWithVariants",
+        title = "countSamples",
         structuredContent = true,
         annotations = @Tool.Annotations(
-            title = "countSamplesWithVariants",
+            title = "countSamples",
             readOnlyHint = true,
             destructiveHint = false,
             idempotentHint = true,
@@ -470,8 +491,8 @@ public class OneKGPdMCPServer {
             "- Use selectHet=false AND selectHom=true: when need samples with HOMOZYGOUS variants ONLY (1/1 genotypes)\n\n" +
 
             "WORKFLOW:\n" +
-            "1. Use this tool FIRST: to assess result size before calling selectSamplesWithVariants\n" +
-            "2. If count is manageable, call selectSamplesWithVariants with same filters if sample IDs are required\n\n" +
+            "1. Use this tool FIRST: to assess result size before calling selectSamples\n" +
+            "2. If count is manageable, call selectSamples with same filters if sample IDs are required\n\n" +
 
             "PARAMETERS Logic:\n" +
             "- Filters: ALL filters are combined with AND logic\n" +
@@ -482,13 +503,13 @@ public class OneKGPdMCPServer {
             generator = CountSchemaGenerator.class
         )
     )
-    public ToolResponse countSamplesWithVariants(
+    public ToolResponse countSamples(
                 @ToolArg(description = "Genomic regions, at least one") List<GenomicRegion> regions,
                 @ToolArg(description = HET_DESC) Boolean selectHet,
                 @ToolArg(description = HOM_DESC) Boolean selectHom,
                 @ToolArg(description = ANN_DESC, required = false) SelectByAnnotations annotations) {
         try {
-            Long count = client.countSamplesInMultiRegions(regions, selectHom, selectHet, annotations);
+            Integer count = client.countSamples(regions, selectHom, selectHet, annotations);
             return mcpResponse.success(Map.of("count", count));
         } catch (Exception e) {
             throw McpResponse.handle(e);
@@ -496,18 +517,18 @@ public class OneKGPdMCPServer {
     }
 
     @Tool(
-        title = "selectSamplesWithVariants",
+        title = "selectSamples",
         structuredContent = true,
         annotations = @Tool.Annotations(
-            title = "selectSamplesWithVariants",
+            title = "selectSamples",
             readOnlyHint = true,
             destructiveHint = false,
             idempotentHint = true,
             openWorldHint = false
         ),
         description =
-            "SELECT SAMPLES with specific variants in genomic region in 1000 Genomes.\n" +
-            "Returns: unique sample IDs having variants matching criteria.\n" +
+            "SELECT SAMPLES with specific variants which exist in ANY genomic region provided, in 1000 Genomes.\n" +
+            "Returns: unique sample IDs having variants matching criteria in ANY region.\n" +
             "Filters: REF/ALT, AF (KGP/gnomAD), VEP impact/biotype/consequences, variant type, AlphaMissense class/score, ClinVar significance.\n\n" +
 
             "ZYGOSITY Parameters Logic:\n" +
@@ -519,7 +540,7 @@ public class OneKGPdMCPServer {
             "- Use selectHet=false AND selectHom=true: when need samples with HOMOZYGOUS variants ONLY (1/1 genotypes)\n\n" +
 
             "WORKFLOW:\n" +
-            "1. ALWAYS call countSamplesWithVariants first to assess result size\n" +
+            "1. ALWAYS call countSamples first to assess result size\n" +
             "2. Apply this tool with the same filters\n\n" +
 
             "PARAMETERS Logic:\n" +
@@ -531,13 +552,13 @@ public class OneKGPdMCPServer {
             generator = SampleIdArraySchemaGenerator.class
         )
     )
-    public ToolResponse selectSamplesWithVariants(
-                @ToolArg(description = "Genomic region") GenomicRegion region,
+    public ToolResponse selectSamples(
+                @ToolArg(description = "Genomic regions, at least one") List<GenomicRegion> regions,
                 @ToolArg(description = HET_DESC) Boolean selectHet,
                 @ToolArg(description = HOM_DESC) Boolean selectHom,
                 @ToolArg(description = ANN_DESC, required = false) SelectByAnnotations annotations) {
         try {
-            List<String> samples = client.selectSamplesInRegion(region, selectHom, selectHet, annotations);
+            List<String> samples = client.selectSamples(regions, selectHom, selectHet, annotations);
             Map<String, Object> structured = Map.of("samples", samples);
             return mcpResponse.success(structured, samples);
         } catch (Exception e) {
@@ -567,7 +588,7 @@ public class OneKGPdMCPServer {
         @ToolArg(description = CHROMOSOME_DESC) String chromosome,
         @ToolArg(description = POSITION_DESC) int position) {
         try {
-            Long count = client.countSamplesHomozygousReference(chromosome, position);
+            Integer count = client.countSamplesHomozygousReference(chromosome, position);
             return mcpResponse.success(Map.of("count", count));
         } catch (Exception e) {
             throw McpResponse.handle(e);
