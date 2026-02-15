@@ -2,6 +2,27 @@
 
 ## All notable changes to this project will be documented in this file.
 
+## Release 1.2.10
+### Changed - 2026-02-15
+
+● Method signature refactoring
+● Summary of the changes made across test files:
+
+  OneKGPdMCPServerTest.java - Updated all method calls:
+  - countVariants: List<GenomicRegion> + SelectByAnnotations → 5 region params (chromosome, start, end, refAllele,
+  altAllele) + 2 zygosity booleans + 21 individual annotation params
+  - selectVariants: Same expansion + skip, limit at the end
+  - countSamples / selectSamples: Same region + annotation expansion
+  - computeAlphaMissenseAvg: List<GenomicRegion> → List<String> chromosome, List<Integer> start, List<Integer> end
+  - testParameterPassthrough (MCP-003): Expanded SelectByAnnotations constructor args into individual params
+  - testNullOptionalParameters (MCP-004): Changed isNull() assertion to any() since the server now constructs a
+  SelectByAnnotations with all-null fields
+  - Removed unused SelectByAnnotations import
+
+  OneKGPdMCPServerIT.java - Updated testJsonResponseStructure:
+  - selectVariants call expanded from GenomicRegion to individual list params + 21 annotation nulls
+  - Removed unused GenomicRegion import
+
 ## Release 1.2.9
 ### Changed - 2026-02-14
 

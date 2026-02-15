@@ -7,7 +7,7 @@ import io.quarkus.test.junit.QuarkusTest;
 import jakarta.inject.Inject;
 import org.dnaerys.client.DnaerysClient;
 import org.dnaerys.cluster.grpc.*;
-import org.dnaerys.mcp.OneKGPdMCPServer.GenomicRegion;
+
 import org.dnaerys.mcp.generator.VariantView;
 import org.dnaerys.test.WireMockGrpcResource;
 import org.dnaerys.test.WireMockGrpcResource.InjectWireMockGrpc;
@@ -319,9 +319,10 @@ class OneKGPdMCPServerIT {
     void testJsonResponseStructure() {
         // Get some variants to validate structure using selectVariants
         ToolResponse toolResponse = server.selectVariants(
-                List.of(new GenomicRegion(CHR_BRCA1, BRCA1_START, BRCA1_END, null, null)),
+                List.of(CHR_BRCA1), List.of(BRCA1_START), List.of(BRCA1_END), null, null,
                 true, true,  // selectHet, selectHom
-                null, 0, 5  // Get just 5 variants
+                null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null,
+                0, 5  // skip, limit
         );
         Map<String, List<VariantView>> result = (Map<String, List<VariantView>>) toolResponse.structuredContent();
 

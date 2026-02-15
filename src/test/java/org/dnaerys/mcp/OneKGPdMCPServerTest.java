@@ -8,7 +8,6 @@ import jakarta.inject.Inject;
 import org.dnaerys.client.DnaerysClient;
 import org.dnaerys.cluster.grpc.*;
 import org.dnaerys.mcp.OneKGPdMCPServer.GenomicRegion;
-import org.dnaerys.mcp.OneKGPdMCPServer.SelectByAnnotations;
 import org.dnaerys.mcp.generator.VariantView;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -91,9 +90,9 @@ class OneKGPdMCPServerTest {
             )).thenReturn(5573);
 
             ToolResponse toolResponse = server.countVariants(
-                List.of(new GenomicRegion("17", 43044295, 43170245, null, null)),
+                List.of("17"), List.of(43044295), List.of(43170245), null, null,
                 true, true,  // selectHet, selectHom
-                null
+                null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null
             );
             Map<String, Integer> result = (Map<String, Integer>) toolResponse.structuredContent();
 
@@ -109,9 +108,9 @@ class OneKGPdMCPServerTest {
             )).thenReturn(100);
 
             server.countVariants(
-                List.of(new GenomicRegion("1", 1000, 2000, null, null)),
+                List.of("1"), List.of(1000), List.of(2000), null, null,
                 false, true,  // selectHet=false, selectHom=true (homozygous only)
-                null
+                null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null
             );
 
             // Server swaps: calls client with (selectHom=true, selectHet=false)
@@ -128,9 +127,9 @@ class OneKGPdMCPServerTest {
             )).thenReturn(100);
 
             server.countVariants(
-                List.of(new GenomicRegion("1", 1000, 2000, null, null)),
+                List.of("1"), List.of(1000), List.of(2000), null, null,
                 true, false,  // selectHet=true, selectHom=false (heterozygous only)
-                null
+                null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null
             );
 
             // Server swaps: calls client with (selectHom=false, selectHet=true)
@@ -147,9 +146,9 @@ class OneKGPdMCPServerTest {
             )).thenReturn(200);
 
             server.countVariants(
-                List.of(new GenomicRegion("1", 1000, 2000, null, null)),
+                List.of("1"), List.of(1000), List.of(2000), null, null,
                 true, true,  // selectHet=true, selectHom=true (all variants)
-                null
+                null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null
             );
 
             // Verify the client was called with hom=true, het=true
@@ -168,9 +167,9 @@ class OneKGPdMCPServerTest {
             ToolCallException thrown = org.junit.jupiter.api.Assertions.assertThrows(
                 ToolCallException.class,
                 () -> server.countVariants(
-                    List.of(new GenomicRegion("99", 1000, 2000, null, null)),
+                    List.of("99"), List.of(1000), List.of(2000), null, null,
                     true, true,  // selectHet, selectHom
-                    null
+                    null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null
                 )
             );
 
@@ -201,9 +200,10 @@ class OneKGPdMCPServerTest {
             )).thenReturn(List.of(variant));
 
             ToolResponse toolResponse = server.selectVariants(
-                List.of(new GenomicRegion("17", 43044295, 43170245, null, null)),
+                List.of("17"), List.of(43044295), List.of(43170245), null, null,
                 true, true,  // selectHet, selectHom
-                null, null, null
+                null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null,
+                null, null  // skip, limit
             );
             Map<String, List<VariantView>> result = (Map<String, List<VariantView>>) toolResponse.structuredContent();
 
@@ -221,9 +221,10 @@ class OneKGPdMCPServerTest {
             ToolCallException thrown = org.junit.jupiter.api.Assertions.assertThrows(
                 ToolCallException.class,
                 () -> server.selectVariants(
-                    List.of(new GenomicRegion("1", 2000, 1000, null, null)),
+                    List.of("1"), List.of(2000), List.of(1000), null, null,
                     true, true,  // selectHet, selectHom
-                    null, null, null
+                    null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null,
+                    null, null  // skip, limit
                 )
             );
 
@@ -248,9 +249,9 @@ class OneKGPdMCPServerTest {
             )).thenReturn(150);
 
             ToolResponse toolResponse = server.countSamples(
-                List.of(new GenomicRegion("1", 1000, 2000, null, null)),
+                List.of("1"), List.of(1000), List.of(2000), null, null,
                 true, true,  // selectHet, selectHom
-                null
+                null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null
             );
             Map<String, Integer> result = (Map<String, Integer>) toolResponse.structuredContent();
 
@@ -267,9 +268,9 @@ class OneKGPdMCPServerTest {
             )).thenReturn(List.of("HG00403", "HG00405"));
 
             ToolResponse toolResponse = server.selectSamples(
-                List.of(new GenomicRegion("1", 1000, 2000, null, null)),
+                List.of("1"), List.of(1000), List.of(2000), null, null,
                 true, true,  // selectHet, selectHom
-                null
+                null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null
             );
             Map<String, List<String>> result = (Map<String, List<String>>) toolResponse.structuredContent();
 
@@ -285,9 +286,9 @@ class OneKGPdMCPServerTest {
             )).thenReturn(List.of());
 
             server.selectSamples(
-                List.of(new GenomicRegion("1", 1000, 2000, null, null)),
+                List.of("1"), List.of(1000), List.of(2000), null, null,
                 false, true,  // selectHet=false, selectHom=true (homozygous only)
-                null
+                null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null
             );
 
             // Server swaps: calls client with (selectHom=true, selectHet=false)
@@ -304,9 +305,9 @@ class OneKGPdMCPServerTest {
             )).thenReturn(List.of());
 
             server.selectSamples(
-                List.of(new GenomicRegion("1", 1000, 2000, null, null)),
+                List.of("1"), List.of(1000), List.of(2000), null, null,
                 true, false,  // selectHet=true, selectHom=false (heterozygous only)
-                null
+                null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null
             );
 
             // Server swaps: calls client with (selectHom=false, selectHet=true)
@@ -331,27 +332,25 @@ class OneKGPdMCPServerTest {
                 any(), anyBoolean(), anyBoolean(), any()
             )).thenReturn(100);
 
-            // Call with specific parameters (refAllele/altAllele are now in GenomicRegion)
+            // Call with specific parameters
             ToolResponse response = server.countVariants(
-                List.of(new GenomicRegion("17", 43044295, 43170245, "A", "G")),
+                List.of("17"), List.of(43044295), List.of(43170245), List.of("A"), List.of("G"),
                 true,                   // selectHet
                 true,                   // selectHom
-                new SelectByAnnotations(
-                    0.01f, 0.0001f,                // afLessThan, afGreaterThan
-                    0.02f, 0.0005f,                // gnomadExomeAfLT, gnomadExomeAfGT
-                    0.03f, 0.0002f,                // gnomadGenomeAfLT, gnomadGenomeAfGT
-                    "PATHOGENIC",                  // clinSignificance
-                    "HIGH",                        // vepImpact
-                    "TRANSCRIPT",                  // vepFeature
-                    "PROTEIN_CODING",              // vepBiotype
-                    "SNV",                         // vepVariantType
-                    "MISSENSE_VARIANT",            // vepConsequences
-                    "LIKELY_PATHOGENIC",            // alphaMissenseClass
-                    0.9f, 0.5f,                    // alphaMissenseScoreLT, alphaMissenseScoreGT
-                    true, false,                   // biallelicOnly, multiallelicOnly
-                    false, true,                   // excludeMales, excludeFemales
-                    10, 50                         // minVariantLengthBp, maxVariantLengthBp
-                )
+                0.01f, 0.0001f,                // afLessThan, afGreaterThan
+                0.02f, 0.0005f,                // gnomadExomeAfLT, gnomadExomeAfGT
+                0.03f, 0.0002f,                // gnomadGenomeAfLT, gnomadGenomeAfGT
+                "PATHOGENIC",                  // clinSignificance
+                "HIGH",                        // vepImpact
+                "TRANSCRIPT",                  // vepFeature
+                "PROTEIN_CODING",              // vepBiotype
+                "SNV",                         // vepVariantType
+                "MISSENSE_VARIANT",            // vepConsequences
+                "LIKELY_PATHOGENIC",            // alphaMissenseClass
+                0.9f, 0.5f,                    // alphaMissenseScoreLT, alphaMissenseScoreGT
+                true, false,                   // biallelicOnly, multiallelicOnly
+                false, true,                   // excludeMales, excludeFemales
+                10, 50                         // minVariantLengthBp, maxVariantLengthBp
             );
 
             // Verify the client was called
@@ -372,29 +371,29 @@ class OneKGPdMCPServerTest {
 
             // Call with all optional params as null (selectHet/selectHom are required)
             server.countVariants(
-                List.of(new GenomicRegion("1", 1000, 2000, null, null)),
+                List.of("1"), List.of(1000), List.of(2000), null, null,
                 true, true,  // selectHet, selectHom (required)
-                null
+                null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null
             );
 
-            // Verify client was called with null annotations
+            // Verify client was called (annotations object is constructed with all-null fields)
             verify(mockClient).countVariants(
-                any(), eq(true), eq(true), isNull()
+                any(), eq(true), eq(true), any()
             );
         }
 
         @Test
-        @DisplayName("Chromosome parameter is correctly mapped via GenomicRegion")
+        @DisplayName("Chromosome parameter is correctly mapped")
         void testChromosomeMapping() {
             when(mockClient.countVariants(
                 any(), anyBoolean(), anyBoolean(), any()
             )).thenReturn(100);
 
-            // Test chromosome X via GenomicRegion
+            // Test chromosome X
             server.countVariants(
-                List.of(new GenomicRegion("X", 1000, 2000, null, null)),
+                List.of("X"), List.of(1000), List.of(2000), null, null,
                 true, true,  // selectHet, selectHom
-                null
+                null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null
             );
 
             verify(mockClient).countVariants(
@@ -542,7 +541,7 @@ class OneKGPdMCPServerTest {
             when(mockClient.computeAlphaMissenseAvg(any())).thenReturn(stat);
 
             ToolResponse toolResponse = server.computeAlphaMissenseAvg(
-                List.of(new GenomicRegion("17", 43044295, 43170245, null, null))
+                List.of("17"), List.of(43044295), List.of(43170245)
             );
             DnaerysClient.AlphaMissenseAvg result = (DnaerysClient.AlphaMissenseAvg) toolResponse.structuredContent();
 
@@ -561,7 +560,7 @@ class OneKGPdMCPServerTest {
             ToolCallException thrown = org.junit.jupiter.api.Assertions.assertThrows(
                 ToolCallException.class,
                 () -> server.computeAlphaMissenseAvg(
-                    List.of(new GenomicRegion("17", 43044295, 43170245, null, null))
+                    List.of("17"), List.of(43044295), List.of(43170245)
                 )
             );
 
@@ -575,7 +574,7 @@ class OneKGPdMCPServerTest {
             when(mockClient.computeAlphaMissenseAvg(any())).thenReturn(stat);
 
             ToolResponse toolResponse = server.computeAlphaMissenseAvg(
-                List.of(new GenomicRegion("22", 50000000, 50001000, null, null))
+                List.of("22"), List.of(50000000), List.of(50001000)
             );
             DnaerysClient.AlphaMissenseAvg result = (DnaerysClient.AlphaMissenseAvg) toolResponse.structuredContent();
 
@@ -590,12 +589,11 @@ class OneKGPdMCPServerTest {
             DnaerysClient.AlphaMissenseAvg stat = new DnaerysClient.AlphaMissenseAvg(0.5, 0.1, 50);
             when(mockClient.computeAlphaMissenseAvg(any())).thenReturn(stat);
 
-            List<GenomicRegion> regions = List.of(
-                new GenomicRegion("17", 43044295, 43170245, null, null),
-                new GenomicRegion("7", 117287120, 117715971, null, null)
+            server.computeAlphaMissenseAvg(
+                List.of("17", "7"),
+                List.of(43044295, 117287120),
+                List.of(43170245, 117715971)
             );
-
-            server.computeAlphaMissenseAvg(regions);
 
             verify(mockClient).computeAlphaMissenseAvg(argThat(r ->
                 r.size() == 2 &&
@@ -623,9 +621,9 @@ class OneKGPdMCPServerTest {
             ToolCallException thrown = org.junit.jupiter.api.Assertions.assertThrows(
                 ToolCallException.class,
                 () -> server.countVariants(
-                    List.of(new GenomicRegion("1", 1000, 2000, null, null)),
+                    List.of("1"), List.of(1000), List.of(2000), null, null,
                     true, true,  // selectHet, selectHom
-                    null
+                    null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null
                 )
             );
 
@@ -642,9 +640,10 @@ class OneKGPdMCPServerTest {
             ToolCallException thrown = org.junit.jupiter.api.Assertions.assertThrows(
                 ToolCallException.class,
                 () -> server.selectVariants(
-                    List.of(new GenomicRegion("1", 1000, 2000, null, null)),
+                    List.of("1"), List.of(1000), List.of(2000), null, null,
                     true, true,  // selectHet, selectHom
-                    null, null, null
+                    null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null,
+                    null, null  // skip, limit
                 )
             );
 
@@ -661,9 +660,9 @@ class OneKGPdMCPServerTest {
             ToolCallException thrown = org.junit.jupiter.api.Assertions.assertThrows(
                 ToolCallException.class,
                 () -> server.selectSamples(
-                    List.of(new GenomicRegion("1", 1000, 2000, null, null)),
+                    List.of("1"), List.of(1000), List.of(2000), null, null,
                     true, true,  // selectHet, selectHom
-                    null
+                    null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null
                 )
             );
 
