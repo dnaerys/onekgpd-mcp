@@ -53,7 +53,8 @@ public class ContigsMapping {
     );
 
     static Chromosome contigName2GrpcChr(String contig) {
-        return GRPC_CHR.getOrDefault(contig, Chromosome.UNRECOGNIZED);
+        String chr = contig.toUpperCase().startsWith("CHR") ? contig.substring(3) : contig;
+        return GRPC_CHR.getOrDefault(chr, Chromosome.UNRECOGNIZED);
     }
 
     static List<Chromosome> contigName2GrpcChr(String[] contigs) {

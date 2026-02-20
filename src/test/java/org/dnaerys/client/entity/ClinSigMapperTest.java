@@ -36,7 +36,7 @@ class ClinSigMapperTest {
     @DisplayName("Benign values map correctly")
     void testBenignValues() {
         // Note: Plain "BENIGN" maps to CLNSIG_BENIGN in the proto
-        assertThat(ClinSigMapper.fromString("CLNSIG_BENIGN")).isEqualTo(ClinSignificance.CLNSIG_BENIGN);
+        assertThat(ClinSigMapper.fromString("BENIGN")).isEqualTo(ClinSignificance.CLNSIG_BENIGN);
         assertThat(ClinSigMapper.fromString("LIKELY_BENIGN")).isEqualTo(ClinSignificance.LIKELY_BENIGN);
     }
 
@@ -82,7 +82,7 @@ class ClinSigMapperTest {
 
     static Stream<Arguments> validClinSigValues() {
         return Stream.of(
-            Arguments.of("CLNSIG_BENIGN", ClinSignificance.CLNSIG_BENIGN),
+            Arguments.of("BENIGN", ClinSignificance.CLNSIG_BENIGN),
             Arguments.of("LIKELY_BENIGN", ClinSignificance.LIKELY_BENIGN),
             Arguments.of("UNCERTAIN_SIGNIFICANCE", ClinSignificance.UNCERTAIN_SIGNIFICANCE),
             Arguments.of("LIKELY_PATHOGENIC", ClinSignificance.LIKELY_PATHOGENIC),
@@ -110,7 +110,7 @@ class ClinSigMapperTest {
 
     @ParameterizedTest
     @NullAndEmptySource
-    @ValueSource(strings = {"  ", "INVALID", "BENIGN", "MALIGNANT", "UNKNOWN_SIGNIFICANCE"})
+    @ValueSource(strings = {"  ", "INVALID", "MALIGNANT", "UNKNOWN_SIGNIFICANCE"})
     @DisplayName("Various invalid inputs return UNRECOGNIZED")
     void testInvalidInputs(String input) {
         assertThat(ClinSigMapper.fromString(input)).isEqualTo(ClinSignificance.UNRECOGNIZED);

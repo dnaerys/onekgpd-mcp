@@ -56,12 +56,9 @@ public class OneKGPdMCPServer {
         "position in base pairs, 1-based, GRCh38";
 
     private static final String HET_DESC =
-        "include HETEROZYGOUS (0/1 genotypes)";
+        "include HETEROZYGOUS variants (0/1 genotypes)";
     private static final String HOM_DESC =
-        "include HOMOZYGOUS (1/1 genotypes)";
-
-    private static final String ANN_DESC =
-        "Annotations for variant filtering";
+        "include HOMOZYGOUS variants (1/1 genotypes)";
 
     private static final String REF_DESC =
         "reference allele bases (REF)";
@@ -127,7 +124,7 @@ public class OneKGPdMCPServer {
         "SPLICE_DONOR_5TH_BASE_VARIANT,SPLICE_DONOR_REGION_VARIANT";
 
     private static final String AM_DESC =
-        "CSV with AlphaMissense classes. Values: " +
+        "CSV with AlphaMissense Classes. Values: " +
         "LIKELY_BENIGN,LIKELY_PATHOGENIC,AMBIGUOUS";
 
     private static final String AMLT_DESC =
@@ -138,7 +135,7 @@ public class OneKGPdMCPServer {
 
     private static final String CLIN_DESC =
         "CSV with ClinVar Clinical Significance annotations. Values: " +
-        "CLNSIG_BENIGN,LIKELY_BENIGN,UNCERTAIN_SIGNIFICANCE,LIKELY_PATHOGENIC,PATHOGENIC," +
+        "BENIGN,LIKELY_BENIGN,UNCERTAIN_SIGNIFICANCE,LIKELY_PATHOGENIC,PATHOGENIC," +
         "DRUG_RESPONSE,ASSOCIATION,RISK_FACTOR,PROTECTIVE,AFFECTS,CONFERS_SENSITIVITY," +
         "UNCERTAIN_RISK_ALLELE,LIKELY_RISK_ALLELE,ESTABLISHED_RISK_ALLELE";
 
@@ -253,7 +250,7 @@ public class OneKGPdMCPServer {
 
             "WORKFLOW:\n" +
             "1. Use this tool FIRST: to assess result size before calling selectVariants\n" +
-            "2. If count is manageable, call selectVariants with same filters if variant details are required\n" +
+            "2. If count is manageable, call selectVariants with same filters if variant details are required\n\n" +
 
             "PARAMETERS Logic:\n" +
             "- Filters: ALL filters are combined with AND logic\n" +
@@ -945,13 +942,13 @@ public class OneKGPdMCPServer {
     public List<GenomicRegion> getGenomicRegions(List<String> chromosome, List<Integer> start, List<Integer> end,
                                                  List<String> refAllele, List<String> altAllele) {
         if (chromosome.size() != start.size() || chromosome.size() != end.size()) {
-            throw new RuntimeException("Invalid parameter: number of elements in chromosome, start and end lists should be equal");
+            throw new RuntimeException("Invalid parameter: number of elements in 'chromosome', 'start' and 'end' lists should be equal");
         }
         if (refAllele != null && !refAllele.isEmpty() && refAllele.size() != chromosome.size()) {
-            throw new RuntimeException("Invalid parameter: number of elements in refAllele should be equal to number of regions");
+            throw new RuntimeException("Invalid parameter: number of elements in 'refAllele' should be equal to number of regions");
         }
         if (altAllele != null && !altAllele.isEmpty() && altAllele.size() != chromosome.size()) {
-            throw new RuntimeException("Invalid parameter: number of elements in altAllele should be equal to number of regions");
+            throw new RuntimeException("Invalid parameter: number of elements in 'altAllele' should be equal to number of regions");
         }
         List<GenomicRegion> regions = new ArrayList<GenomicRegion>();
         for (int i = 0; i < chromosome.size(); i++) {

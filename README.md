@@ -22,8 +22,8 @@ gnomADe + gnomADg 4.1, AlphaMissense Score & AlphaMissense Class annotations
 
 Remote MCP service via _Streamable HTTP:_
 
-- http://db.dnaerys.org:80/mcp
-- https://db.dnaerys.org:443/mcp
+- http://db.dnaerys.org/mcp
+- https://db.dnaerys.org/mcp
 
 ## Examples
 
@@ -65,10 +65,21 @@ electrostatic gradient._
 and the thioredoxin system. Complete loss of either GSR or TXNRD1 is incompatible with mammalian development, yet population
 databases contain individuals carrying variants predicted to impair enzyme function._
 >
+
 > _Identify clusters of individuals in the KGP cohort who carry multiple 'Moderate' impact VEP variants across both systems.
 Reasoning through the AlphaMissense structural implications, can you detect a 'balancing act' where a loss of efficiency
 in Glutathione reductase is consistently paired with high-confidence benign or potentially activating variants in the
 Thioredoxin system ? Synthesize a model of 'Redox Robustness' based on the co-occurrence of these variants across the cohort._
+
+#### Macromolecular structural complexes
+
+> _Treat the 26S Proteasome as a mechanically redundant 3D machine and map every missense variant from the KGP individuals
+across all 33 subunits. Perform a spatial analysis to determine if pathogenic variation is statistically partitioned toward
+the distal 'Lid' (Zone C) rather than the more evolutionary constrained 'Core' (Zone A) or 'Gating' (Zone B) interfaces.
+Identify individuals with a high cumulative burden (2+ 'Likely Pathogenic' variants) to investigate inter-subunit compensation,
+searching for paired 'weakening' and 'stabilizing' mutations at protein-protein hinges. Finally, define the 'mechanical
+tolerance' of the proteasome by establishing the maximum cumulative structural disruption observed in a single healthy
+individual based on AlphaMissense scores and calculated ΔΔG values._
 
 _[More examples](./examples/README.md)_
 
@@ -212,6 +223,18 @@ See [TEST_SPECIFICATION.md](./docs/TEST_SPECIFICATION.md) for detailed test docu
 ---
 
 _Test part of this project is written by Claude. Fun part is written by humans._
+
+---
+
+## Privacy Policy
+
+OneKGPd MCP Server operates as a read-only interface layer for 1000 Genomes Project dataset.
+Server does not collect, store, or transmit any user data. No conversation data is recorded.
+No personal information is collected. No cookies, tracking mechanisms or authentication are used.
+
+## Support
+
+For issues, questions, or feedback: https://github.com/dnaerys/onekgpd-mcp/issues
 
 ## License
 

@@ -147,6 +147,16 @@ variant in one key component (e.g., DSP), are they depleted of rare missense var
 compared to the general population ? This would suggest that even a single hit requires the rest of the complex to be "pristine"
 when one component is already compromised to maintain mechanical integrity._
 
+- .
+
+> _Treat the 26S Proteasome as a mechanically redundant 3D machine and map every missense variant from the KGP individuals
+across all 33 subunits. Perform a spatial analysis to determine if pathogenic variation is statistically partitioned toward
+the distal 'Lid' (Zone C) rather than the more evolutionary constrained 'Core' (Zone A) or 'Gating' (Zone B) interfaces.
+Identify individuals with a high cumulative burden (2+ 'Likely Pathogenic' variants) to investigate inter-subunit compensation,
+searching for paired 'weakening' and 'stabilizing' mutations at protein-protein hinges. Finally, define the 'mechanical
+tolerance' of the proteasome by establishing the maximum cumulative structural disruption observed in a single healthy
+individual based on AlphaMissense scores and calculated ΔΔG values._
+
 ---
 
 #### Structural Intolerance

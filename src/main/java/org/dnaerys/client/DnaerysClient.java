@@ -763,8 +763,13 @@ public class DnaerysClient {
             throw new RuntimeException("Invalid parameter: 'end' must be provided");
         }
 
-        Chromosome chr = ContigsMapping.contigName2GrpcChr(region.chromosome());
-        if (chr.equals(Chromosome.UNRECOGNIZED)) throw new RuntimeException("Invalid Chromosome: " + region.chromosome());
+        String chromosome =
+            region.chromosome().toUpperCase().startsWith("CHR") ? region.chromosome().substring(3) : region.chromosome();
+
+        Chromosome chr = ContigsMapping.contigName2GrpcChr(chromosome);
+        if (chr.equals(Chromosome.UNRECOGNIZED))
+            throw new RuntimeException("Invalid Chromosome: " + region.chromosome() +
+                ". Valid chromosome values: 1,2,...,22,X,Y");
 
         if (region.start() < 0 || region.end() < region.start()) {
             throw new RuntimeException(String.format(

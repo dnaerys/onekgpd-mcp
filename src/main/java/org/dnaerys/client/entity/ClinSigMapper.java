@@ -12,6 +12,7 @@ public class ClinSigMapper {
             .toUpperCase()
             .replace(' ', '_')
             .replace('-', '_');
+        if (normalized.equals("BENIGN")) normalized = "CLNSIG_BENIGN";
 
         try {
             return ClinSignificance.valueOf(normalized);
