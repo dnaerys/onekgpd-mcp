@@ -3,7 +3,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>org.dnaerys</groupId>
     <artifactId>onekgpd-mcp</artifactId>
-    <version>1.2.10</version>
+    <version>1.2.11</version>
 
     <properties>
         <compiler-plugin.version>3.14.0</compiler-plugin.version>
@@ -17,6 +17,7 @@
 
         <skipITs>true</skipITs>
         <surefire-plugin.version>3.5.4</surefire-plugin.version>
+        <duckdb.version>1.2.2.0</duckdb.version>
         <wiremock.version>3.13.2</wiremock.version>
         <wiremock-grpc.version>0.11.0</wiremock-grpc.version>
         <protobuf-maven-plugin.version>0.6.1</protobuf-maven-plugin.version>
@@ -127,6 +128,11 @@
             <groupId>com.google.code.gson</groupId>
             <artifactId>gson</artifactId>
             <version>2.13.2</version>
+        </dependency>
+        <dependency>
+            <groupId>org.duckdb</groupId>
+            <artifactId>duckdb_jdbc</artifactId>
+            <version>${duckdb.version}</version>
         </dependency>
     </dependencies>
 

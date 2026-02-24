@@ -9,14 +9,16 @@ three panel + 698 samples from 602 family trios - [dataset details](https://www.
 
 - _real-time_ access to _138 044 723_ unique variants and _~442 billion_ individual genotypes
 
-- variant, sample and genotype selection based on coordinates, annotations, zygosity
+- variant, sample and genotype selection based on coordinates, annotations, zygosity, population
 
 - filtering by VEP (impact, biotype, feature type, variant class, consequences), ClinVar Clinical Significance (202502),
-gnomADe + gnomADg 4.1, AlphaMissense Score & AlphaMissense Class annotations
+  gnomADe + gnomADg 4.1, AlphaMissense Score & AlphaMissense Class annotations
 
   - [full annotation composition](./docs/annotations.md)
 
 - returned variants annotated with _HGVSp_, _gnomADe + gnomADg_, _AlphaMissense score_ + cohort-wide statistics
+
+- samples annotated with: _familyId, gender, paternalId, maternalId, relationship, children, population, superpopulation, phase3 indicator_
 
 ## Online Service
 
@@ -91,9 +93,14 @@ Implemented as a Java EE service, accessing _KGP dataset_ via gRPC calls to publ
 
 - provides MCP over _Streamable HTTP_, _HTTP/SSE_ and _STDIO_ transports
 - service implementation is based on [Quarkus MCP Server framework](https://docs.quarkiverse.io/quarkus-mcp-server/dev/)
-- tools: _computeAlphaMissenseAvg, computeVariantBurden, countSamples, countSamplesHomozygousReference, countVariants,
-  countVariantsInSamples, getDatasetInfo, getKinshipDegree, selectSamples, selectSamplesHomozygousReference,
-  selectVariants, selectVariantsInSamples_
+- sample population and metadata are managed by an embedded DuckDB instance
+
+- MCP Tools:
+  - Genomics database: _countSamples, countSamplesHomozygousReference, countVariants, countVariantsInSamples,
+  getDatasetInfo, getKinshipDegree, selectSamples, selectSamplesHomozygousReference, selectVariants, selectVariantsInSamples,
+  computeAlphaMissenseAvg, computeVariantBurden_
+  - Population and metadata: _listPopulations, listSuperpopulations, getPopulationStats, getSuperpopulationSummary,
+  getSampleMetadata, selectSamplesByPopulation_
   - [implementation](./src/main/java/org/dnaerys/mcp/OneKGPdMCPServer.java)
 
 ## Installation
@@ -217,8 +224,6 @@ _e.g._ `http://localhost:9000/mcp` or `https://db.dnaerys.org:443/mcp`
 # Update test baselines after data changes
 ./mvnw verify -DskipITs=false -DupdateBaseline=true
 ```
-
-See [TEST_SPECIFICATION.md](./docs/TEST_SPECIFICATION.md) for detailed test documentation.
 
 ---
 

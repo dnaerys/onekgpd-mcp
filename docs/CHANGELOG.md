@@ -2,6 +2,14 @@
 
 ## All notable changes to this project will be documented in this file.
 
+## Release 1.2.11
+### Changed - 2026-02-24
+
+● Sample Metainformation in DuckDB
+
+New Tools: listPopulations, listSuperpopulations, getPopulationStats, getSuperpopulationSummary,
+ getSampleMetadata, selectSamplesByPopulation
+
 ## Release 1.2.10
 ### Changed - 2026-02-15
 

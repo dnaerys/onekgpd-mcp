@@ -26,6 +26,12 @@ import jakarta.enterprise.context.ApplicationScoped;
 
 import jakarta.inject.Inject;
 import org.dnaerys.client.DnaerysClient;
+import org.dnaerys.client.MetaClient;
+import org.dnaerys.client.entity.PopulationInfo;
+import org.dnaerys.client.entity.PopulationStats;
+import org.dnaerys.client.entity.SuperpopulationInfo;
+import org.dnaerys.client.entity.SuperpopulationSummary;
+import org.dnaerys.client.entity.SampleMeta;
 import org.dnaerys.cluster.grpc.Variant;
 import org.dnaerys.mcp.generator.*;
 import org.dnaerys.mcp.util.McpResponse;
@@ -45,6 +51,9 @@ public class OneKGPdMCPServer {
 
     @Inject
     DnaerysClient client;
+
+    @Inject
+    MetaClient metaClient;
 
     private static final String CHROMOSOME_DESC =
         "chromosome, values: 1,2,...,22,X,Y";
@@ -957,5 +966,189 @@ public class OneKGPdMCPServer {
             regions.add(new GenomicRegion(chromosome.get(i), start.get(i), end.get(i), ref, alt));
         }
         return regions;
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------
+
+    @Tool(
+        title = "getSampleMetadata",
+        structuredContent = true,
+        annotations = @Tool.Annotations(
+            title = "getSampleMetadata",
+            readOnlyHint = true,
+            destructiveHint = false,
+            idempotentHint = true,
+            openWorldHint = false
+        ),
+        description =
+            "GET sample metadata for given sample IDs from 1000 Genomes Project.\n" +
+            "Returns: family info, gender, parental IDs, children, population, superpopulation, phase3 status.",
+        outputSchema = @Tool.OutputSchema(
+            from = SampleMeta.class,
+            generator = SampleMetaSchemaGenerator.class
+        )
+    )
+    public ToolResponse getSampleMetadata(
+                @ToolArg(description = "list of sample IDs (e.g. HG00096, HG00427)") List<String> sampleIds) {
+        try {
+            List<SampleMeta> metas = metaClient.getSampleMeta(sampleIds);
+            Map<String, Object> structured = Map.of("samples", metas);
+            return mcpResponse.success(structured, metas);
+        } catch (Exception e) {
+            throw McpResponse.handle(e);
+        }
+    }
+
+    @Tool(
+        title = "listPopulations",
+        structuredContent = true,
+        annotations = @Tool.Annotations(
+            title = "listPopulations",
+            readOnlyHint = true,
+            destructiveHint = false,
+            idempotentHint = true,
+            openWorldHint = false
+        ),
+        description =
+            "LIST all known populations in 1000 Genomes Project with their superpopulation and sample count.\n" +
+            "Use this to discover valid population/region values before calling selectSamplesByPopulation.",
+        outputSchema = @Tool.OutputSchema(
+            from = PopulationInfo.class,
+            generator = PopulationInfoSchemaGenerator.class
+        )
+    )
+    public ToolResponse listPopulations() {
+        try {
+            List<PopulationInfo> populations = metaClient.listPopulations();
+            Map<String, Object> structured = Map.of("populations", populations);
+            return mcpResponse.success(structured, populations);
+        } catch (Exception e) {
+            throw McpResponse.handle(e);
+        }
+    }
+
+    @Tool(
+        title = "listSuperpopulations",
+        structuredContent = true,
+        annotations = @Tool.Annotations(
+            title = "listSuperpopulations",
+            readOnlyHint = true,
+            destructiveHint = false,
+            idempotentHint = true,
+            openWorldHint = false
+        ),
+        description =
+            "LIST all known superpopulations in 1000 Genomes Project with sample count and constituent populations.\n" +
+            "RETURNS: Refer to the Output Schema for field definitions.",
+        outputSchema = @Tool.OutputSchema(
+            from = SuperpopulationInfo.class,
+            generator = SuperpopulationInfoSchemaGenerator.class
+        )
+    )
+    public ToolResponse listSuperpopulations() {
+        try {
+            List<SuperpopulationInfo> superpopulations = metaClient.listSuperpopulations();
+            Map<String, Object> structured = Map.of("superpopulations", superpopulations);
+            return mcpResponse.success(structured, superpopulations);
+        } catch (Exception e) {
+            throw McpResponse.handle(e);
+        }
+    }
+
+    @Tool(
+        title = "getPopulationStats",
+        structuredContent = true,
+        annotations = @Tool.Annotations(
+            title = "getPopulationStats",
+            readOnlyHint = true,
+            destructiveHint = false,
+            idempotentHint = true,
+            openWorldHint = false
+        ),
+        description =
+            "GET detailed statistics for one or more populations: gender split, phase3 count, trio membership.\n" +
+            "Accepts population short codes (e.g. CHS) or full names.\n" +
+            "RETURNS: Refer to the Output Schema for field definitions.",
+        outputSchema = @Tool.OutputSchema(
+            from = PopulationStats.class,
+            generator = PopulationStatsSchemaGenerator.class
+        )
+    )
+    public ToolResponse getPopulationStats(
+                @ToolArg(description = "list of population codes or full names (e.g. CHS, GBR)") List<String> populations) {
+        try {
+            List<PopulationStats> stats = metaClient.getPopulationStats(populations);
+            Map<String, Object> structured = Map.of("populations", stats);
+            return mcpResponse.success(structured, stats);
+        } catch (Exception e) {
+            throw McpResponse.handle(e);
+        }
+    }
+
+    @Tool(
+        title = "getSuperpopulationSummary",
+        structuredContent = true,
+        annotations = @Tool.Annotations(
+            title = "getSuperpopulationSummary",
+            readOnlyHint = true,
+            destructiveHint = false,
+            idempotentHint = true,
+            openWorldHint = false
+        ),
+        description =
+            "GET summary statistics for one or more superpopulations with per-population breakdown.\n" +
+            "Accepts superpopulation short codes (e.g. EAS) or full names.\n" +
+            "RETURNS: Refer to the Output Schema for field definitions.",
+        outputSchema = @Tool.OutputSchema(
+            from = SuperpopulationSummary.class,
+            generator = SuperpopulationSummarySchemaGenerator.class
+        )
+    )
+    public ToolResponse getSuperpopulationSummary(
+                @ToolArg(description = "list of superpopulation codes or full names (e.g. EAS, EUR)") List<String> superpopulations) {
+        try {
+            List<SuperpopulationSummary> summaries = metaClient.getSuperpopulationSummary(superpopulations);
+            Map<String, Object> structured = Map.of("superpopulations", summaries);
+            return mcpResponse.success(structured, summaries);
+        } catch (Exception e) {
+            throw McpResponse.handle(e);
+        }
+    }
+
+    @Tool(
+        title = "selectSamplesByPopulation",
+        structuredContent = true,
+        annotations = @Tool.Annotations(
+            title = "selectSamplesByPopulation",
+            readOnlyHint = true,
+            destructiveHint = false,
+            idempotentHint = true,
+            openWorldHint = false
+        ),
+        description =
+                "SELECT samples from 1000 Genomes by population and/or superpopulation.\n" +
+                "Accepts short codes (population: CHS, superpopulation: EAS) or full names " +
+                "(population: 'Southern Han Chinese, China', superpopulation: 'East Asia').\n" +
+
+                "At least one parameter must be provided. When both are given, results are intersected.\n" +
+                "Supports pagination via skip/limit (default: skip=0, limit=50, max limit=3202).\n" +
+
+                "RETURNS: Refer to the Output Schema for field definitions.",
+        outputSchema = @Tool.OutputSchema(
+            generator = SampleIdArraySchemaGenerator.class
+        )
+    )
+    public ToolResponse selectSamplesByPopulation(
+                @ToolArg(description = "population short code (e.g. CHS, GBR) or full name (e.g. 'Southern Han Chinese, China')", required = false) String population,
+                @ToolArg(description = "superpopulation short code (e.g. EAS, EUR) or full name (e.g. 'East Asia')", required = false) String region,
+                @ToolArg(description = "number of results to skip (default 0)", required = false) Integer skip,
+                @ToolArg(description = "maximum number of results to return (default 50, max 3202)", required = false) Integer limit) {
+        try {
+            List<String> samples = metaClient.selectSamplesByPopulation(population, region, skip, limit);
+            Map<String, Object> structured = Map.of("samples", samples);
+            return mcpResponse.success(structured, samples);
+        } catch (Exception e) {
+            throw McpResponse.handle(e);
+        }
     }
 }
