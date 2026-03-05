@@ -2,6 +2,11 @@
 
 ## All notable changes to this project will be documented in this file.
 
+## Release 1.2.12
+### Changed - 2026-03-05
+
+● Canonical transcripts
+
 ## Release 1.2.11
 ### Changed - 2026-02-24
 

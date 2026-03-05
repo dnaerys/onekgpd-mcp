@@ -14,9 +14,13 @@ three panel + 698 samples from 602 family trios - [dataset details](https://www.
 - filtering by VEP (impact, biotype, feature type, variant class, consequences), ClinVar Clinical Significance (202502),
   gnomADe + gnomADg 4.1, AlphaMissense Score & AlphaMissense Class annotations
 
+  - annotated with VEP 115 / GENCODE 49
+  - [GENCODE Primary set](https://www.gencodegenes.org/pages/gencode_primary/) transcripts
   - [full annotation composition](./docs/annotations.md)
 
 - returned variants annotated with _HGVSp_, _gnomADe + gnomADg_, _AlphaMissense score_ + cohort-wide statistics
+
+  - _**HGVSp**_ annotations are for **_Canonical transcripts_** to reduce LLMs cognitive load
 
 - samples annotated with: _familyId, gender, paternalId, maternalId, relationship, children, population, superpopulation, phase3 indicator_
 
@@ -107,8 +111,6 @@ Implemented as a Java EE service, accessing _KGP dataset_ via gRPC calls to publ
 
 Project can be run locally with MCP over _stdio_ and/or _http_ transports
 
-#### Option A - build & run locally
-
 - build the project and package it as a single _über-jar_:
     - jar is located in `target/onekgpd-mcp-runner.jar` and includes all dependencies
 
@@ -124,44 +126,11 @@ with skipping test compilation
 
 - run it locally with _dev profile_
     - both _stdio_ and _http_ transports are enabled 
-    - http transport is on quarkus [http.port](./src/main/resources/application.properties)
+    - http transport is on port 9000 ([quarkus.http.port in config](./src/main/resources/application.properties))
     - project expects _JRE 21_ to be available at runtime
 
 ```shell script
 java -Dquarkus.profile=dev -jar <full path>/onekgpd-mcp-runner.jar
-```
-
-#### Option B - build & run in docker
-
-- in order to run in docker, _stdio_ transport needs to be disabled to prevent application from stopping itself
-due to closed stdio in containers
-    - it's already configured in _prod profile_
-    - it's the default configuration overall
- 
-- build with _prod profile_
-
-```shell script
-docker build -f Dockerfile -t onekgpd-mcp .
-```
-
-- run as you prefer, e.g.
-
-```shell script
-docker run -p 9000:9000 --name onekgpd-mcp --rm onekgpd-mcp
-```
-
-#### Option C - pull from Docker Hub
-
-- pull prebuilt image; _stdio_ transport disabled, _http_ transport on port 9000
-
-```shell script
-docker pull dnaerys/onekgpd-mcp:latest
-```
-
-- run
-
-```shell script
-docker run -p 9000:9000 --name onekgpd-mcp --rm onekgpd-mcp
 ```
 
 ---
@@ -239,7 +208,9 @@ No personal information is collected. No cookies, tracking mechanisms or authent
 
 ## Support
 
-For issues, questions, or feedback: https://github.com/dnaerys/onekgpd-mcp/issues
+For issues, questions, or feedback:<br>
+issues: https://github.com/dnaerys/onekgpd-mcp/issues<br>
+email: mcp@dnaerys.org
 
 ## License
 

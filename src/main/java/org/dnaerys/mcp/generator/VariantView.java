@@ -45,7 +45,7 @@ public record VariantView(
             v.getGnomADe(),
             v.getGnomADg(),
             v.getAmScore(),
-            v.getAminoAcids()
+            v.getAminoAcids().isBlank() ? "" : v.getAminoAcids().split(",")[0]
         );
     }
 
