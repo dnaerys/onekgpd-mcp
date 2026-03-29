@@ -107,6 +107,10 @@ Implemented as a Java EE service, accessing _KGP dataset_ via gRPC calls to publ
   getSampleMetadata, selectSamplesByPopulation_
   - [implementation](./src/main/java/org/dnaerys/mcp/OneKGPdMCPServer.java)
 
+## Hosted deployment
+
+A hosted deployment is available on [Fronteir AI](https://fronteir.ai/mcp/dnaerys-onekgpd-mcp).
+
 ## Installation
 
 Project can be run locally with MCP over _stdio_ and/or _http_ transports
