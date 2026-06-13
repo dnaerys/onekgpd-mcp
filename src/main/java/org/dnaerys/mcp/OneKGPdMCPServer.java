@@ -34,6 +34,7 @@ import org.dnaerys.client.entity.SuperpopulationSummary;
 import org.dnaerys.client.entity.SampleMeta;
 import org.dnaerys.cluster.grpc.Variant;
 import org.dnaerys.mcp.generator.*;
+import org.dnaerys.mcp.logging.LogToolCall;
 import org.dnaerys.mcp.util.McpResponse;
 
 import java.util.ArrayList;
@@ -44,6 +45,7 @@ import java.util.stream.Collectors;
 
 @SuppressWarnings("unused")
 @ApplicationScoped
+@LogToolCall
 public class OneKGPdMCPServer {
 
     @Inject

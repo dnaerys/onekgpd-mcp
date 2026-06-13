@@ -3,7 +3,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>org.dnaerys</groupId>
     <artifactId>onekgpd-mcp</artifactId>
-    <version>1.2.12</version>
+    <version>1.2.14</version>
 
     <properties>
         <compiler-plugin.version>3.14.0</compiler-plugin.version>
@@ -50,6 +50,10 @@
         <dependency>
             <groupId>io.quarkus</groupId>
             <artifactId>quarkus-rest</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-smallrye-health</artifactId>
         </dependency>
 
         <dependency>
