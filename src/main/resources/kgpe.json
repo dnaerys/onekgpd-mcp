@@ -754,7 +754,7 @@
     "internalIDs": "HG00155",
     "externalIDs": "HG00155",
     "pid": "0",
-    "mid": "HG00144",
+    "mid": "0",
     "sex": "1",
     "gender": "male",
     "pop": "GBR",
@@ -5658,7 +5658,7 @@
     "familyId": "CDX1",
     "internalIDs": "HG00867",
     "externalIDs": "HG00867",
-    "pid": "HG00866",
+    "pid": "0",
     "mid": "0",
     "sex": "2",
     "gender": "female",
@@ -16910,8 +16910,8 @@
     "externalIDs": "HG02300",
     "pid": "HG02299",
     "mid": "HG02298",
-    "sex": "1",
-    "gender": "male",
+    "sex": "2",
+    "gender": "female",
     "pop": "PEL",
     "reg": "AMR",
     "Population": "Peruvian in Lima, Peru",
@@ -18783,7 +18783,7 @@
     "familyId": "GB20",
     "internalIDs": "HG02569",
     "externalIDs": "HG02569",
-    "pid": "HG02567",
+    "pid": "0",
     "mid": "HG02568",
     "sex": "1",
     "gender": "male",
@@ -25593,7 +25593,7 @@
     "familyId": "SL50",
     "internalIDs": "HG03451",
     "externalIDs": "HG03451",
-    "pid": "HG03466",
+    "pid": "0",
     "mid": "0",
     "sex": "1",
     "gender": "male",
@@ -30199,7 +30199,7 @@
     "internalIDs": "HG03944",
     "externalIDs": "HG03944",
     "pid": "0",
-    "mid": "HG04067",
+    "mid": "0",
     "sex": "2",
     "gender": "female",
     "pop": "STU",
@@ -37189,7 +37189,7 @@
     "internalIDs": "NA18862",
     "externalIDs": "NA18862",
     "pid": "0",
-    "mid": "NA19105",
+    "mid": "0",
     "sex": "1",
     "gender": "male",
     "pop": "YRI",
@@ -41884,7 +41884,7 @@
     "internalIDs": "NA19434",
     "externalIDs": "NA19434",
     "pid": "0",
-    "mid": "NA19432",
+    "mid": "0",
     "sex": "2",
     "gender": "female",
     "pop": "LWK",
@@ -42003,7 +42003,7 @@
     "familyId": "LWK004",
     "internalIDs": "NA19445",
     "externalIDs": "NA19445",
-    "pid": "NA19453",
+    "pid": "0",
     "mid": "0",
     "sex": "2",
     "gender": "female",
@@ -44082,7 +44082,7 @@
     "Population": "African Ancestry in Southwest US",
     "region": "Africa",
     "phase3": "TRUE",
-    "Relationship": ""
+    "Relationship": "father"
 },
 {
     "familyId": "2427",
@@ -44118,7 +44118,7 @@
     "familyId": "2426a",
     "internalIDs": "NA19913",
     "externalIDs": "NA19913",
-    "pid": "0",
+    "pid": "NA19904",
     "mid": "0",
     "sex": "2",
     "gender": "female",
@@ -44127,7 +44127,7 @@
     "Population": "African Ancestry in Southwest US",
     "region": "Africa",
     "phase3": "TRUE",
-    "Relationship": ""
+    "Relationship": "child"
 },
 {
     "familyId": "2430",
@@ -44607,14 +44607,14 @@
     "Population": "African Ancestry in Southwest US",
     "region": "Africa",
     "phase3": "TRUE",
-    "Relationship": ""
+    "Relationship": "mother"
 },
 {
     "familyId": "2480a",
     "internalIDs": "NA20318",
     "externalIDs": "NA20318",
     "pid": "0",
-    "mid": "0",
+    "mid": "NA20317",
     "sex": "1",
     "gender": "male",
     "pop": "ASW",
@@ -44622,7 +44622,7 @@
     "Population": "African Ancestry in Southwest US",
     "region": "Africa",
     "phase3": "TRUE",
-    "Relationship": ""
+    "Relationship": "child"
 },
 {
     "familyId": "2481a",
@@ -44682,7 +44682,7 @@
     "Population": "African Ancestry in Southwest US",
     "region": "Africa",
     "phase3": "TRUE",
-    "Relationship": ""
+    "Relationship": "mother"
 },
 {
     "familyId": "2486",
@@ -44779,7 +44779,7 @@
     "internalIDs": "NA20355",
     "externalIDs": "NA20355",
     "pid": "0",
-    "mid": "0",
+    "mid": "NA20334",
     "sex": "2",
     "gender": "female",
     "pop": "ASW",
@@ -44787,7 +44787,7 @@
     "Population": "African Ancestry in Southwest US",
     "region": "Africa",
     "phase3": "TRUE",
-    "Relationship": ""
+    "Relationship": "child"
 },
 {
     "familyId": "2494",
@@ -44847,14 +44847,14 @@
     "Population": "African Ancestry in Southwest US",
     "region": "Africa",
     "phase3": "TRUE",
-    "Relationship": ""
+    "Relationship": "mother"
 },
 {
     "familyId": "2495a",
     "internalIDs": "NA20362",
     "externalIDs": "NA20362",
     "pid": "0",
-    "mid": "0",
+    "mid": "NA20359",
     "sex": "1",
     "gender": "male",
     "pop": "ASW",
@@ -44862,7 +44862,7 @@
     "Population": "African Ancestry in Southwest US",
     "region": "Africa",
     "phase3": "TRUE",
-    "Relationship": ""
+    "Relationship": "child"
 },
 {
     "familyId": "2505",
@@ -47253,7 +47253,7 @@
     "familyId": "GIH003",
     "internalIDs": "NA20910",
     "externalIDs": "NA20910",
-    "pid": "NA20909",
+    "pid": "0",
     "mid": "0",
     "sex": "2",
     "gender": "female",
