@@ -9,7 +9,7 @@ import org.dnaerys.cluster.grpc.Variant;
 
 import java.io.IOException;
 
-//    @JsonPropertyOrder({ "chr", "pos", "ref", "alt", "AF", "AC", "AN", "het", "hom", "gnomADe", "gnomADg", "AlphaMissense", "HGVSp" })
+//    @JsonPropertyOrder({ "chr", "pos", "ref", "alt", "AF", "AC", "AN", "HetSamplesCount", "HomSamplesCount", "gnomADe", "gnomADg", "AlphaMissense", "HGVSp" })
 @JsonSerialize(using = VariantView.VariantSerializer.class)
 public record VariantView(
     int chrIdx,
@@ -19,8 +19,8 @@ public record VariantView(
     float AF,
     int AC,
     int AN,
-    int het,
-    int hom,
+    int HetSamplesCount,
+    int HomSamplesCount,
     float gnomADe,
     float gnomADg,
     float AlphaMissense,
@@ -39,9 +39,8 @@ public record VariantView(
             v.getAf(),
             (int) v.getAc(),
             v.getAn(),
-            // Counters logic: only include for autosomes to avoid misleading LLM on sex chromosomes
-            v.getChr().getNumber() > 22 ? 0 : v.getHetc(), // counters in sex chr are split between males/females
-            v.getChr().getNumber() > 22 ? 0 : v.getHomc(), // counters in sex chr are split between males/females
+            v.getHetSamples(),
+            v.getHomSamples(),
             v.getGnomADe(),
             v.getGnomADg(),
             v.getAmScore(),
@@ -65,8 +64,8 @@ public record VariantView(
             gen.writeNumberField("AF", v.AF);
             gen.writeNumberField("AC", v.AC);
             gen.writeNumberField("AN", v.AN);
-            gen.writeNumberField("het", v.het);
-            gen.writeNumberField("hom", v.hom);
+            gen.writeNumberField("HetSamplesCount", v.HetSamplesCount);
+            gen.writeNumberField("HomSamplesCount", v.HomSamplesCount);
 
             // Optional (NON_DEFAULT logic)
             if (v.gnomADe != 0.0f) gen.writeNumberField("gnomADe", v.gnomADe);
@@ -84,9 +83,9 @@ public record VariantView(
             Chromosome chr = Chromosome.forNumber(chrIdx);
             if (chr == null) return "0";
             return switch (chr) {
-                case CHR_X -> "X";
-                case CHR_Y -> "Y";
-                case CHR_MT -> "MT";
+                case CHRX -> "X";
+                case CHRY -> "Y";
+                case CHRMT -> "MT";
                 case CHROMOSOME_UNSPECIFIED, UNRECOGNIZED -> "0";
                 default -> String.valueOf(chr.getNumber());
             };

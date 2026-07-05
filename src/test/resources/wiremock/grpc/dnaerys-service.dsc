@@ -1,5 +1,5 @@
 
-∆ƒ
+ê«
 dnaerys.protoorg.dnaerys.cluster.grpc"
 HealthRequest"(
 HealthResponse
@@ -179,7 +179,7 @@ male_count (R	maleCount0
 
 elapsed_ms (R	elapsedMs"
 elapsed_db_ms (RelapsedDbMs
-node_id (	RnodeId"É
+node_id (	RnodeId"“
 Variant6
 chr (2$.org.dnaerys.cluster.grpc.ChromosomeRchr
 start (Rstart
@@ -188,23 +188,29 @@ elapsed_ms (R	elapsedMs"
 alt (	Ralt
 af (Raf
 ac (Rac
-an (Ran
-homc	 (Rhomc
-hetc
- (Rhetc
-misc (Rmisc
-homfc (Rhomfc
-hetfc (Rhetfc
-misfc (Rmisfc
-gnomADe (RgnomADe
-gnomADg (RgnomADg
-cadd_raw (RcaddRaw
+an (Ran
+hom_samples	 (R
+homSamples
+het_samples
+ (R
+hetSamples
+mis_samples (R
+misSamples$
+hom_samples_fx (RhomSamplesFx$
+het_samples_fx (RhetSamplesFx$
+mis_samples_fx (RmisSamplesFx&
+hom_samples_mxy (RhomSamplesMxy&
+het_samples_mxy (RhetSamplesMxy&
+mis_samples_mxy (RmisSamplesMxy
+gnomADe (RgnomADe
+gnomADg (RgnomADg
+cadd_raw (RcaddRaw
 
-cadd_phred (R	caddPhred
-am_score (RamScore
-amino_acids (	R
+cadd_phred (R	caddPhred
+am_score (RamScore
+amino_acids (	R
 aminoAcids
-	biallelic (R	biallelic"â
+	biallelic (R	biallelic"â
 AllelesWithStatsResponseF
 variants (2*.org.dnaerys.cluster.grpc.VariantWithStatsRvariants-
 incomplete_cluster (RincompleteCluster
@@ -212,21 +218,23 @@ aminoAcids
 
 elapsed_ms (R	elapsedMs"
 elapsed_db_ms (RelapsedDbMs
-node_id (	RnodeId"≠
+node_id (	RnodeId"¡
 VariantWithStats;
 variant (2!.org.dnaerys.cluster.grpc.VariantRvariant
 vaf (Rvaf
 vac (Rvac
-van (Rvan
-vhomc (Rvhomc
-vhetc (Rvhetc
-vhomfc (Rvhomfc
-vhetfc (Rvhetfc
-phwe	 (Rphwe
-pchi2
- (Rpchi2
-or (Ror
-ibc (Ribc"K
+van (Rvan"
+v_hom_samples (RvHomSamples"
+v_het_samples (RvHetSamples'
+v_hom_samples_fx (RvHomSamplesFx'
+v_het_samples_fx (RvHetSamplesFx)
+v_hom_samples_mxy	 (RvHomSamplesMxy)
+v_het_samples_mxy
+ (RvHetSamplesMxy
+phwe (Rphwe
+pchi2 (Rpchi2
+or (Ror
+ibc (Ribc"K
 TopNchi2Request
 n (Rn
 samples (	Rsamples
@@ -547,50 +555,36 @@ elapsed_ms (R	elapsedMs"
 
 GRCh37
 
-GRCh38*…
+GRCh38*∞
 
 Chromosome
-CHROMOSOME_UNSPECIFIED 	
-CHR_1	
-CHR_2	
-CHR_3	
-CHR_4	
-CHR_5	
-CHR_6	
-CHR_7	
-CHR_8	
-CHR_9	
-
-CHR_10
-
-
-CHR_11
-
-CHR_12
-
-CHR_13
-
-CHR_14
-
-CHR_15
-
-CHR_16
-
-CHR_17
-
-CHR_18
-
-CHR_19
-
-CHR_20
-
-CHR_21
-
-CHR_22	
-CHR_X	
-CHR_Y
-
-CHR_MT*√
+CHROMOSOME_UNSPECIFIED 
+CHR1
+CHR2
+CHR3
+CHR4
+CHR5
+CHR6
+CHR7
+CHR8
+CHR9		
+CHR10
+	
+CHR11	
+CHR12	
+CHR13	
+CHR14	
+CHR15	
+CHR16	
+CHR17	
+CHR18	
+CHR19	
+CHR20	
+CHR21	
+CHR22
+CHRX
+CHRY	
+CHRMT*√
 VariantType
 VARIANTTYPE_UNSPECIFIED 
 SNV
