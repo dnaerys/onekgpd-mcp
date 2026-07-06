@@ -503,7 +503,7 @@ class DnaerysClientTest {
         }
 
         @ParameterizedTest(name = "Chromosome ''{0}'' is invalid")
-        @ValueSource(strings = {"0", "23", "99", "chrM", "invalid", ""})  // Note: "MT" is valid (maps to CHR_MT)
+        @ValueSource(strings = {"0", "23", "99", "chrM", "invalid", ""})  // Note: "MT" is valid (maps to CHRMT)
         @DisplayName("Invalid chromosome values throw RuntimeException")
         void testVariousInvalidChromosomes(String chromosome) {
             RuntimeException thrown = org.junit.jupiter.api.Assertions.assertThrows(

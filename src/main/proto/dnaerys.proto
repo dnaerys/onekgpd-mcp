@@ -1,5 +1,5 @@
 syntax = "proto3";
-// R1.17.4
+// R1.20.0 - breaking changes
 
 package org.dnaerys.cluster.grpc;
 
@@ -161,7 +161,7 @@ service DnaerysService {
 
     // "reported vs observed" sex mismatch check is based on F-statistics
     // for deviation from expected number of homozygous alleles performed
-    // on biallelic SNVs on X chromosome outside PAR. The same method is
+    // on biallelic SNVs in X chromosome outside PAR. The same method is
     // used in Hail 0.2 and Plink 1.7, parameters have similar meaning.
     rpc SexMismatchCheck (FstatXRequest) returns (SexMismatchResponse) {}
 
@@ -233,6 +233,7 @@ message DatasetInfoResponse {
     int32 rings_total = 12; // dataset's total number of rings
     int64 elapsed_ms = 14; // time to execute, in ms; time from receiving request to sending response
     string node_id = 15; // node which responses
+    int32 max_variants_per_ring = 16; // responses from each individual ring are capped at this limit; individual queries can set lower limits
 }
 
 message Cohort {
@@ -271,6 +272,7 @@ message Annotations {
     float af_lt = 7; // select variants with dataset AF < af_lt, 0 is default & has no effect
     float af_gt = 8; // select variants with dataset AF > af_gt, 0 is default & has no effect
     // gnomAD AF
+    // NB: gnomad_exomes_af_lt/gnomad_genomes_af_lt include unannotated variants / not in gnomAD (gnomAD e/g AF=0)
     float gnomad_exomes_af_lt = 9;   // select variants with gnomADe AF < gnomad_exomes_af_lt, 0 is default & has no effect
     float gnomad_exomes_af_gt = 10;  // select variants with gnomADe AF > gnomad_exomes_af_gt, 0 is default & has no effect
     float gnomad_genomes_af_lt = 11; // select variants with gnomADg AF < gnomad_genomes_af_lt, 0 is default & has no effect
@@ -310,7 +312,7 @@ message AllelesInRegionRequest {
     int32  variantMinLength = 10; // minimal alt allele length; default = 0; optional
     int32  variantMaxLength = 11; // maximal alt allele length; >= 1; default = Int32.MaxValue; optional
     int32  skip = 12;  // skip first n variants from result from each node, <= 0 means no skip; optional
-    int32  limit = 13; // limit result to n variants from each node, <= 0 means 2^31-1 limit; optional
+    int32  limit = 13; // limit result to n variants from each node, <= 0 means server-side limit (5000); optional
 }
 
 // Selects variants in all samples in a bracket
@@ -330,7 +332,7 @@ message AllelesInBracketRequest {
     int32  variantMinLength = 12; // minimal alt allele length; default = 0; optional
     int32  variantMaxLength = 13; // maximal alt allele length; >= 1; default = Int32.MaxValue; optional
     int32  skip = 14;  // skip first n variants from result from each node, <= 0 means no skip; optional
-    int32  limit = 15; // limit result to n variants from each node, <= 0 means 2^31-1 limit; optional
+    int32  limit = 15; // limit result to n variants from each node, <= 0 means server-side limit (5000); optional
 }
 
 // Selects variants in provided samples in a bracket
@@ -351,7 +353,7 @@ message AllelesInBracketInSamplesRequest {
     int32  variantMaxLength = 13; // maximal alt allele length; >= 1; default = Int32.MaxValue; optional
     repeated string samples = 14; // samples names as provided during ETL
     int32  skip = 15;  // skip first n variants from result from each node, <= 0 means no skip; optional
-    int32  limit = 16; // limit result to n variants from each node, <= 0 means 2^31-1 limit; optional
+    int32  limit = 16; // limit result to n variants from each node, <= 0 means server-side limit (5000); optional
 }
 
 // Selects variants in provided samples in region
@@ -369,7 +371,7 @@ message AllelesInRegionInSamplesRequest {
     int32  variantMinLength = 11; // minimal alt allele length; default = 0; optional
     int32  variantMaxLength = 12; // maximal alt allele length; >= 1; default = Int32.MaxValue; optional
     int32  skip = 13;  // skip first n variants from result from each node, <= 0 means no skip; optional
-    int32  limit = 14; // limit result to n variants from each node, <= 0 means 2^31-1 limit; optional
+    int32  limit = 14; // limit result to n variants from each node, <= 0 means server-side limit (5000); optional
 }
 
 // Selects variants in all samples in regions
@@ -386,7 +388,7 @@ message AllelesInMultiRegionsRequest {
     int32  variantMinLength = 10; // minimal alt allele length; default = 0; optional
     int32  variantMaxLength = 11; // maximal alt allele length; >= 1; default = Int32.MaxValue; optional
     int32  skip = 12; // skip first n variants from result from each node, <= 0 means no skip; optional
-    int32  limit = 13; // limit result to n variants from each node, <= 0 means 2^31-1 limit; optional
+    int32  limit = 13; // limit result to n variants from each node, <= 0 means server-side limit (5000); optional
 }
 
 // Selects variants in provided samples in regions
@@ -404,7 +406,7 @@ message AllelesInMultiRegionsInSamplesRequest {
     int32  variantMinLength = 11; // minimal alt allele length; default = 0; optional
     int32  variantMaxLength = 12; // maximal alt allele length; >= 1; default = Int32.MaxValue; optional
     int32  skip = 13;  // skip first n variants from result from each node, <= 0 means no skip; optional
-    int32  limit = 14; // limit result to n variants from each node, <= 0 means 2^31-1 limit; optional
+    int32  limit = 14; // limit result to n variants from each node, <= 0 means server-side limit (5000); optional
 }
 
 
@@ -419,7 +421,7 @@ message AllelesResponse {
 }
 
 message Variant {
-    Chromosome chr = 1; // chromosome name in CHR_# format, e.g. CHR_2, CHR_11, CHR_X
+    Chromosome chr = 1; // chromosome name in CHR# format, e.g. CHR2, CHR11, CHRX
     int32  start = 2; // 1-based, inclusive
     int32  end = 3;   // 1-based, inclusive = start for SNVs
     string ref = 4;   // reference allele, in CAPITALS
@@ -428,21 +430,23 @@ message Variant {
     float  ac = 7; // dataset allele count. There is some degree of uncertainty how to count heterozygous loci
                    // in sex chromosomes in males, since the true ones exist only in PAR.
                    // To resolve this, it is counted as 1/2 of het alleles in data outside PAR. Hence float.
-    int32  an = 8;    // dataset allele number. Doesn't count samples with missing genotypes in data, hence specific per variant.
-    int32  homc = 9;  // homozygous alleles count
-    int32  hetc = 10; // heterozygous alleles count
-    int32  misc = 11; // missing aka no-call alleles count
-    int32  homfc = 12; // homozygous alleles count in females on sex chromosomes. males counts are in homc for sex chromosomes
-    int32  hetfc = 13; // heterozygous alleles count in females on sex chromosomes. males counts are in hetc for sex chromosomes
-    int32  misfc = 14; // missing alleles count in females on sex chromosomes.
-                       // NB: # of female samples with missing GT is not defined in Runtime Optimized mode
-    float  gnomADe = 15; // gnomADe exomes AF as defined in input VCFs, = 0 if variant is not annotated
-    float  gnomADg = 16; // gnomADg genomes AF as defined in input VCFs, = 0 if variant is not annotated
-    float  cadd_raw = 17;  // CADD raw  as defined in input VCFs, = 0 if variant is not annotated
-    float  cadd_phred = 18;// CADD phred as defined in input VCFs, = 0 if variant is not annotated
-    float  am_score = 19; // AlphaMissense score as defined in am_pathogenicity CSQ field, = 0 if variant is not annotated
-    string amino_acids = 20; // amino acid substitution: HGVSp (default) or VEP's "Amino_acids" field notation (as determined in ETL), csv for multiple ENST
-    bool   biallelic = 21; // whether variant was biallelic in input VCFs
+    int32  an = 8; // dataset allele number. Doesn't count samples with missing genotypes in data, hence specific per variant.
+    int32  hom_samples = 9;  // # all samples with homozygous genotype
+    int32  het_samples = 10; // # all samples with heterozygous genotype
+    int32  mis_samples = 11; // # all samples with missing/no-call genotype
+    int32  hom_samples_fx = 12; // # female samples with homozygous genotype in X chromosome; = 0 outside X
+    int32  het_samples_fx = 13; // # female samples with heterozygous genotype in X chromosome only; = 0 outside X
+    int32  mis_samples_fx = 14; // # female samples with missing/no-call genotype in X chromosome only; = 0 outside X
+    int32  hom_samples_mxy = 15; // # male samples with homozygous genotype in X & Y chromosomes only; = 0 outside X and Y
+    int32  het_samples_mxy = 16; // # male samples with heterozygous genotype in X & Y chromosomes only; = 0 outside X and Y
+    int32  mis_samples_mxy = 17; // # male samples with missing/no-call genotype in X & Y chromosomes only; = 0 outside X and Y
+    float  gnomADe = 18; // gnomADe exomes AF as defined in input VCFs, = 0 if variant is not annotated
+    float  gnomADg = 19; // gnomADg genomes AF as defined in input VCFs, = 0 if variant is not annotated
+    float  cadd_raw = 20;  // CADD raw as defined in input VCFs, = 0 if variant is not annotated
+    float  cadd_phred = 21;// CADD phred as defined in input VCFs, = 0 if variant is not annotated
+    float  am_score = 22; // AlphaMissense score as defined in am_pathogenicity CSQ field, = 0 if variant is not annotated
+    string amino_acids = 23; // amino acid substitution: HGVSp (default) or VEP's "Amino_acids" field notation (as determined in ETL), csv for multiple ENST
+    bool   biallelic = 24; // whether variant was biallelic in input VCFs
 }
 
 // Set of variants in a given region(s) with stats
@@ -463,22 +467,24 @@ message VariantWithStats {
     float  vaf = 2;
     float  vac = 3;
     int32  van = 4;
-    int32  vhomc = 5;
-    int32  vhetc = 6;
-    int32  vhomfc = 7;
-    int32  vhetfc = 8;
+    int32  v_hom_samples = 5; // # samples with homozygous genotype within virtual cohort
+    int32  v_het_samples = 6; // # samples with heterozygous genotype within virtual cohort
+    int32  v_hom_samples_fx = 7; // # female samples with homozygous genotype in X chromosome within virtual cohort; = 0 outside X
+    int32  v_het_samples_fx = 8; // # female samples with heterozygous genotype in X chromosome within virtual cohort; = 0 outside X
+    int32  v_hom_samples_mxy = 9;  // # male samples with homozygous genotype in X & Y chromosomes only within virtual cohort; = 0 outside X and Y
+    int32  v_het_samples_mxy = 10; // # male samples with heterozygous genotype in X & Y chromosomes only within virtual cohort; = 0 outside X and Y
     // Statistics
     // NB i. Calculated for the whole population = dataset, NOT just in sub-population = virtual cohort
     // NB ii. All stats are empty in Runtime Optimized mode and outside function domain
-    float  phwe = 9;  // p-value for Chi-squared test for deviation from Hardy-Weinberg Equilibrium
-                      // Biallelic SNVs only on autosomal and X chromosomes. For all other variants p-value = 0.
-    float  pchi2 = 10; // p-value in Pearson's chi-squared test with provided samples as cases and the rest of cohort as controls
-    float  or = 11; // odds ratio in Pearson's chi-squared test above
+    float  phwe = 11;  // p-value for Chi-squared test for deviation from Hardy-Weinberg Equilibrium
+                       // Biallelic SNVs only on autosomal and X chromosomes. For all other variants p-value = 0.
+    float  pchi2 = 12; // p-value in Pearson's chi-squared test with provided samples as cases and the rest of cohort as controls
+    float  or = 13; // odds ratio in Pearson's chi-squared test above
     // F-statistics
     // https://en.wikipedia.org/wiki/F-statistics
     // For biallelic SNVs in Autosomal and PAR only
     // Empty for X & Y outside PAR, MT, non SNVs and in Runtime Optimized mode
-    float  ibc = 12; // F-statistics as for inbreeding coefficient
+    float  ibc = 14; // F-statistics as for inbreeding coefficient
 }
 
 message TopNchi2Request {
@@ -509,8 +515,10 @@ message SamplesInRegionRequest {
     RefAssembly assembly = 9; // reference assembly, optional; default = GRCh38
     int32  variantMinLength = 11; // minimal alt allele length; default = 0; optional
     int32  variantMaxLength = 12; // maximal alt allele length; >= 1; default = Int32.MaxValue; optional
-    int32  skip = 13; // skip first n samples from result from each node, <= 0 means no skip; optional
-    int32  limit = 14; // limit result to n samples from each node, <= 0 means 2^31-1 limit; optional
+    // global order is guaranteed for samples, hence skip & limit carry the strong semantics across
+    // the whole cluster, allowing precise pagination (they are global, not per node)
+    int32  skip = 13;  // skip first n samples from result across the cluster; 0 means no skip; optional
+    int32  limit = 14; // limit result to n samples across the cluster; 0 means 2^31-1 limit; optional
 }
 
 // Selects samples with (specific) variants in region(s)
@@ -526,8 +534,10 @@ message SamplesInMultiRegionsRequest {
     RefAssembly assembly = 9; // reference assembly, optional; default = GRCh38
     int32  variantMinLength = 10; // minimal alt allele length; default = 0; optional
     int32  variantMaxLength = 11; // maximal alt allele length; >= 1; default = Int32.MaxValue; optional
-    int32  skip = 12; // skip first n samples from result from each node, <= 0 means no skip; optional
-    int32  limit = 13; // limit result to n samples from each node, <= 0 means 2^31-1 limit; optional
+    // global order is guaranteed for samples, hence skip & limit carry the strong semantics across
+    // the whole cluster, allowing precise pagination (they are global, not per node)
+    int32  skip = 12;  // skip first n samples from result across the cluster; 0 means no skip; optional
+    int32  limit = 13; // limit result to n samples across the cluster; 0 means 2^31-1 limit; optional
 }
 
 // Samples with confirmed homozygous reference call at a position
@@ -535,8 +545,10 @@ message SamplesHomRefRequest {
     Chromosome chr = 1;
     int32 position = 2;       // 1-based region position
     RefAssembly assembly = 3; // reference assembly, optional; default = GRCh38
-    int32 skip = 4;  // skip first n samples, <= 0 means no skip; optional
-    int32 limit = 5; // limit result to n samples, <= 0 means 2^31-1 limit; optional
+    // global order is guaranteed for samples, hence skip & limit carry the strong semantics across
+    // the whole cluster, allowing precise pagination (they are global, not per node)
+    int32  skip = 4;  // skip first n samples from result across the cluster; 0 means no skip; optional
+    int32  limit = 5; // limit result to n samples across the cluster; 0 means 2^31-1 limit; optional
 }
 
 // Set of samples with variants in given region(s)
@@ -564,7 +576,7 @@ message DeNovoRequest {
     int32  variantMinLength = 11;  // minimal alt allele length; default = 0; optional
     int32  variantMaxLength = 12; // maximal alt allele length; >= 1; default = Int32.MaxValue; optional
     int32  skip = 13;   // skip first n variants from result from each node, <= 0 means no skip; optional
-    int32  limit = 14;  // limit result to n variants from each node, <= 0 means 2^31-1 limit; optional
+    int32  limit = 14;  // limit result to n variants from each node, <= 0 means server-side limit (5000); optional
 }
 
 // Heterozygous Dominant Request
@@ -582,7 +594,7 @@ message HetDominantRequest {
     int32  variantMinLength = 11;  // minimal alt allele length; default = 0; optional
     int32  variantMaxLength = 12; // maximal alt allele length; >= 1; default = Int32.MaxValue; optional
     int32  skip = 13;  // skip first n variants from result from each node, <= 0 means no skip; optional
-    int32  limit = 14; // limit result to n variants from each node, <= 0 means 2^31-1 limit; optional
+    int32  limit = 14; // limit result to n variants from each node, <= 0 means server-side limit (5000); optional
 }
 
 // Homozygous Recessive Request
@@ -600,7 +612,7 @@ message HomRecessiveRequest {
     int32  variantMinLength = 11;  // minimal alt allele length; default = 0; optional
     int32  variantMaxLength = 12; // maximal alt allele length; >= 1; default = Int32.MaxValue; optional
     int32  skip = 13;  // skip first n variants from result from each node, <= 0 means no skip; optional
-    int32  limit = 14; // limit result to n variants from each node, <= 0 means 2^31-1 limit; optional
+    int32  limit = 14; // limit result to n variants from each node, <= 0 means server-side limit (5000); optional
 }
 
 // PRS for Samples Request
@@ -907,31 +919,31 @@ enum RefAssembly {
 
 enum Chromosome {
     CHROMOSOME_UNSPECIFIED = 0;
-    CHR_1  = 1;
-    CHR_2  = 2;
-    CHR_3  = 3;
-    CHR_4  = 4;
-    CHR_5  = 5;
-    CHR_6  = 6;
-    CHR_7  = 7;
-    CHR_8  = 8;
-    CHR_9  = 9;
-    CHR_10 = 10;
-    CHR_11 = 11;
-    CHR_12 = 12;
-    CHR_13 = 13;
-    CHR_14 = 14;
-    CHR_15 = 15;
-    CHR_16 = 16;
-    CHR_17 = 17;
-    CHR_18 = 18;
-    CHR_19 = 19;
-    CHR_20 = 20;
-    CHR_21 = 21;
-    CHR_22 = 22;
-    CHR_X  = 23;
-    CHR_Y  = 24;
-    CHR_MT = 25;
+    CHR1  = 1;
+    CHR2  = 2;
+    CHR3  = 3;
+    CHR4  = 4;
+    CHR5  = 5;
+    CHR6  = 6;
+    CHR7  = 7;
+    CHR8  = 8;
+    CHR9  = 9;
+    CHR10 = 10;
+    CHR11 = 11;
+    CHR12 = 12;
+    CHR13 = 13;
+    CHR14 = 14;
+    CHR15 = 15;
+    CHR16 = 16;
+    CHR17 = 17;
+    CHR18 = 18;
+    CHR19 = 19;
+    CHR20 = 20;
+    CHR21 = 21;
+    CHR22 = 22;
+    CHRX  = 23;
+    CHRY  = 24;
+    CHRMT = 25;
 }
 
 /* Annotations enums */

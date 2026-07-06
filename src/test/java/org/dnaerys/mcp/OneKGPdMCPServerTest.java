@@ -190,7 +190,7 @@ class OneKGPdMCPServerTest {
         @SuppressWarnings("unchecked")
         void testSelectVariantsReturnsMap() {
             Variant variant = Variant.newBuilder()
-                .setChr(Chromosome.CHR_17)
+                .setChr(Chromosome.CHR17)
                 .setStart(43044295)
                 .setRef("A")
                 .setAlt("G")
