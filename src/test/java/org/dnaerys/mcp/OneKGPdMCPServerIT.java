@@ -94,6 +94,12 @@ class OneKGPdMCPServerIT {
                         .setCount(2500)
                         .build())));
 
+        // 2b. Stub for CountVariantsInMultiRegions (findVariants always computes the total count)
+        dnaerysService.stubFor(method("CountVariantsInMultiRegions")
+                .willReturn(message(CountAllelesResponse.newBuilder()
+                        .setCount(2)
+                        .build())));
+
         // 3. Stub for KinshipDuo
         dnaerysService.stubFor(method("KinshipDuo")
                 .willReturn(message(KinshipResponse.newBuilder()
@@ -215,15 +221,17 @@ class OneKGPdMCPServerIT {
         // Use a known variant position in BRCA1 region for better test reliability
         int testPosition = 43044346; // Known variant position from BRCA1
         try {
-            ToolResponse countResponse = server.countSamplesHomozygousReference(
-                    CHR_BRCA1,   // chromosome
-                    testPosition // position
+            ToolResponse countResponse = server.findSamplesHomozygousReference(
+                    true,         // countOnly
+                    CHR_BRCA1,    // chromosome
+                    testPosition, // position
+                    null, null    // skip, limit
             );
-            Map<String, Integer> countResult = (Map<String, Integer>) countResponse.structuredContent();
+            Map<String, Object> countResult = (Map<String, Object>) countResponse.structuredContent();
 
             assertNotNull(countResult, "Count result should not be null");
-            assertTrue(countResult.containsKey("count"), "Result should contain 'count' key");
-            int count = countResult.get("count");
+            assertTrue(countResult.containsKey("totalCount"), "Result should contain 'totalCount' key");
+            int count = (Integer) countResult.get("totalCount");
             // Count can be -1 if no variants exist at this position
             assertTrue(count >= -1, "Count should be >= -1");
 
@@ -317,17 +325,18 @@ class OneKGPdMCPServerIT {
     @Order(5)
     @DisplayName("Validate JSON response structure from variant tools")
     void testJsonResponseStructure() {
-        // Get some variants to validate structure using selectVariants
-        ToolResponse toolResponse = server.selectVariants(
+        // Get some variants to validate structure using findVariants
+        ToolResponse toolResponse = server.findVariants(
+                false,  // countOnly
                 List.of(CHR_BRCA1), List.of(BRCA1_START), List.of(BRCA1_END), null, null,
                 true, true,  // selectHet, selectHom
                 null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null,
                 0, 5  // skip, limit
         );
-        Map<String, List<VariantView>> result = (Map<String, List<VariantView>>) toolResponse.structuredContent();
+        Map<String, Object> result = (Map<String, Object>) toolResponse.structuredContent();
 
         assertNotNull(result, "Result should not be null");
-        List<VariantView> variants = result.get("variants");
+        List<VariantView> variants = (List<VariantView>) result.get("variants");
 
         if (!variants.isEmpty()) {
             VariantView firstVariant = variants.get(0);

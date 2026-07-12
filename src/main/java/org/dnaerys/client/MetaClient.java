@@ -132,6 +132,56 @@ public class MetaClient {
         }
     }
 
+    public int countSamplesByPopulation(String population, String region) {
+        boolean hasPop = population != null && !population.isBlank();
+        boolean hasReg = region != null && !region.isBlank();
+
+        if (!hasPop && !hasReg) {
+            throw new RuntimeException(
+                "At least one parameter ('population' or 'region') must be provided");
+        }
+
+        String popTrimmed = hasPop ? population.trim() : null;
+        String regTrimmed = hasReg ? region.trim() : null;
+
+        validatePopulationRegionInputs(popTrimmed, regTrimmed);
+
+        StringBuilder sql = new StringBuilder("SELECT COUNT(*) AS cnt FROM sample_meta WHERE ");
+        List<String> conditions = new ArrayList<>();
+        List<String> params = new ArrayList<>();
+
+        if (hasPop) {
+            conditions.add("(pop = ? OR \"Population\" = ?)");
+            params.add(popTrimmed);
+            params.add(popTrimmed);
+        }
+
+        if (hasReg) {
+            conditions.add("(reg = ? OR region = ?)");
+            params.add(regTrimmed);
+            params.add(regTrimmed);
+        }
+
+        sql.append(String.join(" AND ", conditions));
+
+        try (PreparedStatement ps = connection.prepareStatement(sql.toString())) {
+            for (int i = 0; i < params.size(); i++) {
+                ps.setString(i + 1, params.get(i));
+            }
+
+            ResultSet rs = ps.executeQuery();
+            int count = rs.next() ? rs.getInt("cnt") : 0;
+
+            LOG.debugf("countSamplesByPopulation: found %d samples", count);
+            return count;
+
+        } catch (RuntimeException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new RuntimeException("DuckDB query failed: " + e.getMessage(), e);
+        }
+    }
+
     public List<SampleMeta> getSampleMeta(List<String> sampleIds) {
         if (sampleIds == null || sampleIds.isEmpty()) {
             throw new RuntimeException("Parameter 'sampleIds' must not be null or empty");

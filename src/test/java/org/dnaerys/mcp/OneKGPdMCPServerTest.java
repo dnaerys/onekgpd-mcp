@@ -25,7 +25,8 @@ import static org.mockito.Mockito.*;
  * Unit tests for OneKGPdMCPServer.
  * Tests delegation patterns, response wrapping, and parameter passthrough.
  *
- * Test Case IDs: MCP-001 through MCP-004
+ * The count/select tools were consolidated into single tools switched by a countOnly flag
+ * (first parameter), returning a wrapper object keyed totalCount (+ optional list).
  *
  * @see org.dnaerys.mcp.OneKGPdMCPServer
  */
@@ -74,81 +75,90 @@ class OneKGPdMCPServerTest {
     }
 
     // ========================================
-    // VARIANT COUNT TOOLS TESTS
+    // VARIANT QUERY TOOLS TESTS (countOnly)
     // ========================================
 
     @Nested
-    @DisplayName("Variant Count Tools Tests")
+    @DisplayName("findVariants countOnly Tests")
     class VariantCountToolsTests {
 
         @Test
-        @DisplayName("countVariants returns Map with 'count' key")
+        @DisplayName("findVariants countOnly=true returns Map with 'totalCount' key")
         @SuppressWarnings("unchecked")
-        void testCountVariantsReturnsMap() {
+        void testFindVariantsCountOnlyReturnsMap() {
             when(mockClient.countVariants(
                 any(), anyBoolean(), anyBoolean(), any()
             )).thenReturn(5573);
 
-            ToolResponse toolResponse = server.countVariants(
+            ToolResponse toolResponse = server.findVariants(
+                true,  // countOnly
                 List.of("17"), List.of(43044295), List.of(43170245), null, null,
                 true, true,  // selectHet, selectHom
-                null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null
+                null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null,
+                null, null  // skip, limit
             );
-            Map<String, Integer> result = (Map<String, Integer>) toolResponse.structuredContent();
+            Map<String, Object> result = (Map<String, Object>) toolResponse.structuredContent();
 
-            assertThat(result).containsKey("count");
-            assertThat(result.get("count")).isEqualTo(5573);
+            assertThat(result).containsKey("totalCount");
+            assertThat(result.get("totalCount")).isEqualTo(5573);
+            assertThat(result).doesNotContainKey("variants");
         }
 
         @Test
-        @DisplayName("countVariants passes selectHom=true, selectHet=false for homozygous only")
-        void testCountVariantsHomozygousOnlyFlags() {
+        @DisplayName("findVariants passes selectHom=true, selectHet=false for homozygous only")
+        void testFindVariantsHomozygousOnlyFlags() {
             when(mockClient.countVariants(
                 any(), anyBoolean(), anyBoolean(), any()
             )).thenReturn(100);
 
-            server.countVariants(
+            server.findVariants(
+                true,  // countOnly
                 List.of("1"), List.of(1000), List.of(2000), null, null,
                 false, true,  // selectHet=false, selectHom=true (homozygous only)
-                null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null
+                null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null,
+                null, null  // skip, limit
             );
 
-            // Server swaps: calls client with (selectHom=true, selectHet=false)
+            // Server passes (selectHom=true, selectHet=false) to the client
             verify(mockClient).countVariants(
                 any(), eq(true), eq(false), any()
             );
         }
 
         @Test
-        @DisplayName("countVariants passes selectHom=false, selectHet=true for heterozygous only")
-        void testCountVariantsHeterozygousOnlyFlags() {
+        @DisplayName("findVariants passes selectHom=false, selectHet=true for heterozygous only")
+        void testFindVariantsHeterozygousOnlyFlags() {
             when(mockClient.countVariants(
                 any(), anyBoolean(), anyBoolean(), any()
             )).thenReturn(100);
 
-            server.countVariants(
+            server.findVariants(
+                true,  // countOnly
                 List.of("1"), List.of(1000), List.of(2000), null, null,
                 true, false,  // selectHet=true, selectHom=false (heterozygous only)
-                null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null
+                null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null,
+                null, null  // skip, limit
             );
 
-            // Server swaps: calls client with (selectHom=false, selectHet=true)
+            // Server passes (selectHom=false, selectHet=true) to the client
             verify(mockClient).countVariants(
                 any(), eq(false), eq(true), any()
             );
         }
 
         @Test
-        @DisplayName("countVariants passes selectHom=true, selectHet=true for all variants")
-        void testCountVariantsAllVariantsFlags() {
+        @DisplayName("findVariants passes selectHom=true, selectHet=true for all variants")
+        void testFindVariantsAllVariantsFlags() {
             when(mockClient.countVariants(
                 any(), anyBoolean(), anyBoolean(), any()
             )).thenReturn(200);
 
-            server.countVariants(
+            server.findVariants(
+                true,  // countOnly
                 List.of("1"), List.of(1000), List.of(2000), null, null,
                 true, true,  // selectHet=true, selectHom=true (all variants)
-                null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null
+                null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null,
+                null, null  // skip, limit
             );
 
             // Verify the client was called with hom=true, het=true
@@ -158,18 +168,20 @@ class OneKGPdMCPServerTest {
         }
 
         @Test
-        @DisplayName("countVariants throws ToolCallException for invalid chromosome")
-        void testCountVariantsInvalidChromosome() {
+        @DisplayName("findVariants throws ToolCallException for invalid chromosome")
+        void testFindVariantsInvalidChromosome() {
             when(mockClient.countVariants(
                 any(), anyBoolean(), anyBoolean(), any()
             )).thenThrow(new RuntimeException("Invalid Chromosome"));
 
             ToolCallException thrown = org.junit.jupiter.api.Assertions.assertThrows(
                 ToolCallException.class,
-                () -> server.countVariants(
+                () -> server.findVariants(
+                    true,  // countOnly
                     List.of("99"), List.of(1000), List.of(2000), null, null,
                     true, true,  // selectHet, selectHom
-                    null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null
+                    null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null,
+                    null, null  // skip, limit
                 )
             );
 
@@ -178,49 +190,54 @@ class OneKGPdMCPServerTest {
     }
 
     // ========================================
-    // VARIANT SELECT TOOLS TESTS
+    // VARIANT QUERY TOOLS TESTS (list mode)
     // ========================================
 
     @Nested
-    @DisplayName("Variant Select Tools Tests")
+    @DisplayName("findVariants list Tests")
     class VariantSelectToolsTests {
 
         @Test
-        @DisplayName("MCP-002: selectVariants returns Map with 'variants' key")
+        @DisplayName("MCP-002: findVariants countOnly=false returns Map with 'variants' and 'totalCount'")
         @SuppressWarnings("unchecked")
-        void testSelectVariantsReturnsMap() {
+        void testFindVariantsReturnsVariants() {
             Variant variant = Variant.newBuilder()
                 .setChr(Chromosome.CHR17)
                 .setStart(43044295)
                 .setRef("A")
                 .setAlt("G")
                 .build();
+            when(mockClient.countVariants(any(), anyBoolean(), anyBoolean(), any())).thenReturn(1);
             when(mockClient.selectVariants(
                 any(), anyBoolean(), anyBoolean(), any(), any(), any()
             )).thenReturn(List.of(variant));
 
-            ToolResponse toolResponse = server.selectVariants(
+            ToolResponse toolResponse = server.findVariants(
+                false,  // countOnly
                 List.of("17"), List.of(43044295), List.of(43170245), null, null,
                 true, true,  // selectHet, selectHom
                 null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null,
                 null, null  // skip, limit
             );
-            Map<String, List<VariantView>> result = (Map<String, List<VariantView>>) toolResponse.structuredContent();
+            Map<String, Object> result = (Map<String, Object>) toolResponse.structuredContent();
 
-            assertThat(result).containsKey("variants");
-            assertThat(result.get("variants")).isNotEmpty();
+            assertThat(result).containsKeys("variants", "totalCount");
+            assertThat(result.get("totalCount")).isEqualTo(1);
+            assertThat((List<VariantView>) result.get("variants")).isNotEmpty();
         }
 
         @Test
-        @DisplayName("selectVariants throws ToolCallException for invalid region")
-        void testSelectVariantsInvalidRegion() {
+        @DisplayName("findVariants throws ToolCallException for invalid region")
+        void testFindVariantsInvalidRegion() {
+            when(mockClient.countVariants(any(), anyBoolean(), anyBoolean(), any())).thenReturn(1);
             when(mockClient.selectVariants(
                 any(), anyBoolean(), anyBoolean(), any(), any(), any()
             )).thenThrow(new RuntimeException("Invalid 'start' or 'end'"));
 
             ToolCallException thrown = org.junit.jupiter.api.Assertions.assertThrows(
                 ToolCallException.class,
-                () -> server.selectVariants(
+                () -> server.findVariants(
+                    false,  // countOnly
                     List.of("1"), List.of(2000), List.of(1000), null, null,
                     true, true,  // selectHet, selectHom
                     null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null,
@@ -233,84 +250,94 @@ class OneKGPdMCPServerTest {
     }
 
     // ========================================
-    // SAMPLE TOOLS TESTS
+    // SAMPLE TOOLS TESTS (findSamples)
     // ========================================
 
     @Nested
-    @DisplayName("Sample Tools Tests")
+    @DisplayName("findSamples Tests")
     class SampleToolsTests {
 
         @Test
-        @DisplayName("countSamples returns Map with 'count' key")
+        @DisplayName("findSamples countOnly=true returns Map with 'totalCount' key")
         @SuppressWarnings("unchecked")
-        void testCountSamplesReturnsMap() {
+        void testFindSamplesCountOnlyReturnsMap() {
             when(mockClient.countSamples(
                 any(), anyBoolean(), anyBoolean(), any()
             )).thenReturn(150);
 
-            ToolResponse toolResponse = server.countSamples(
+            ToolResponse toolResponse = server.findSamples(
+                true,  // countOnly
                 List.of("1"), List.of(1000), List.of(2000), null, null,
                 true, true,  // selectHet, selectHom
-                null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null
+                null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null,
+                null, null  // skip, limit
             );
-            Map<String, Integer> result = (Map<String, Integer>) toolResponse.structuredContent();
+            Map<String, Object> result = (Map<String, Object>) toolResponse.structuredContent();
 
-            assertThat(result).containsKey("count");
-            assertThat(result.get("count")).isEqualTo(150);
+            assertThat(result).containsKey("totalCount");
+            assertThat(result.get("totalCount")).isEqualTo(150);
+            assertThat(result).doesNotContainKey("samples");
         }
 
         @Test
-        @DisplayName("selectSamples returns Map with 'samples' key")
+        @DisplayName("findSamples countOnly=false returns Map with 'samples' key")
         @SuppressWarnings("unchecked")
-        void testSelectSamplesReturnsMap() {
+        void testFindSamplesReturnsSamples() {
             when(mockClient.selectSamples(
                 any(), anyBoolean(), anyBoolean(), any()
             )).thenReturn(List.of("HG00403", "HG00405"));
 
-            ToolResponse toolResponse = server.selectSamples(
+            ToolResponse toolResponse = server.findSamples(
+                false,  // countOnly
                 List.of("1"), List.of(1000), List.of(2000), null, null,
                 true, true,  // selectHet, selectHom
-                null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null
+                null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null,
+                null, null  // skip, limit
             );
-            Map<String, List<String>> result = (Map<String, List<String>>) toolResponse.structuredContent();
+            Map<String, Object> result = (Map<String, Object>) toolResponse.structuredContent();
 
-            assertThat(result).containsKey("samples");
-            assertThat(result.get("samples")).contains("HG00403", "HG00405");
+            assertThat(result).containsKeys("samples", "totalCount");
+            assertThat((List<String>) result.get("samples")).contains("HG00403", "HG00405");
+            assertThat(result.get("totalCount")).isEqualTo(2);
         }
 
         @Test
-        @DisplayName("selectSamples passes selectHom=true, selectHet=false for homozygous only")
-        void testSelectSamplesHomVariantsFlags() {
+        @DisplayName("findSamples passes selectHom=true, selectHet=false for homozygous only")
+        void testFindSamplesHomVariantsFlags() {
             when(mockClient.selectSamples(
                 any(), anyBoolean(), anyBoolean(), any()
             )).thenReturn(List.of());
 
-            server.selectSamples(
+            server.findSamples(
+                false,  // countOnly
                 List.of("1"), List.of(1000), List.of(2000), null, null,
                 false, true,  // selectHet=false, selectHom=true (homozygous only)
-                null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null
+                null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null,
+                null, null  // skip, limit
             );
 
-            // Server swaps: calls client with (selectHom=true, selectHet=false)
+            // Server passes (selectHom=true, selectHet=false) to the client
             verify(mockClient).selectSamples(
                 any(), eq(true), eq(false), any()
             );
         }
 
         @Test
-        @DisplayName("selectSamples passes selectHom=false, selectHet=true for heterozygous only")
-        void testSelectSamplesHetVariantsFlags() {
+        @DisplayName("findSamples passes selectHom=false, selectHet=true for heterozygous only")
+        void testFindSamplesHetVariantsFlags() {
             when(mockClient.selectSamples(
                 any(), anyBoolean(), anyBoolean(), any()
             )).thenReturn(List.of());
 
-            server.selectSamples(
+            server.findSamples(
+                false,  // countOnly
                 List.of("1"), List.of(1000), List.of(2000), null, null,
                 true, false,  // selectHet=true, selectHom=false (heterozygous only)
-                null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null
+                null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null,
+                null, null  // skip, limit
             );
 
-            // Server swaps: calls client with (selectHom=false, selectHet=true)
+            // Server passes (selectHom=false, selectHet=true) to the client
             verify(mockClient).selectSamples(
                 any(), eq(false), eq(true), any()
             );
@@ -333,7 +360,8 @@ class OneKGPdMCPServerTest {
             )).thenReturn(100);
 
             // Call with specific parameters
-            ToolResponse response = server.countVariants(
+            ToolResponse response = server.findVariants(
+                true,                          // countOnly
                 List.of("17"), List.of(43044295), List.of(43170245), List.of("A"), List.of("G"),
                 true,                   // selectHet
                 true,                   // selectHom
@@ -350,7 +378,8 @@ class OneKGPdMCPServerTest {
                 0.9f, 0.5f,                    // alphaMissenseScoreLT, alphaMissenseScoreGT
                 true, false,                   // biallelicOnly, multiallelicOnly
                 false, true,                   // excludeMales, excludeFemales
-                10, 50                         // minVariantLengthBp, maxVariantLengthBp
+                10, 50,                        // minVariantLengthBp, maxVariantLengthBp
+                null, null                     // skip, limit
             );
 
             // Verify the client was called
@@ -370,10 +399,12 @@ class OneKGPdMCPServerTest {
             )).thenReturn(100);
 
             // Call with all optional params as null (selectHet/selectHom are required)
-            server.countVariants(
+            server.findVariants(
+                true,  // countOnly
                 List.of("1"), List.of(1000), List.of(2000), null, null,
                 true, true,  // selectHet, selectHom (required)
-                null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null
+                null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null,
+                null, null  // skip, limit
             );
 
             // Verify client was called (annotations object is constructed with all-null fields)
@@ -390,10 +421,12 @@ class OneKGPdMCPServerTest {
             )).thenReturn(100);
 
             // Test chromosome X
-            server.countVariants(
+            server.findVariants(
+                true,  // countOnly
                 List.of("X"), List.of(1000), List.of(2000), null, null,
                 true, true,  // selectHet, selectHom
-                null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null
+                null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null,
+                null, null  // skip, limit
             );
 
             verify(mockClient).countVariants(
@@ -408,60 +441,62 @@ class OneKGPdMCPServerTest {
     // ========================================
 
     @Nested
-    @DisplayName("Homozygous Reference Tools Tests")
+    @DisplayName("findSamplesHomozygousReference Tests")
     class HomozygousReferenceToolsTests {
 
         @Test
-        @DisplayName("countSamplesHomozygousReference returns Map with 'count' key")
+        @DisplayName("findSamplesHomozygousReference countOnly=true returns Map with 'totalCount' key")
         @SuppressWarnings("unchecked")
-        void testCountSamplesHomRefReturnsMap() {
+        void testHomRefCountOnlyReturnsMap() {
             when(mockClient.countSamplesHomozygousReference(anyString(), anyInt()))
                 .thenReturn(2500);
 
-            ToolResponse toolResponse = server.countSamplesHomozygousReference("1", 12345);
-            Map<String, Integer> result = (Map<String, Integer>) toolResponse.structuredContent();
+            ToolResponse toolResponse = server.findSamplesHomozygousReference(true, "1", 12345, null, null);
+            Map<String, Object> result = (Map<String, Object>) toolResponse.structuredContent();
 
-            assertThat(result).containsKey("count");
-            assertThat(result.get("count")).isEqualTo(2500);
+            assertThat(result).containsKey("totalCount");
+            assertThat(result.get("totalCount")).isEqualTo(2500);
+            assertThat(result).doesNotContainKey("samples");
         }
 
         @Test
-        @DisplayName("selectSamplesHomozygousReference returns Map with 'samples' key")
+        @DisplayName("findSamplesHomozygousReference countOnly=false returns Map with 'samples' key")
         @SuppressWarnings("unchecked")
-        void testSelectSamplesHomRefReturnsMap() {
+        void testHomRefReturnsSamples() {
+            when(mockClient.countSamplesHomozygousReference(anyString(), anyInt())).thenReturn(2);
             when(mockClient.selectSamplesHomozygousReference(anyString(), anyInt()))
                 .thenReturn(List.of("HG00403", "HG00405"));
 
-            ToolResponse toolResponse = server.selectSamplesHomozygousReference("1", 12345);
-            Map<String, List<String>> result = (Map<String, List<String>>) toolResponse.structuredContent();
+            ToolResponse toolResponse = server.findSamplesHomozygousReference(false, "1", 12345, null, null);
+            Map<String, Object> result = (Map<String, Object>) toolResponse.structuredContent();
 
-            assertThat(result).containsKey("samples");
-            assertThat(result.get("samples")).contains("HG00403", "HG00405");
+            assertThat(result).containsKeys("samples", "totalCount");
+            assertThat((List<String>) result.get("samples")).contains("HG00403", "HG00405");
         }
 
         @Test
-        @DisplayName("countSamplesHomozygousReference throws ToolCallException for invalid chromosome")
-        void testCountSamplesHomRefInvalidChromosome() {
+        @DisplayName("findSamplesHomozygousReference throws ToolCallException for invalid chromosome")
+        void testHomRefInvalidChromosome() {
             when(mockClient.countSamplesHomozygousReference(anyString(), anyInt()))
                 .thenThrow(new RuntimeException("Invalid Chromosome"));
 
             ToolCallException thrown = org.junit.jupiter.api.Assertions.assertThrows(
                 ToolCallException.class,
-                () -> server.countSamplesHomozygousReference("99", 12345)
+                () -> server.findSamplesHomozygousReference(true, "99", 12345, null, null)
             );
 
             assertThat(thrown.getMessage()).contains("Invalid Chromosome");
         }
 
         @Test
-        @DisplayName("countSamplesHomozygousReference throws ToolCallException for invalid position")
-        void testCountSamplesHomRefInvalidPosition() {
+        @DisplayName("findSamplesHomozygousReference throws ToolCallException for invalid position")
+        void testHomRefInvalidPosition() {
             when(mockClient.countSamplesHomozygousReference(anyString(), anyInt()))
                 .thenThrow(new RuntimeException("'position' must be >= 0"));
 
             ToolCallException thrown = org.junit.jupiter.api.Assertions.assertThrows(
                 ToolCallException.class,
-                () -> server.countSamplesHomozygousReference("1", 0)
+                () -> server.findSamplesHomozygousReference(true, "1", 0, null, null)
             );
 
             assertThat(thrown.getMessage()).contains("'position' must be >= 0");
@@ -620,10 +655,12 @@ class OneKGPdMCPServerTest {
 
             ToolCallException thrown = org.junit.jupiter.api.Assertions.assertThrows(
                 ToolCallException.class,
-                () -> server.countVariants(
+                () -> server.findVariants(
+                    true,  // countOnly
                     List.of("1"), List.of(1000), List.of(2000), null, null,
                     true, true,  // selectHet, selectHom
-                    null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null
+                    null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null,
+                    null, null  // skip, limit
                 )
             );
 
@@ -631,15 +668,17 @@ class OneKGPdMCPServerTest {
         }
 
         @Test
-        @DisplayName("gRPC error throws ToolCallException for select")
+        @DisplayName("gRPC error throws ToolCallException for variant list")
         void testGrpcErrorThrowsExceptionForSelect() {
+            when(mockClient.countVariants(any(), anyBoolean(), anyBoolean(), any())).thenReturn(1);
             when(mockClient.selectVariants(
                 any(), anyBoolean(), anyBoolean(), any(), any(), any()
             )).thenThrow(new RuntimeException("Connection failed"));
 
             ToolCallException thrown = org.junit.jupiter.api.Assertions.assertThrows(
                 ToolCallException.class,
-                () -> server.selectVariants(
+                () -> server.findVariants(
+                    false,  // countOnly
                     List.of("1"), List.of(1000), List.of(2000), null, null,
                     true, true,  // selectHet, selectHom
                     null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null,
@@ -659,10 +698,12 @@ class OneKGPdMCPServerTest {
 
             ToolCallException thrown = org.junit.jupiter.api.Assertions.assertThrows(
                 ToolCallException.class,
-                () -> server.selectSamples(
+                () -> server.findSamples(
+                    false,  // countOnly
                     List.of("1"), List.of(1000), List.of(2000), null, null,
                     true, true,  // selectHet, selectHom
-                    null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null
+                    null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null,
+                    null, null  // skip, limit
                 )
             );
 

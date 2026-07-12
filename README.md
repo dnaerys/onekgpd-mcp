@@ -101,12 +101,11 @@ Implemented as a Java EE service, accessing _KGP dataset_ via gRPC calls to publ
 - service implementation is based on [Quarkus MCP Server framework](https://docs.quarkiverse.io/quarkus-mcp-server/dev/)
 - sample population and metadata are managed by an embedded DuckDB instance
 
-- MCP Tools:
-  - Genomics database: _countSamples, countSamplesHomozygousReference, countVariants, countVariantsInSamples,
-  getDatasetInfo, getKinshipDegree, selectSamples, selectSamplesHomozygousReference, selectVariants, selectVariantsInSamples,
-  computeAlphaMissenseAvg, computeVariantBurden_
+- MCP Tools (14):
+  - Genomics database: _findVariants, findVariantsInSamples, findSamples, findSamplesHomozygousReference,
+  getDatasetInfo, getKinshipDegree, computeAlphaMissenseAvg, computeVariantBurden_
   - Population and metadata: _listPopulations, listSuperpopulations, getPopulationStats, getSuperpopulationSummary,
-  getSampleMetadata, selectSamplesByPopulation_
+  getSampleMetadata, findSamplesByPopulation_
   - [implementation](./src/main/java/org/dnaerys/mcp/OneKGPdMCPServer.java)
 
 ## Installation
