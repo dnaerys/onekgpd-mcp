@@ -43,8 +43,6 @@ searching for paired 'weakening' and 'stabilizing' mutations at protein-protein 
 tolerance' of the proteasome by establishing the maximum cumulative structural disruption observed in a single healthy
 individual based on AlphaMissense scores and calculated ΔΔG values._
 
-_[Case study: workflow, task reports, manuscripts drafts →](./examples/26S.md)_
-
 #### Macromolecular structural complexes
 
 > _The MCM2-7 Complex (The "DNA Helicase Motor") is a molecular masterpiece. It’s a heterohexameric ring where each subunit is
