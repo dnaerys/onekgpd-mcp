@@ -59,7 +59,7 @@ class OneKGPdMCPServerTest {
         void testGetDatasetInfoReturnsWrappedResult() {
             // Mock the client to return dataset info
             DnaerysClient.DatasetInfo datasetInfo = new DnaerysClient.DatasetInfo(
-                138044723, 3202, 1598, 1604
+                138044723, 3202, 1598, 1604, "2026-10-10T01:00:00Z"
             );
             when(mockClient.getDatasetInfo()).thenReturn(datasetInfo);
 
@@ -71,6 +71,7 @@ class OneKGPdMCPServerTest {
             assertThat(result.samplesTotal()).isEqualTo(3202);
             assertThat(result.samplesMaleCount()).isEqualTo(1598);
             assertThat(result.samplesFemaleCount()).isEqualTo(1604);
+            assertThat(result.datasetId()).isEqualTo("2026-10-10T01:00:00Z");
         }
     }
 

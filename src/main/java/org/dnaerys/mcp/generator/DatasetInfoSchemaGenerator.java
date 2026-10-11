@@ -17,9 +17,10 @@ public class DatasetInfoSchemaGenerator implements OutputSchemaGenerator {
                 "variantsTotal", Map.of("type", "integer", "description", "Total number of variants in the dataset"),
                 "samplesTotal", Map.of("type", "integer", "description", "Total number of samples in the dataset"),
                 "samplesMaleCount", Map.of("type", "integer", "description", "Number of male samples"),
-                "samplesFemaleCount", Map.of("type", "integer", "description", "Number of female samples")
+                "samplesFemaleCount", Map.of("type", "integer", "description", "Number of female samples"),
+                "datasetId", Map.of("type", "string", "description", "Dataset identifier")
             ),
-            "required", List.of("variantsTotal", "samplesTotal", "samplesMaleCount", "samplesFemaleCount")
+            "required", List.of("variantsTotal", "samplesTotal", "samplesMaleCount", "samplesFemaleCount", "datasetId")
         );
     }
 }

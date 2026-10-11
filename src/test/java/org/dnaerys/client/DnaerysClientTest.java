@@ -1043,19 +1043,20 @@ class DnaerysClientTest {
         @Test
         @DisplayName("DatasetInfo record holds correct values")
         void testDatasetInfoRecord() {
-            DnaerysClient.DatasetInfo info = new DnaerysClient.DatasetInfo(138044723, 3202, 1598, 1604);
+            DnaerysClient.DatasetInfo info = new DnaerysClient.DatasetInfo(138044723, 3202, 1598, 1604, "2026-10-10T01:00:00Z");
 
             assertThat(info.variantsTotal()).isEqualTo(138044723);
             assertThat(info.samplesTotal()).isEqualTo(3202);
             assertThat(info.samplesMaleCount()).isEqualTo(1598);
             assertThat(info.samplesFemaleCount()).isEqualTo(1604);
+            assertThat(info.datasetId()).isEqualTo("2026-10-10T01:00:00Z");
         }
 
         @Test
         @DisplayName("DatasetInfo record equality")
         void testDatasetInfoEquality() {
-            DnaerysClient.DatasetInfo info1 = new DnaerysClient.DatasetInfo(1000, 100, 50, 50);
-            DnaerysClient.DatasetInfo info2 = new DnaerysClient.DatasetInfo(1000, 100, 50, 50);
+            DnaerysClient.DatasetInfo info1 = new DnaerysClient.DatasetInfo(1000, 100, 50, 50, "ds-1");
+            DnaerysClient.DatasetInfo info2 = new DnaerysClient.DatasetInfo(1000, 100, 50, 50, "ds-1");
 
             assertThat(info1).isEqualTo(info2);
         }

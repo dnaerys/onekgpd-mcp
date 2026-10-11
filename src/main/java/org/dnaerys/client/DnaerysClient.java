@@ -38,6 +38,7 @@ import org.jboss.logging.Logger;
 public class DnaerysClient {
 
     private static final Logger LOG = Logger.getLogger(DnaerysClient.class);
+    private static final String DATASETID = "2026-10-10-variants-138044723-samples-3202";
 
     @GrpcClient("dnaerys")
     DnaerysServiceGrpc.DnaerysServiceBlockingStub blockingStub;
@@ -59,7 +60,7 @@ public class DnaerysClient {
 
     public enum Gender { MALE, FEMALE, BOTH }
 
-    public record DatasetInfo(int variantsTotal, int samplesTotal, int samplesMaleCount, int samplesFemaleCount) {}
+    public record DatasetInfo(int variantsTotal, int samplesTotal, int samplesMaleCount, int samplesFemaleCount, String datasetId) {}
     public record VariantsInSample(String sample, List<Variant> variants) {}
 
     public record AlphaMissenseAvg(double alphaMissenseMean, double alphaMissenseDeviation, int variantCount) {}
@@ -223,7 +224,8 @@ public class DnaerysClient {
             response.getVariantsTotal(),
             response.getSamplesTotal(),
             response.getMalesTotal(),
-            response.getFemalesTotal()
+            response.getFemalesTotal(),
+            DATASETID
         );
     }
 

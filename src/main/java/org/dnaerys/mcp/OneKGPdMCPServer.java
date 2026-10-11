@@ -236,7 +236,7 @@ public class OneKGPdMCPServer {
             openWorldHint = false
         ),
         description = "Retrieve the number of variants and samples in 1000 Genomes Project.\n\n" +
-            "RETURNS: total number of variants, total number of samples, number of male and female samples.\n" +
+            "RETURNS: total number of variants, total number of samples, number of male and female samples, dataset ID.\n" +
             "Refer to the Output Schema for field definitions.",
         outputSchema = @Tool.OutputSchema(
             from = DnaerysClient.DatasetInfo.class,
